@@ -46,3 +46,11 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
 });
+
+
+const publicRoutes = require('./routes/publicRoutes');
+
+// Add this line BEFORE auth routes (no authentication needed)
+app.use('/api/public', publicRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/fishing', fishingRoutes);

@@ -15,4 +15,6 @@ router.put('/logs/:id', fishingController.updateLog);
 router.delete('/logs/:id', fishingController.deleteLog);
 router.get('/statistics', fishingController.getStatistics);
 
+router.get('/global-predictions', fishingController.getGlobalPredictions);
+
 module.exports = router;

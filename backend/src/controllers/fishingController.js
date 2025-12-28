@@ -136,3 +136,88 @@ exports.getStatistics = async (req, res) => {
     res.status(500).json({ error: 'Failed to get statistics' });
   }
 };
+
+exports.getGlobalPredictions = async (req, res) => {
+  try {
+    // Get ALL fishing logs from ALL users for predictions
+    const query = `
+      SELECT * FROM fishing_logs 
+      WHERE caught_fish = true 
+      ORDER BY log_date DESC 
+      LIMIT 500
+    `;
+    const result = await pool.query(query);
+    const allLogs = result.rows;
+    
+    if (allLogs.length === 0) {
+      return res.json({ 
+        message: 'Not enough community data yet. Be the first to log some catches!' 
+      });
+    }
+    
+    // Calculate predictions from all users' data
+    const predictions = generatePredictionsFromLogs(allLogs);
+    
+    res.json({ 
+      predictions,
+      dataPoints: allLogs.length,
+      message: `Based on ${allLogs.length} successful fishing trips from the community`
+    });
+  } catch (error) {
+    console.error('Global predictions error:', error);
+    res.status(500).json({ error: 'Failed to get predictions' });
+  }
+};
+
+function generatePredictionsFromLogs(logs) {
+  const moonPhaseCount = {};
+  const seaLevelCount = {};
+  const baitCount = {};
+  const locationCount = {};
+  const monthCount = {};
+
+  logs.forEach((log) => {
+    const phase = log.moon_phase?.split(' ')[1] || 'Unknown';
+    moonPhaseCount[phase] = (moonPhaseCount[phase] || 0) + log.fish_count;
+
+    const level = log.sea_level?.split(' ')[0] || 'Unknown';
+    seaLevelCount[level] = (seaLevelCount[level] || 0) + log.fish_count;
+
+    if (log.bait) {
+      baitCount[log.bait] = (baitCount[log.bait] || 0) + log.fish_count;
+    }
+
+    if (log.location_name) {
+      locationCount[log.location_name] = (locationCount[log.location_name] || 0) + log.fish_count;
+    }
+
+    const month = new Date(log.log_date).toLocaleString('default', { month: 'long' });
+    monthCount[month] = (monthCount[month] || 0) + log.fish_count;
+  });
+
+  const bestMoonPhase = Object.keys(moonPhaseCount).reduce((a, b) =>
+    moonPhaseCount[a] > moonPhaseCount[b] ? a : b, 'Unknown'
+  );
+  const bestSeaLevel = Object.keys(seaLevelCount).reduce((a, b) =>
+    seaLevelCount[a] > seaLevelCount[b] ? a : b, 'Unknown'
+  );
+  const bestBait = Object.keys(baitCount).reduce((a, b) =>
+    baitCount[a] > baitCount[b] ? a : b, 'Unknown'
+  );
+  const bestLocation = Object.keys(locationCount).reduce((a, b) =>
+    locationCount[a] > locationCount[b] ? a : b, 'Unknown'
+  );
+  const bestMonth = Object.keys(monthCount).reduce((a, b) =>
+    monthCount[a] > monthCount[b] ? a : b, 'Unknown'
+  );
+
+  return {
+    bestMoonPhase,
+    bestSeaLevel,
+    bestBait,
+    bestLocation,
+    bestMonth,
+    totalFish: logs.reduce((sum, log) => sum + log.fish_count, 0),
+    avgPerTrip: (logs.reduce((sum, log) => sum + log.fish_count, 0) / logs.length).toFixed(1)
+  };
+}
