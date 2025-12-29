@@ -23,7 +23,7 @@ const LogTrip = () => {
     fishingType: '',
     fishingMethod: 'land',
     caughtFish: 'no',
-    fishCount: 0,
+    fishCount: '',
     fishTypes: [],
     hookSetup: '',
     bait: '',
@@ -165,6 +165,7 @@ const LogTrip = () => {
     try {
       const logData = {
         ...formData,
+        fishCount: parseInt(formData.fishCount, 10) || 0,
         bait: finalBait,
         moonPhase: `${environmentalData.moon.emoji} ${environmentalData.moon.phase}`,
         seaLevel: `${environmentalData.tide.level} (${environmentalData.tide.height}m)`,
@@ -186,7 +187,7 @@ const LogTrip = () => {
         fishingType: '',
         fishingMethod: 'land',
         caughtFish: 'no',
-        fishCount: 0,
+        fishCount: '',
         fishTypes: [],
         hookSetup: '',
         bait: '',
@@ -405,7 +406,7 @@ const LogTrip = () => {
         </label>
         <select
           value={formData.caughtFish}
-          onChange={(e) => setFormData({ ...formData, caughtFish: e.target.value, fishCount: 0, fishTypes: [] })}
+            onChange={(e) => setFormData({ ...formData, caughtFish: e.target.value, fishCount: '', fishTypes: [] })}
           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
         >
           <option value="no">No</option>
@@ -424,12 +425,21 @@ const LogTrip = () => {
               min="1"
               value={formData.fishCount}
               onChange={(e) => {
-                const count = parseInt(e.target.value) || 0;
-                setFormData({
-                  ...formData,
-                  fishCount: count,
-                  fishTypes: Array(count).fill('')
-                });
+                const val = e.target.value;
+                if (val === '') {
+                  setFormData({
+                    ...formData,
+                    fishCount: '',
+                    fishTypes: []
+                  });
+                } else {
+                  const count = Math.max(0, parseInt(val, 10) || 0);
+                  setFormData({
+                    ...formData,
+                    fishCount: count,
+                    fishTypes: Array(count).fill('')
+                  });
+                }
               }}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
             />

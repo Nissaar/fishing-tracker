@@ -57,7 +57,7 @@ const Predictions = () => {
           <h2 className="text-2xl font-bold">Community Fishing Insights</h2>
         </div>
         <p className="text-blue-100">
-          {predictions?.message || 'Based on community data from all fishermen'}
+          {predictions?.message || 'Based on community data from all Anglers'}
         </p>
       </div>
 

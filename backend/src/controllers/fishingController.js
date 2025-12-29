@@ -28,6 +28,7 @@ exports.getEnvironmentalData = async (req, res) => {
     res.json({
       moon: moonData,
       tide: tideData,
+      tideHeight: tideData,
       weather: weatherData,
       marine: marineData,
       seaTemperature: seaTemp,

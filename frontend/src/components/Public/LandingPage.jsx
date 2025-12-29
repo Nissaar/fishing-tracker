@@ -98,11 +98,6 @@ const LandingPage = () => {
               <p className="text-4xl mb-2">{conditions.tide?.icon}</p>
               <p className="text-xl font-bold text-blue-700">{conditions.tide?.level}</p>
               <p className="text-sm text-gray-600 mt-2">{conditions.tide?.height}m - {conditions.tide?.trend}</p>
-              <div className="mt-3 pt-3 border-t border-gray-200">
-                <p className="text-xs text-gray-600">
-                  Next {conditions.tide?.isRising ? 'High' : 'Low'}: {conditions.tide?.nextHigh?.timeString || conditions.tide?.nextLow?.timeString}
-                </p>
-              </div>
             </div>
 
             {/* Weather */}
@@ -226,7 +221,7 @@ const LandingPage = () => {
       <footer className="bg-gray-900 text-white py-8">
         <div className="max-w-7xl mx-auto px-4 text-center">
           <p className="text-gray-400">
-            © 2025 Fishing Tracker Pro. Made for Mauritius fishermen 🇲🇺
+            © 2025 Fishing Tracker Pro. Made for Mauritius Anglers 🇲🇺
           </p>
           <div className="mt-4 space-x-6">
             <Link to="/privacy" className="text-gray-400 hover:text-white">
@@ -244,53 +239,88 @@ const LandingPage = () => {
 
 // Tide Timeline Component
 const TideTimeline = ({ tide }) => {
-  const currentHeight = parseFloat(tide.height);
-  const nextHighHeight = parseFloat(tide.nextHigh?.height || 1.8);
-  const nextLowHeight = parseFloat(tide.nextLow?.height || 0.3);
-  
-  // Calculate position on timeline (0-100%)
-  const range = nextHighHeight - nextLowHeight;
-  const position = ((currentHeight - nextLowHeight) / range) * 100;
-  
+  const series = Array.isArray(tide.series) ? tide.series : [];
+  if (!series.length) return null;
+
+  // map series to numeric values
+  const points = series.map(s => ({
+    time: s.time,
+    timeString: s.timeString,
+    height: parseFloat(s.height)
+  }));
+
+  const heights = points.map(p => p.height).filter(h => Number.isFinite(h));
+  const minH = Math.min(...heights);
+  const maxH = Math.max(...heights);
+
+  const width = 800; const height = 160; const padding = 20;
+  const plotWidth = width - padding * 2;
+  const plotHeight = height - padding * 2;
+
+  const n = points.length;
+  const getX = (i) => padding + (i / Math.max(1, n - 1)) * plotWidth;
+  const getY = (h) => padding + (1 - (h - minH) / Math.max(1e-6, (maxH - minH))) * plotHeight;
+
+  const polyPoints = points.map((p, i) => `${getX(i)},${getY(p.height)}`).join(' ');
+
+  // determine 'now' position using referenceTime if available
+  let nowX = null;
+  if (tide.referenceTime) {
+    const refMs = new Date(tide.referenceTime).getTime();
+    let bestIdx = 0; let bestDiff = Infinity;
+    for (let i = 0; i < points.length; i++) {
+      const tMs = new Date(points[i].time + '+04:00').getTime();
+      const diff = Math.abs(tMs - refMs);
+      if (diff < bestDiff) { bestDiff = diff; bestIdx = i; }
+    }
+    nowX = getX(bestIdx);
+  }
+
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center mb-2">
-        <div className="text-center">
-          <p className="text-xs text-gray-500">Low Tide</p>
-          <p className="text-sm font-bold text-blue-600">{nextLowHeight}m</p>
-          <p className="text-xs text-gray-500">{tide.nextLow?.timeString}</p>
-        </div>
-        <div className="flex-1 mx-8">
-          <div className="relative h-8 bg-gradient-to-r from-blue-200 via-blue-400 to-blue-200 rounded-full overflow-hidden">
-            <div 
-              className="absolute top-0 h-full w-1 bg-red-500"
-              style={{ left: `${Math.min(100, Math.max(0, position))}%` }}
-            >
-              <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-2 py-1 rounded text-xs whitespace-nowrap">
-                Now: {currentHeight}m
-              </div>
-            </div>
-            {tide.isRising && (
-              <div className="absolute right-2 top-1/2 transform -translate-y-1/2 text-white">
-                →
-              </div>
-            )}
-            {!tide.isRising && (
-              <div className="absolute left-2 top-1/2 transform -translate-y-1/2 text-white">
-                ←
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="text-center">
-          <p className="text-xs text-gray-500">High Tide</p>
-          <p className="text-sm font-bold text-blue-600">{nextHighHeight}m</p>
-          <p className="text-xs text-gray-500">{tide.nextHigh?.timeString}</p>
-        </div>
-      </div>
-      <p className="text-center text-sm text-gray-600">
-        {tide.isRising ? '📈 Tide is rising' : '📉 Tide is falling'}
-      </p>
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-40">
+        {/* grid lines */}
+        {[0,0.25,0.5,0.75,1].map((g, idx) => (
+          <line key={idx} x1={padding} x2={width - padding} y1={padding + g * plotHeight} y2={padding + g * plotHeight} stroke="#e6eef9" strokeWidth="1" />
+        ))}
+
+        {/* polyline tide */}
+        <polyline fill="none" stroke="#4f46e5" strokeWidth="2" points={polyPoints} strokeLinecap="round" strokeLinejoin="round" />
+
+        {/* points */}
+        {points.map((p, i) => (
+          <circle key={p.time} cx={getX(i)} cy={getY(p.height)} r={2} fill="#4f46e5" />
+        ))}
+
+        {/* now marker */}
+        {nowX !== null && (
+          <g>
+            <line x1={nowX} x2={nowX} y1={padding} y2={height - padding} stroke="#ef4444" strokeWidth="1" strokeDasharray="4 2" />
+            <rect x={nowX - 30} y={padding - 18} rx={4} ry={4} width={60} height={16} fill="#ef4444" />
+            <text x={nowX} y={padding - 6} textAnchor="middle" fontSize="10" fill="#fff">Now</text>
+          </g>
+        )}
+      {/* axis labels inside main SVG: y ticks (heights) on right and x ticks (times) on bottom */}
+      {/* y ticks */}
+      {[0,1,2,3,4].map((i) => {
+        const g = i / 4;
+        const y = padding + g * plotHeight;
+        const value = (maxH - g * (maxH - minH)).toFixed(2);
+        return (
+          <text key={`y-${i}`} x={width - padding + 8} y={y + 4} fontSize={11} fill="#64748b">{value}m</text>
+        );
+      })}
+
+      {/* x ticks - show up to ~8 labels evenly along bottom */}
+      {points.map((p, i) => {
+        const step = Math.max(1, Math.floor(points.length / 8));
+        if (i % step !== 0) return null;
+        const x = getX(i);
+        return (
+          <text key={`x-${p.time}`} x={x} y={height - 6} textAnchor="middle" fontSize="11" fill="#64748b">{p.timeString}</text>
+        );
+      })}
+      </svg>
     </div>
   );
 };

@@ -1,6 +1,6 @@
 const express = require('express');
 const { calculateMoonPhase } = require('../utils/moonPhase');
-const { getMauritiusTides } = require('../services/mauritiusTideService');
+const { getWorldTidesData } = require('../services/tideService');
 const { getCurrentWeather } = require('../services/weatherService');
 const { getOpenMeteoMarineData, getSeaSurfaceTemperature } = require('../services/openMeteoService');
 
@@ -14,15 +14,48 @@ router.get('/conditions', async (req, res) => {
     
     const [moonData, tideData, weatherData, marineData, seaTemp] = await Promise.all([
       Promise.resolve(calculateMoonPhase(today)),
-      getMauritiusTides(today),
+      getWorldTidesData(lat, lon, today),
       getCurrentWeather(lat, lon),
       getOpenMeteoMarineData(lat, lon, today),
       getSeaSurfaceTemperature(lat, lon, today)
     ]);
     
+    // Normalize tide data for frontend: add human-readable times and trend
+    const tide = tideData || {};
+    const now = new Date();
+    if (tide.nextHigh && tide.nextHigh.time) {
+      tide.nextHigh.timeString = new Date(tide.nextHigh.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    if (tide.nextLow && tide.nextLow.time) {
+      tide.nextLow.timeString = new Date(tide.nextLow.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    // Prefer isRising provided by the tide service (derived from hourly data);
+    // fallback to next-event ordering if not present.
+    if (typeof tide.isRising === 'boolean') {
+      tide.trend = tide.isRising ? 'rising' : 'falling';
+    } else {
+      try {
+        let nextEvent = null;
+        if (tide.nextHigh && tide.nextLow) {
+          const highTime = new Date(tide.nextHigh.time);
+          const lowTime = new Date(tide.nextLow.time);
+          nextEvent = highTime < lowTime ? 'high' : 'low';
+        } else if (tide.nextHigh) {
+          nextEvent = 'high';
+        } else if (tide.nextLow) {
+          nextEvent = 'low';
+        }
+        tide.isRising = nextEvent === 'high';
+        tide.trend = tide.isRising ? 'rising' : 'falling';
+      } catch (err) {
+        tide.isRising = null;
+        tide.trend = null;
+      }
+    }
+
     res.json({
       moon: moonData,
-      tide: tideData,
+      tide,
       weather: weatherData,
       marine: marineData,
       seaTemperature: seaTemp,

@@ -16,14 +16,14 @@ const About = () => {
           
           <div className="prose prose-lg max-w-none">
             <p className="text-xl text-gray-700 mb-6">
-              Fishing Tracker Pro is designed specifically for fishermen in Mauritius to help track, analyze, and predict the best fishing conditions.
+              Fishing Tracker Pro is designed specifically for Anglers in Mauritius to help track, analyze, and predict the best fishing conditions.
             </p>
 
             <h2 className="text-2xl font-bold text-gray-900 mt-8 mb-4">
               Our Mission
             </h2>
             <p className="text-gray-700 mb-6">
-              We aim to help Mauritian fishermen make data-driven decisions by providing accurate, real-time environmental data and AI-powered insights based on historical catches.
+              We aim to help Mauritian Anglers make data-driven decisions by providing accurate, real-time environmental data and AI-powered insights based on historical catches.
             </p>
 
             <h2 className="text-2xl font-bold text-gray-900 mt-8 mb-4">
@@ -86,7 +86,7 @@ const About = () => {
             <ul className="list-disc list-inside text-gray-700 space-y-2">
               <li>Moon phase calculations using astronomical algorithms</li>
               <li>Tide data based on Mauritius Meteorological Services</li>
-              <li>Weather data from WeatherAPI.com</li>
+              <li>Weather data from \open-meteo.com</li>
               <li>Location data for 60+ fishing spots around Mauritius</li>
             </ul>
 
