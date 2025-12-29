@@ -3,14 +3,8 @@ const { calculateMoonPhase } = require('../utils/moonPhase');
 const { getWorldTidesData } = require('../services/tideService');
 const { getCurrentWeather } = require('../services/weatherService');
 const { allLocations } = require('../data/mauritiusLocations');
-
-exports.getLocations = async (req, res) => {
-  try {
-    res.json({ locations: allLocations });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to get locations' });
-  }
-};
+const { getOpenMeteoMarineData, getSeaSurfaceTemperature } = require('../services/openMeteoService');
+const pool = require('../config/database');
 
 exports.getEnvironmentalData = async (req, res) => {
   try {
@@ -21,19 +15,34 @@ exports.getEnvironmentalData = async (req, res) => {
       return res.status(404).json({ error: 'Location not found' });
     }
 
-    const moonData = calculateMoonPhase(date);
-    const tideData = await getWorldTidesData(location.lat, location.lon, date);
-    const weatherData = await getCurrentWeather(location.lat, location.lon);
+    // Get all environmental data
+    const [moonData, tideData, weatherData, marineData, seaTemp] = await Promise.all([
+      Promise.resolve(calculateMoonPhase(date)),
+      getWorldTidesData(location.lat, location.lon, date),
+      getCurrentWeather(location.lat, location.lon),
+      getOpenMeteoMarineData(location.lat, location.lon, date),
+      getSeaSurfaceTemperature(location.lat, location.lon, date)
+    ]);
 
     res.json({
       moon: moonData,
       tide: tideData,
       weather: weatherData,
+      marine: marineData,
+      seaTemperature: seaTemp,
       location: location
     });
   } catch (error) {
     console.error('Environmental data error:', error);
     res.status(500).json({ error: 'Failed to get environmental data' });
+  }
+};
+
+exports.getLocations = async (req, res) => {
+  try {
+    res.json({ locations: allLocations });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get locations' });
   }
 };
 
@@ -140,9 +149,12 @@ exports.getStatistics = async (req, res) => {
 exports.getGlobalPredictions = async (req, res) => {
   try {
     // Get ALL fishing logs from ALL users for predictions
+    // Handle both boolean true and string 'yes' for backwards compatibility
     const query = `
       SELECT * FROM fishing_logs 
       WHERE caught_fish = true 
+      OR caught_fish = 'yes'
+      OR CAST(caught_fish AS TEXT) = 'true'
       ORDER BY log_date DESC 
       LIMIT 500
     `;

@@ -3,8 +3,6 @@ import { authAPI } from '../services/api';
 
 const AuthContext = createContext();
 
-export const useAuth = () => useContext(AuthContext);
-
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -21,6 +19,7 @@ export const AuthProvider = ({ children }) => {
         setUser(response.data.user);
       } catch (error) {
         localStorage.removeItem('token');
+        setUser(null);
       }
     }
     setLoading(false);
@@ -33,8 +32,8 @@ export const AuthProvider = ({ children }) => {
     return response.data;
   };
 
-  const register = async (userData) => {
-    const response = await authAPI.register(userData);
+    const register = async (credentials) => {
+    const response = await authAPI.register(credentials);
     localStorage.setItem('token', response.data.token);
     setUser(response.data.user);
     return response.data;
@@ -56,4 +55,12 @@ export const AuthProvider = ({ children }) => {
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };

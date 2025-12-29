@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Fish, Moon, Waves, Sun, Wind, Eye, Menu, X } from 'lucide-react';
+import { Fish, Moon, Waves, Sun, Wind, Eye, Menu, X, Thermometer } from 'lucide-react';
 import axios from 'axios';
 import PublicNav from './PublicNav';
 
@@ -112,6 +112,27 @@ const LandingPage = () => {
               <p className="text-4xl mb-2">{conditions.weather?.icon}</p>
               <p className="text-xl font-bold text-orange-700">{conditions.weather?.temperature}°C</p>
               <p className="text-sm text-gray-600 mt-2">{conditions.weather?.description}</p>
+            </div>
+
+            {/* Sea Temperature */}
+            <div className="bg-white rounded-2xl shadow-xl p-6 border-2 border-teal-200 hover:shadow-2xl transition-shadow">
+              <Thermometer className="w-12 h-12 text-teal-600 mb-4" />
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">Sea Temperature</h3>
+              <p className="text-xl font-bold text-teal-700">
+                {conditions.seaTemperature?.temperature}°C
+              </p>
+              <p className="text-sm text-gray-600 mt-2">
+                {conditions.seaTemperature?.description}
+              </p>
+            </div>
+
+            {/* Wave Height */}
+            <div className="bg-white rounded-2xl shadow-xl p-6 border-2 border-cyan-200 hover:shadow-2xl transition-shadow">
+              <Waves className="w-12 h-12 text-cyan-600 mb-4" />
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">Wave Height</h3>
+              <p className="text-4xl mb-2">{conditions.marine?.icon}</p>
+              <p className="text-xl font-bold text-cyan-700">{conditions.marine?.waveHeight}m</p>
+              <p className="text-sm text-gray-600 mt-2">{conditions.marine?.condition}</p>
             </div>
 
             {/* Wind */}

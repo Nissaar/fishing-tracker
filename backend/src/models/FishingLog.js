@@ -98,6 +98,42 @@ class FishingLog {
     const result = await pool.query(query, [userId]);
     return result.rows[0];
   }
+
+  static async create(userId, logData) {
+  const query = `
+    INSERT INTO fishing_logs (
+      user_id, log_date, location, location_name, caught_fish, fish_count, 
+      fish_types, fishing_type, fishing_method, moon_phase, sea_level, 
+      sea_temperature, wave_height, tide_data, weather_data, hook_setup, bait, notes
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+    RETURNING *
+  `;
+  const values = [
+    userId,
+    logData.date,
+    logData.location,
+    logData.locationName,
+    logData.caughtFish,
+    logData.fishCount || 0,
+    JSON.stringify(logData.fishTypes || []),
+    logData.fishingType || null,
+    logData.fishingMethod || null,
+    logData.moonPhase,
+    logData.seaLevel,
+    logData.seaTemperature || null,
+    logData.waveHeight || null,
+    JSON.stringify(logData.tideData || {}),
+    JSON.stringify(logData.weatherData || {}),
+    logData.hookSetup,
+    logData.bait,
+    logData.notes || ''
+  ];
+  const result = await pool.query(query, values);
+  return result.rows[0];
 }
+}
+
+
 
 module.exports = FishingLog;

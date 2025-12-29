@@ -107,6 +107,8 @@ const DataTable = () => {
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Moon</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Tide</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Bait</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Type</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Method</th>
                 <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Actions</th>
               </tr>
             </thead>
@@ -143,6 +145,10 @@ const DataTable = () => {
                     <td className="px-4 py-3 text-sm text-gray-900">{log.moon_phase}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">{log.sea_level?.split(' ')[0] || '-'}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">{log.bait || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{log.fishing_type || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      {log.fishing_method === 'boat' ? '🚤 Boat' : '🏖️ Land'}
+                    </td>
                     <td className="px-4 py-3 text-right">
                       <button
                         onClick={() => handleDelete(log.id)}

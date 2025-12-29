@@ -8,13 +8,14 @@ require('dotenv').config();
 const passport = require('./config/passport');
 const authRoutes = require('./routes/authRoutes');
 const fishingRoutes = require('./routes/fishingRoutes');
+const publicRoutes = require('./routes/publicRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(helmet());
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || '*',
+  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : '*',
   credentials: true
 }));
 app.use(morgan('combined'));
@@ -30,6 +31,10 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
+// Public routes (no authentication needed)
+app.use('/api/public', publicRoutes);
+
+// Protected routes
 app.use('/api/auth', authRoutes);
 app.use('/api/fishing', fishingRoutes);
 
@@ -46,11 +51,3 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
 });
-
-
-const publicRoutes = require('./routes/publicRoutes');
-
-// Add this line BEFORE auth routes (no authentication needed)
-app.use('/api/public', publicRoutes);
-app.use('/api/auth', authRoutes);
-app.use('/api/fishing', fishingRoutes);

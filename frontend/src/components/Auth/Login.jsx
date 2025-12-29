@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 import { Fish, Mail, Lock } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 
 const Login = () => {
   const { login } = useAuth();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
 
@@ -15,6 +16,7 @@ const Login = () => {
     try {
       await login(formData);
       toast.success('Login successful!');
+      navigate('/dashboard');
     } catch (error) {
       toast.error(error.response?.data?.error || 'Login failed');
     } finally {

@@ -1,4 +1,48 @@
 const axios = require('axios');
+const { getMauritiusTides } = require('./mauritiusTideService');
+
+async function getWorldTidesData(lat, lon, date) {
+  try {
+    // First try Mauritius-specific tides
+    if (lat < -19 && lat > -21 && lon > 56 && lon < 58) {
+      return await getMauritiusTides(date);
+    }
+    
+    // Then try WorldTides API if key provided
+    if (process.env.WORLDTIDES_API_KEY && 
+        process.env.WORLDTIDES_API_KEY !== 'your-worldtides-api-key' &&
+        process.env.WORLDTIDES_API_KEY !== 'using-free-fallback-calculations') {
+      
+      const dateObj = new Date(date);
+      const timestamp = Math.floor(dateObj.getTime() / 1000);
+      
+      const response = await axios.get('https://www.worldtides.info/api/v3', {
+        params: {
+          extremes: true,
+          heights: true,
+          lat: lat,
+          lon: lon,
+          start: timestamp,
+          length: 86400,
+          key: process.env.WORLDTIDES_API_KEY,
+          datum: 'LAT'
+        },
+        timeout: 5000
+      });
+
+      // Process WorldTides response...
+      return processWorldTidesResponse(response.data, timestamp);
+    }
+    
+    // Fallback to Mauritius calculation
+    return await getMauritiusTides(date);
+  } catch (error) {
+    console.log('Tide API error, using Mauritius calculation');
+    return await getMauritiusTides(date);
+  }
+}
+
+function processWorldTidesResponse(data, currentTime) {
 
 async function getWorldTidesData(lat, lon, date) {
   try {
@@ -108,6 +152,7 @@ function calculateFallbackTide(dateStr) {
     unit: 'meters',
     source: 'Calculated (Mauritius)'
   };
+}
 }
 
 module.exports = { getWorldTidesData };

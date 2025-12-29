@@ -1,10 +1,12 @@
-FROM node:18-alpine as build
+FROM node:20-alpine as build
 
 WORKDIR /app
 
+ENV NODE_OPTIONS=--no-network-family-autoselection
+
 COPY package*.json ./
 
-RUN npm install
+RUN npm install --verbose
 
 #RUN npm ci
 
