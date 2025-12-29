@@ -153,13 +153,13 @@ const Register = () => {
             Login
           </Link>
         </p>
-      </div>
-      <Link
+        <Link
             to="/"
             className="text-center text-gray-600 hover:text-blue-600 mt-4 block"
           >
             ← Back to Homepage
       </Link>
+      </div>
     </div>
   );
 };
