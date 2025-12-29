@@ -88,3 +88,14 @@ CREATE TABLE IF NOT EXISTS fishing_logs (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Add new columns
+ALTER TABLE fishing_logs ADD COLUMN IF NOT EXISTS tide_height DECIMAL(5,2);
+
+-- Update existing records to have tide_height from tide_data
+UPDATE fishing_logs 
+SET tide_height = CAST((tide_data->>'height')::text AS DECIMAL(5,2))
+WHERE tide_data IS NOT NULL;
+
+-- Exit
+\q

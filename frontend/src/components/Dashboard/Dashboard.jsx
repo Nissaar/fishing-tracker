@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Calendar, Fish, Activity, TrendingUp, Table, LogOut, User } from 'lucide-react';
+import { Calendar, Fish, Activity, TrendingUp, Table, LogOut, User, MapPin } from 'lucide-react';
 import Header from '../Layout/Header';
 import LogTrip from './LogTrip';
 import Reports from './Reports';
 import Predictions from './Predictions';
 import DataTable from './DataTable';
+import BrowseLocation from './BrowseLocation';
+import BestConditions from './BestConditions';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -16,6 +18,8 @@ const Dashboard = () => {
     { id: 'table', name: 'View Data', icon: Table },
     { id: 'reports', name: 'Reports', icon: Activity },
     { id: 'predictions', name: 'Predictions', icon: TrendingUp },
+    { id: 'browse', name: 'Browse Locations', icon: MapPin },
+    { id: 'best', name: 'Best Conditions', icon: TrendingUp },
   ];
 
   return (
@@ -48,6 +52,8 @@ const Dashboard = () => {
             {activeTab === 'table' && <DataTable />}
             {activeTab === 'reports' && <Reports />}
             {activeTab === 'predictions' && <Predictions />}
+            {activeTab === 'browse' && <BrowseLocation />}
+            {activeTab === 'best' && <BestConditions />}
           </div>
         </div>
       </div>

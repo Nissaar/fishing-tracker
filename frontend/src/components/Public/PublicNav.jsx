@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Fish, Menu, X } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 const PublicNav = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const { isAuthenticated } = useAuth();
 
   return (
     <nav className="bg-white shadow-lg sticky top-0 z-50">
@@ -25,18 +27,30 @@ const PublicNav = () => {
             <Link to="/privacy" className="text-gray-700 hover:text-blue-600 font-medium">
               Privacy
             </Link>
-            <Link
-              to="/login"
-              className="text-blue-600 hover:text-blue-700 font-semibold"
-            >
-              Sign In
-            </Link>
-            <Link
-              to="/register"
-              className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-            >
-              Get Started
-            </Link>
+            
+            {isAuthenticated ? (
+              <Link
+                to="/dashboard"
+                className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+              >
+                Dashboard
+              </Link>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className="text-blue-600 hover:text-blue-700 font-semibold"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  to="/register"
+                  className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                >
+                  Get Started
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -76,20 +90,33 @@ const PublicNav = () => {
             >
               Privacy
             </Link>
-            <Link
-              to="/login"
-              className="block py-2 text-blue-600 hover:text-blue-700 font-semibold"
-              onClick={() => setIsOpen(false)}
-            >
-              Sign In
-            </Link>
-            <Link
-              to="/register"
-              className="block py-2 bg-blue-600 text-white text-center rounded-lg font-semibold hover:bg-blue-700"
-              onClick={() => setIsOpen(false)}
-            >
-              Get Started
-            </Link>
+            
+            {isAuthenticated ? (
+              <Link
+                to="/dashboard"
+                className="block py-2 bg-blue-600 text-white text-center rounded-lg font-semibold hover:bg-blue-700"
+                onClick={() => setIsOpen(false)}
+              >
+                Dashboard
+              </Link>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className="block py-2 text-blue-600 hover:text-blue-700 font-semibold"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Sign In
+                </Link>
+                <Link
+                  to="/register"
+                  className="block py-2 bg-blue-600 text-white text-center rounded-lg font-semibold hover:bg-blue-700"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Get Started
+                </Link>
+              </>
+            )}
           </div>
         )}
       </div>

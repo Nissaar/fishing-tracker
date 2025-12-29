@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 import { Fish } from 'lucide-react';
 
 const Register = () => {
   const { register } = useAuth();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -17,6 +18,27 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Password validation
+    if (formData.password.length < 8) {
+      toast.error('Password must be at least 8 characters');
+      return;
+    }
+    if (!/[A-Z]/.test(formData.password)) {
+      toast.error('Password must contain at least one uppercase letter');
+      return;
+    }
+    if (!/[a-z]/.test(formData.password)) {
+      toast.error('Password must contain at least one lowercase letter');
+      return;
+    }
+    if (!/[0-9]/.test(formData.password)) {
+      toast.error('Password must contain at least one number');
+      return;
+    }
+    if (!/[!@#$%^&*]/.test(formData.password)) {
+      toast.error('Password must contain at least one special character (!@#$%^&*)');
+      return;
+    }
     if (formData.password !== formData.confirmPassword) {
       toast.error('Passwords do not match');
       return;
@@ -30,6 +52,7 @@ const Register = () => {
         password: formData.password
       });
       toast.success('Registration successful!');
+      navigate('/dashboard');
     } catch (error) {
       toast.error(error.response?.data?.error || 'Registration failed');
     } finally {
@@ -50,7 +73,7 @@ const Register = () => {
           <p className="text-gray-600 mt-2">Join Fishing Tracker Pro</p>
         </div>
 
-        <div className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="text"
             placeholder="Username"
@@ -75,6 +98,16 @@ const Register = () => {
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             required
           />
+          <div className="text-xs text-gray-600 mt-1 pl-2">
+            <p className="font-semibold">Password must contain:</p>
+            <ul className="list-disc list-inside mt-1 space-y-0.5">
+              <li className={formData.password.length >= 8 ? 'text-green-600' : ''}>At least 8 characters</li>
+              <li className={/[A-Z]/.test(formData.password) ? 'text-green-600' : ''}>One uppercase letter</li>
+              <li className={/[a-z]/.test(formData.password) ? 'text-green-600' : ''}>One lowercase letter</li>
+              <li className={/[0-9]/.test(formData.password) ? 'text-green-600' : ''}>One number</li>
+              <li className={/[!@#$%^&*]/.test(formData.password) ? 'text-green-600' : ''}>One special character (!@#$%^&*)</li>
+            </ul>
+          </div>
           <input
             type="password"
             placeholder="Confirm Password"
@@ -84,13 +117,13 @@ const Register = () => {
             required
           />
           <button
-            onClick={handleSubmit}
+            type="submit"
             disabled={loading}
             className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-cyan-700 transition-all disabled:opacity-50"
           >
             {loading ? 'Creating account...' : 'Register'}
           </button>
-        </div>
+        </form>
 
         <div className="relative my-6">
           <div className="absolute inset-0 flex items-center">
@@ -121,6 +154,12 @@ const Register = () => {
           </Link>
         </p>
       </div>
+      <Link
+            to="/"
+            className="text-center text-gray-600 hover:text-blue-600 mt-4 block"
+          >
+            ← Back to Homepage
+      </Link>
     </div>
   );
 };

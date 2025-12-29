@@ -10,8 +10,8 @@ const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+const handleSubmit = async (e) => {
+    e.preventDefault(); // This allows Enter key to work
     setLoading(true);
     try {
       await login(formData);
@@ -37,7 +37,7 @@ const Login = () => {
           <p className="text-gray-600 mt-2">Mauritius Edition</p>
         </div>
 
-        <div className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="email"
             placeholder="Email"
@@ -55,13 +55,13 @@ const Login = () => {
             required
           />
           <button
-            onClick={handleSubmit}
+            type="submit"
             disabled={loading}
             className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-cyan-700 transition-all disabled:opacity-50"
           >
             {loading ? 'Logging in...' : 'Login'}
           </button>
-        </div>
+        </form>
 
         <div className="relative my-6">
           <div className="absolute inset-0 flex items-center">
@@ -73,6 +73,7 @@ const Login = () => {
         </div>
 
         <button
+          type="button"
           onClick={handleGoogleLogin}
           className="w-full flex items-center justify-center gap-3 bg-white border-2 border-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-50 transition-colors"
         >
@@ -92,6 +93,12 @@ const Login = () => {
           </Link>
         </p>
       </div>
+      <Link
+            to="/"
+            className="text-center text-gray-600 hover:text-blue-600 mt-4 block"
+          >
+            ← Back to Homepage
+      </Link>
     </div>
   );
 };

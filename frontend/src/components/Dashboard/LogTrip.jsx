@@ -1,14 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { fishingAPI } from '../../services/api';
+import axios from 'axios';
 import { toast } from 'react-toastify';
 import { Calendar, MapPin, Fish, Moon, Waves, Sun, Loader, Thermometer, Wind } from 'lucide-react';
 
 const LogTrip = () => {
   const [locations, setLocations] = useState([]);
+  const [fishSpecies, setFishSpecies] = useState([]);
   const [filteredLocations, setFilteredLocations] = useState([]);
+  const [filteredFish, setFilteredFish] = useState([]);
   const [locationSearch, setLocationSearch] = useState('');
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
   const locationRef = useRef(null);
+  
+  const fishingTypes = ['Casting', 'Jigging', 'Lapess Couler/Couler', 'Dropshot'];
+  const fishingMethods = ['land', 'boat'];
   
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -21,6 +27,9 @@ const LogTrip = () => {
     fishTypes: [],
     hookSetup: '',
     bait: '',
+    baitOther: '',
+    jighead: '',
+    softbait: '',
     notes: ''
   });
   
@@ -29,8 +38,7 @@ const LogTrip = () => {
   const [loadingEnv, setLoadingEnv] = useState(false);
 
   useEffect(() => {
-    loadLocations();
-    // Close dropdown when clicking outside
+    loadData();
     const handleClickOutside = (event) => {
       if (locationRef.current && !locationRef.current.contains(event.target)) {
         setShowLocationDropdown(false);
@@ -47,28 +55,31 @@ const LogTrip = () => {
   }, [formData.location, formData.date]);
 
   useEffect(() => {
-    // Filter locations based on search
     if (locationSearch) {
       const filtered = locations.filter(loc =>
         loc.name.toLowerCase().includes(locationSearch.toLowerCase()) ||
-        loc.region.toLowerCase().includes(locationSearch.toLowerCase()) ||
-        loc.type.toLowerCase().includes(locationSearch.toLowerCase())
+        loc.region.toLowerCase().includes(locationSearch.toLowerCase())
       );
       setFilteredLocations(filtered);
       setShowLocationDropdown(true);
     } else {
       setFilteredLocations(locations);
-      setShowLocationDropdown(false);
     }
   }, [locationSearch, locations]);
 
-  const loadLocations = async () => {
+  const loadData = async () => {
     try {
-      const response = await fishingAPI.getLocations();
-      setLocations(response.data.locations);
-      setFilteredLocations(response.data.locations);
+      const [locsRes, fishRes] = await Promise.all([
+        fishingAPI.getLocations(),
+        axios.get(`${process.env.REACT_APP_API_URL}/fishing/fish-species`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        })
+      ]);
+      setLocations(locsRes.data.locations);
+      setFilteredLocations(locsRes.data.locations);
+      setFishSpecies(fishRes.data.species);
     } catch (error) {
-      toast.error('Failed to load locations');
+      toast.error('Failed to load data');
     }
   };
 
@@ -94,6 +105,38 @@ const LogTrip = () => {
     setShowLocationDropdown(false);
   };
 
+  const getBaitOptions = () => {
+    switch (formData.fishingType) {
+      case 'Lapess Couler/Couler':
+        return ['Calamar', 'Baby calamar', 'Shrimp/Crevette', 'Macro', 'Bonit'];
+      case 'Casting':
+        return ['Tidelures', 'Ti Tracer', 'Ton Zorz', 'Others'];
+      case 'Dropshot':
+        return 'special'; // Special case with 2 inputs
+      case 'Jigging':
+        return 'input'; // Free input
+      default:
+        return [];
+    }
+  };
+
+  const updateFishType = (index, value) => {
+    const newFishTypes = [...formData.fishTypes];
+    newFishTypes[index] = value;
+    setFormData({ ...formData, fishTypes: newFishTypes });
+  };
+
+  const handleFishSearch = (index, searchValue) => {
+    if (searchValue) {
+      const filtered = fishSpecies.filter(fish =>
+        fish.display.toLowerCase().includes(searchValue.toLowerCase())
+      );
+      setFilteredFish(filtered);
+    } else {
+      setFilteredFish([]);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!formData.location) {
       toast.error('Please select a location');
@@ -101,7 +144,7 @@ const LogTrip = () => {
     }
 
     if (!formData.fishingType) {
-      toast.error('Please enter fishing type');
+      toast.error('Please select fishing type');
       return;
     }
 
@@ -110,14 +153,23 @@ const LogTrip = () => {
       return;
     }
 
+    // Determine final bait value
+    let finalBait = formData.bait;
+    if (formData.fishingType === 'Dropshot') {
+      finalBait = `Jighead: ${formData.jighead}, Softbait: ${formData.softbait}`;
+    } else if (formData.bait === 'Others') {
+      finalBait = formData.baitOther;
+    }
+
     setLoading(true);
     try {
       const logData = {
         ...formData,
-        caughtFish: formData.caughtFish === 'yes',
+        bait: finalBait,
         moonPhase: `${environmentalData.moon.emoji} ${environmentalData.moon.phase}`,
         seaLevel: `${environmentalData.tide.level} (${environmentalData.tide.height}m)`,
         seaTemperature: parseFloat(environmentalData.seaTemperature?.temperature || 0),
+        tideHeight: parseFloat(environmentalData.tideHeight?.height || 0),
         waveHeight: parseFloat(environmentalData.marine?.waveHeight || 0),
         tideData: environmentalData.tide,
         weatherData: environmentalData.weather
@@ -138,6 +190,9 @@ const LogTrip = () => {
         fishTypes: [],
         hookSetup: '',
         bait: '',
+        baitOther: '',
+        jighead: '',
+        softbait: '',
         notes: ''
       });
       setLocationSearch('');
@@ -148,6 +203,8 @@ const LogTrip = () => {
       setLoading(false);
     }
   };
+
+  const baitOptions = getBaitOptions();
 
   return (
     <div className="space-y-6">
@@ -169,19 +226,18 @@ const LogTrip = () => {
         <div ref={locationRef} className="relative">
           <label className="block text-sm font-semibold text-gray-700 mb-2">
             <MapPin className="w-4 h-4 inline mr-1" />
-            Location (Start typing or select)
+            Location
           </label>
           <input
             type="text"
             value={locationSearch}
             onChange={(e) => setLocationSearch(e.target.value)}
             onFocus={() => setShowLocationDropdown(true)}
-            placeholder="Type location name..."
+            placeholder="Start typing location..."
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             required
           />
           
-          {/* Autocomplete Dropdown */}
           {showLocationDropdown && filteredLocations.length > 0 && (
             <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
               {filteredLocations.map((location) => (
@@ -201,26 +257,27 @@ const LogTrip = () => {
         </div>
       </div>
 
-      {/* NEW: Fishing Type and Method */}
       <div className="grid md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">
-            <Fish className="w-4 h-4 inline mr-1" />
             Type of Fishing
           </label>
-          <input
-            type="text"
+          <select
             value={formData.fishingType}
-            onChange={(e) => setFormData({ ...formData, fishingType: e.target.value })}
-            placeholder="e.g., Bottom fishing, Trolling, Jigging"
+            onChange={(e) => setFormData({ ...formData, fishingType: e.target.value, bait: '', baitOther: '', jighead: '', softbait: '' })}
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             required
-          />
+          >
+            <option value="">Select type...</option>
+            {fishingTypes.map(type => (
+              <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
         </div>
 
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">
-            🚤 Fishing Method
+            Fishing Method
           </label>
           <select
             value={formData.fishingMethod}
@@ -234,6 +291,63 @@ const LogTrip = () => {
         </div>
       </div>
 
+      {/* Bait Selection */}
+      {formData.fishingType && (
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            Bait Used
+          </label>
+          {baitOptions === 'input' ? (
+            <input
+              type="text"
+              value={formData.bait}
+              onChange={(e) => setFormData({ ...formData, bait: e.target.value })}
+              placeholder="Enter bait..."
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+          ) : baitOptions === 'special' ? (
+            <div className="grid md:grid-cols-2 gap-4">
+              <input
+                type="text"
+                value={formData.jighead}
+                onChange={(e) => setFormData({ ...formData, jighead: e.target.value })}
+                placeholder="Jighead..."
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                value={formData.softbait}
+                onChange={(e) => setFormData({ ...formData, softbait: e.target.value })}
+                placeholder="Softbait..."
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          ) : Array.isArray(baitOptions) ? (
+            <>
+              <select
+                value={formData.bait}
+                onChange={(e) => setFormData({ ...formData, bait: e.target.value, baitOther: '' })}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select bait...</option>
+                {baitOptions.map(bait => (
+                  <option key={bait} value={bait}>{bait}</option>
+                ))}
+              </select>
+              {formData.bait === 'Others' && (
+                <input
+                  type="text"
+                  value={formData.baitOther}
+                  onChange={(e) => setFormData({ ...formData, baitOther: e.target.value })}
+                  placeholder="Specify other bait..."
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 mt-2"
+                />
+              )}
+            </>
+          ) : null}
+        </div>
+      )}
+
       {loadingEnv && (
         <div className="bg-blue-50 p-4 rounded-lg flex items-center gap-3">
           <Loader className="w-5 h-5 animate-spin text-blue-600" />
@@ -242,64 +356,44 @@ const LogTrip = () => {
       )}
 
       {environmentalData && !loadingEnv && (
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Moon Phase */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-4">
           <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
             <Moon className="w-6 h-6 text-purple-600 mb-2" />
             <p className="text-sm text-gray-600 mb-1">Moon Phase</p>
             <p className="text-xl font-bold text-purple-700">
               {environmentalData.moon.emoji} {environmentalData.moon.phase}
             </p>
-            <p className="text-xs text-purple-600 mt-1">
-              {environmentalData.moon.illumination}% illuminated
-            </p>
           </div>
 
-          {/* Tide */}
           <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
             <Waves className="w-6 h-6 text-blue-600 mb-2" />
-            <p className="text-sm text-gray-600 mb-1">Tide Level</p>
+            <p className="text-sm text-gray-600 mb-1">Tide Height</p>
             <p className="text-xl font-bold text-blue-700">
-              {environmentalData.tide.level}
-            </p>
-            <p className="text-xs text-blue-600 mt-1">
-              {environmentalData.tide.height}m - {environmentalData.tide.trend}
+              {environmentalData.tideHeight?.height}m
             </p>
           </div>
 
-          {/* Weather */}
           <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
             <Sun className="w-6 h-6 text-orange-600 mb-2" />
             <p className="text-sm text-gray-600 mb-1">Weather</p>
             <p className="text-xl font-bold text-orange-700">
               {environmentalData.weather.icon} {environmentalData.weather.temperature}°C
             </p>
-            <p className="text-xs text-orange-600 mt-1">
-              {environmentalData.weather.description}
-            </p>
           </div>
 
-          {/* Wave Height */}
           <div className="bg-cyan-50 p-4 rounded-lg border border-cyan-200">
             <Wind className="w-6 h-6 text-cyan-600 mb-2" />
-            <p className="text-sm text-gray-600 mb-1">Wave Height</p>
+            <p className="text-sm text-gray-600 mb-1">Wave</p>
             <p className="text-xl font-bold text-cyan-700">
-              {environmentalData.marine?.icon} {environmentalData.marine?.waveHeight}m
-            </p>
-            <p className="text-xs text-cyan-600 mt-1">
-              {environmentalData.marine?.condition}
+              {environmentalData.marine?.waveHeight}m
             </p>
           </div>
 
-          {/* Sea Temperature */}
           <div className="bg-teal-50 p-4 rounded-lg border border-teal-200">
             <Thermometer className="w-6 h-6 text-teal-600 mb-2" />
-            <p className="text-sm text-gray-600 mb-1">Sea Temperature</p>
+            <p className="text-sm text-gray-600 mb-1">Sea Temp</p>
             <p className="text-xl font-bold text-teal-700">
-              🌡️ {environmentalData.seaTemperature?.temperature}°C
-            </p>
-            <p className="text-xs text-teal-600 mt-1">
-              {environmentalData.seaTemperature?.description}
+              {environmentalData.seaTemperature?.temperature}°C
             </p>
           </div>
         </div>
@@ -307,13 +401,12 @@ const LogTrip = () => {
 
       <div>
         <label className="block text-sm font-semibold text-gray-700 mb-2">
-          <Fish className="w-4 h-4 inline mr-1" />
           Did you catch fish?
         </label>
         <select
           value={formData.caughtFish}
           onChange={(e) => setFormData({ ...formData, caughtFish: e.target.value, fishCount: 0, fishTypes: [] })}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 hover:bg-blue-50 appearance-none"
+          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
         >
           <option value="no">No</option>
           <option value="yes">Yes</option>
@@ -328,20 +421,16 @@ const LogTrip = () => {
             </label>
             <input
               type="number"
-              min="0"
-              value={formData.fishCount || ''}
+              min="1"
+              value={formData.fishCount}
               onChange={(e) => {
-                let count = parseInt(e.target.value);
-                if (isNaN(count) || e.target.value === '') {
-                  count = 0;
-                }
+                const count = parseInt(e.target.value) || 0;
                 setFormData({
                   ...formData,
                   fishCount: count,
                   fishTypes: Array(count).fill('')
                 });
               }}
-              placeholder="Enter number of fish caught"
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
             />
           </div>
@@ -352,18 +441,24 @@ const LogTrip = () => {
                 What fish did you catch?
               </label>
               {Array.from({ length: formData.fishCount }).map((_, index) => (
-                <input
-                  key={index}
-                  type="text"
-                  placeholder={`Fish ${index + 1} (e.g., Marlin, Tuna, Dorado)`}
-                  value={formData.fishTypes[index] || ''}
-                  onChange={(e) => {
-                    const newTypes = [...formData.fishTypes];
-                    newTypes[index] = e.target.value;
-                    setFormData({ ...formData, fishTypes: newTypes });
-                  }}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                />
+                <div key={index} className="relative">
+                  <input
+                    type="text"
+                    list={`fish-list-${index}`}
+                    placeholder={`Fish ${index + 1} (start typing...)`}
+                    value={formData.fishTypes[index] || ''}
+                    onChange={(e) => {
+                      updateFishType(index, e.target.value);
+                      handleFishSearch(index, e.target.value);
+                    }}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                  />
+                  <datalist id={`fish-list-${index}`}>
+                    {fishSpecies.map(fish => (
+                      <option key={fish.id} value={fish.display} />
+                    ))}
+                  </datalist>
+                </div>
               ))}
             </div>
           )}
@@ -386,29 +481,16 @@ const LogTrip = () => {
 
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">
-            Bait Used
+            Notes (Optional)
           </label>
           <input
             type="text"
-            value={formData.bait}
-            onChange={(e) => setFormData({ ...formData, bait: e.target.value })}
-            placeholder="e.g., Live bait, lures, squid"
+            value={formData.notes}
+            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+            placeholder="Additional notes..."
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
           />
         </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-2">
-          Notes (Optional)
-        </label>
-        <textarea
-          value={formData.notes}
-          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-          placeholder="Any additional notes about your trip..."
-          rows="3"
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-        />
       </div>
 
       <button
