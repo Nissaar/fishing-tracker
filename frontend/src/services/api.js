@@ -28,7 +28,11 @@ export const authAPI = {
 
 export const fishingAPI = {
   getLocations: () => api.get('/fishing/locations'),
-  getEnvironmentalData: (date, locationId) => api.get('/fishing/environmental-data', { params: { date, locationId } }),
+  getEnvironmentalData: (date, locationId) => {
+    const dateObj = new Date(date);
+    const ref = encodeURIComponent(dateObj.toISOString());
+    return api.get('/fishing/environmental-data', { params: { date, locationId, referenceTime: ref } });
+  },
   createLog: (logData) => api.post('/fishing/logs', logData),
   getLogs: (limit) => api.get('/fishing/logs', { params: { limit } }),
   getLog: (id) => api.get(`/fishing/logs/${id}`),

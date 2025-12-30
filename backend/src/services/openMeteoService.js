@@ -77,18 +77,93 @@ async function getOpenMeteoMarineData(lat, lon, date) {
 }
 
 /**
+ * Get hourly weather (temperature, wind) for a specific reference time using Open-Meteo Forecast API
+ */
+async function getWeatherForReference(lat, lon, referenceTime) {
+  try {
+    const dt = new Date(referenceTime);
+    const dateStr = dt.toISOString().split('T')[0];
+    const hour = dt.getHours();
+
+    const response = await axios.get('https://api.open-meteo.com/v1/forecast', {
+      params: {
+        latitude: lat,
+        longitude: lon,
+        hourly: 'temperature_2m,windspeed_10m,winddirection_10m,precipitation,cloudcover',
+        timezone: 'Indian/Mauritius',
+        start_date: dateStr,
+        end_date: dateStr
+      },
+      timeout: 5000
+    });
+
+    const data = response.data;
+    const temps = data.hourly?.temperature_2m || [];
+    const winds = data.hourly?.windspeed_10m || [];
+    const windDirs = data.hourly?.winddirection_10m || [];
+    const clouds = data.hourly?.cloudcover || [];
+    const precip = data.hourly?.precipitation || [];
+
+    const temperature = typeof temps[hour] === 'number' ? temps[hour] : (temps[0] || 26);
+    const windSpeed = typeof winds[hour] === 'number' ? winds[hour] / 3.6 : (winds[0] ? winds[0] / 3.6 : 5); // convert km/h to m/s
+    const windDirection = typeof windDirs[hour] === 'number' ? windDirs[hour] : 0;
+    const cloud = typeof clouds[hour] === 'number' ? clouds[hour] : 50;
+    const rain = typeof precip[hour] === 'number' ? precip[hour] : 0;
+
+    // Simple description
+    let description = 'Clear';
+    if (rain > 0.5) description = 'Rain';
+    else if (cloud > 70) description = 'Cloudy';
+    else if (cloud > 30) description = 'Partly Cloudy';
+
+    // Simple rating logic similar to weatherService
+    let rating = 'good';
+    let advice = '✅ Good fishing conditions';
+    if (windSpeed > 15 || rain > 10) { rating = 'poor'; advice = '❌ Not recommended - dangerous conditions'; }
+    else if (windSpeed > 10 || rain > 5) { rating = 'poor'; advice = '⚠️ Poor conditions - stay ashore'; }
+    else if (windSpeed > 7 || rain > 2 || cloud > 85) { rating = 'fair'; advice = '⚠️ Fair - experienced anglers only'; }
+    else if (windSpeed < 5 && cloud < 40 && rain === 0) { rating = 'excellent'; advice = '✅ Excellent - perfect fishing weather!'; }
+
+    return {
+      temperature: Number(temperature).toFixed(1),
+      windSpeed: Number(windSpeed).toFixed(1),
+      windDirection,
+      clouds: cloud,
+      description,
+      icon: description === 'Rain' ? '🌧️' : cloud > 70 ? '☁️' : '☀️',
+      conditions: { rating, advice, description },
+      source: 'Open-Meteo Forecast'
+    };
+  } catch (err) {
+    console.log('Open-Meteo weather error:', err.message);
+    return {
+      temperature: '26.0',
+      windSpeed: '5.0',
+      windDirection: 90,
+      clouds: 50,
+      description: 'Typical Mauritius weather',
+      icon: '⛅',
+      conditions: { rating: 'good', advice: '✅ Generally good fishing conditions', description: 'Typical Mauritius weather' },
+      source: 'Default'
+    };
+  }
+}
+
+/**
  * Get tide height from Open-Meteo Marine API
  */
-async function getTideHeight(lat, lon, date) {
+async function getTideHeight(lat, lon, date, referenceTimeOverride) {
   try {
+    const dateStr = new Date(date).toISOString().split('T')[0];
     const response = await axios.get('https://marine-api.open-meteo.com/v1/marine', {
       params: {
         latitude: lat,
         longitude: lon,
         hourly: 'sea_level_height_msl',
         current: 'sea_level_height_msl',
-        timezone: 'auto',
-        forecast_days: 1
+        timezone: 'Indian/Mauritius',
+        start_date: dateStr,
+        end_date: dateStr
       },
       timeout: 5000
     });
@@ -110,8 +185,8 @@ async function getTideHeight(lat, lon, date) {
       return d ? d.getTime() : NaN;
     });
 
-    // Reference time: prefer API-provided current.time (Mauritius local), else use now (instant)
-    const referenceTime = data.current?.time ? parseMauritiusTime(data.current.time) : new Date();
+    // Reference time: prefer override, then API-provided current.time (Mauritius local), else use now (instant)
+    const referenceTime = referenceTimeOverride ? new Date(referenceTimeOverride) : (data.current?.time ? parseMauritiusTime(data.current.time) : new Date());
     const refMs = referenceTime ? referenceTime.getTime() : Date.now();
 
     // Find index i such that timesMs[i] <= refMs < timesMs[i+1]
@@ -322,5 +397,6 @@ function getFallbackWaveData() {
 module.exports = {
   getOpenMeteoMarineData,
   getSeaSurfaceTemperature,
-  getTideHeight
+  getTideHeight,
+  getWeatherForReference
 };

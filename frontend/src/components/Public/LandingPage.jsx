@@ -1,29 +1,48 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Fish, Moon, Waves, Sun, Wind, Eye, Menu, X, Thermometer } from 'lucide-react';
+import { Fish, Moon, Waves, Sun, Wind, Eye, Menu, X, Thermometer, ChevronLeft, ChevronRight } from 'lucide-react';
 import axios from 'axios';
 import PublicNav from './PublicNav';
 
 const LandingPage = () => {
   const [conditions, setConditions] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState(new Date());
 
   useEffect(() => {
-    fetchConditions();
-  }, []);
+    fetchConditions(selectedDate);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate]);
 
-  const fetchConditions = async () => {
+  const fetchConditions = async (dateObj) => {
     try {
-      // Fetch conditions for Port Louis (main location)
-      const response = await axios.get(
-        `${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/public/conditions`
-      );
+      setLoading(true);
+      // Fetch conditions for Port Louis (main location). Optionally include date query param.
+      const base = `${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/public/conditions`;
+      let url = base;
+      if (dateObj) {
+        const yyyy = dateObj.getFullYear();
+        const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const dd = String(dateObj.getDate()).padStart(2, '0');
+        const dateOnly = `${yyyy}-${mm}-${dd}`;
+        const ref = encodeURIComponent(dateObj.toISOString());
+        url = `${base}?date=${dateOnly}&referenceTime=${ref}`;
+      }
+      const response = await axios.get(url);
       setConditions(response.data);
     } catch (error) {
       console.error('Error fetching conditions:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const changeSelectedDate = (days) => {
+    setSelectedDate(prev => {
+      const d = new Date(prev);
+      d.setDate(d.getDate() + days);
+      return d;
+    });
   };
 
   const getFishingRating = () => {
@@ -44,6 +63,13 @@ const LandingPage = () => {
   };
 
   const rating = getFishingRating();
+
+  const formatNumber = (v, decimals = 1) => {
+    if (v === null || v === undefined) return '—';
+    const n = typeof v === 'number' ? v : Number(v);
+    if (Number.isNaN(n)) return '—';
+    return n.toFixed(decimals);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50 to-blue-100">
@@ -72,10 +98,36 @@ const LandingPage = () => {
 
       {/* Current Conditions */}
       <div className="max-w-7xl mx-auto px-4 py-12">
-        <h2 className="text-3xl font-bold text-center text-gray-800 mb-8">
-          🌊 Current Conditions in Port Louis
+        <h2 className="text-3xl font-bold text-center text-gray-800 mb-4">
+          🌊 Conditions in Port Louis
         </h2>
-        
+
+        {/* Date navigation controls (move here so date changes update all cards) */}
+        <div className="flex items-center justify-center gap-4 mb-6">
+          <button
+            onClick={() => changeSelectedDate(-1)}
+            className="p-2 rounded-md bg-gray-100 hover:bg-gray-200"
+            aria-label="Previous day"
+          >
+            <ChevronLeft className="w-5 h-5 text-gray-700" />
+          </button>
+
+          <input
+            type="date"
+            value={selectedDate.toISOString().split('T')[0]}
+            onChange={(e) => setSelectedDate(new Date(e.target.value))}
+            className="px-4 py-2 border rounded-lg bg-gray-50 text-gray-800 font-medium cursor-pointer hover:bg-gray-100"
+          />
+
+          <button
+            onClick={() => changeSelectedDate(1)}
+            className="p-2 rounded-md bg-gray-100 hover:bg-gray-200"
+            aria-label="Next day"
+          >
+            <ChevronRight className="w-5 h-5 text-gray-700" />
+          </button>
+        </div>
+
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="loading-spinner"></div>
@@ -135,7 +187,7 @@ const LandingPage = () => {
               <Wind className="w-12 h-12 text-cyan-600 mb-4" />
               <h3 className="text-lg font-semibold text-gray-800 mb-2">Wind</h3>
               <p className="text-xl font-bold text-cyan-700 mb-2">
-                {conditions.weather?.windSpeed?.toFixed(1)} m/s
+                {formatNumber(conditions.weather?.windSpeed, 1)} m/s
               </p>
               <p className="text-sm text-gray-600">
                 {conditions.weather?.conditions?.advice}
@@ -149,9 +201,36 @@ const LandingPage = () => {
         {/* Tide Timeline */}
         {conditions?.tide && (
           <div className="bg-white rounded-2xl shadow-xl p-8 mb-12">
-            <h3 className="text-2xl font-bold text-gray-800 mb-6 text-center">
+            <h3 className="text-2xl font-bold text-gray-800 mb-4 text-center">
               📊 Tide Timeline
             </h3>
+
+            {/* Date navigation controls for Tide Timeline */}
+            <div className="flex items-center justify-center gap-4 mb-6">
+              <button
+                onClick={() => changeSelectedDate(-1)}
+                className="p-2 rounded-md bg-gray-100 hover:bg-gray-200"
+                aria-label="Previous day"
+              >
+                <ChevronLeft className="w-5 h-5 text-gray-700" />
+              </button>
+
+              <input
+                type="date"
+                value={selectedDate.toISOString().split('T')[0]}
+                onChange={(e) => setSelectedDate(new Date(e.target.value))}
+                className="px-4 py-2 border rounded-lg bg-gray-50 text-gray-800 font-medium cursor-pointer hover:bg-gray-100"
+              />
+
+              <button
+                onClick={() => changeSelectedDate(1)}
+                className="p-2 rounded-md bg-gray-100 hover:bg-gray-200"
+                aria-label="Next day"
+              >
+                <ChevronRight className="w-5 h-5 text-gray-700" />
+              </button>
+            </div>
+
             <TideTimeline tide={conditions.tide} />
           </div>
         )}

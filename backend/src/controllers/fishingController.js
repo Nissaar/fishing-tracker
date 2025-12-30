@@ -4,25 +4,31 @@ const { getWorldTidesData } = require('../services/tideService');
 const { getCurrentWeather } = require('../services/weatherService');
 const { allLocations } = require('../data/mauritiusLocations');
 const { fishSpecies } = require('../data/fishSpecies');
-const { getOpenMeteoMarineData, getSeaSurfaceTemperature } = require('../services/openMeteoService');
+const { getOpenMeteoMarineData, getSeaSurfaceTemperature, getWeatherForReference } = require('../services/openMeteoService');
 const pool = require('../config/database');
 
 exports.getEnvironmentalData = async (req, res) => {
   try {
     const { date, locationId } = req.query;
+    const referenceTime = req.query.referenceTime || null;
     
     const location = allLocations.find(loc => loc.id === locationId);
     if (!location) {
       return res.status(404).json({ error: 'Location not found' });
     }
 
+    // If a referenceTime is provided, use Open-Meteo hourly weather for that instant; otherwise use current weather
+    const weatherPromise = referenceTime
+      ? getWeatherForReference(location.lat, location.lon, referenceTime)
+      : getCurrentWeather(location.lat, location.lon);
+
     // Get all environmental data
     const [moonData, tideData, weatherData, marineData, seaTemp] = await Promise.all([
       Promise.resolve(calculateMoonPhase(date)),
-      getWorldTidesData(location.lat, location.lon, date),
-      getCurrentWeather(location.lat, location.lon),
-      getOpenMeteoMarineData(location.lat, location.lon, date),
-      getSeaSurfaceTemperature(location.lat, location.lon, date)
+      getWorldTidesData(location.lat, location.lon, date, referenceTime),
+      weatherPromise,
+      getOpenMeteoMarineData(location.lat, location.lon, referenceTime || date),
+      getSeaSurfaceTemperature(location.lat, location.lon, referenceTime || date)
     ]);
 
     res.json({

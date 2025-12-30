@@ -2,22 +2,29 @@ const express = require('express');
 const { calculateMoonPhase } = require('../utils/moonPhase');
 const { getWorldTidesData } = require('../services/tideService');
 const { getCurrentWeather } = require('../services/weatherService');
-const { getOpenMeteoMarineData, getSeaSurfaceTemperature } = require('../services/openMeteoService');
+const { getOpenMeteoMarineData, getSeaSurfaceTemperature, getWeatherForReference } = require('../services/openMeteoService');
 
 const router = express.Router();
 
 router.get('/conditions', async (req, res) => {
   try {
     const today = new Date().toISOString().split('T')[0];
+    const date = req.query.date || today;
+    const referenceTime = req.query.referenceTime || null;
     const lat = -20.1609;
     const lon = 57.5012;
-    
+
+    // If a referenceTime is provided, use Open-Meteo hourly weather for that instant; otherwise use current weather
+    const weatherPromise = referenceTime
+      ? getWeatherForReference(lat, lon, referenceTime)
+      : getCurrentWeather(lat, lon);
+
     const [moonData, tideData, weatherData, marineData, seaTemp] = await Promise.all([
-      Promise.resolve(calculateMoonPhase(today)),
-      getWorldTidesData(lat, lon, today),
-      getCurrentWeather(lat, lon),
-      getOpenMeteoMarineData(lat, lon, today),
-      getSeaSurfaceTemperature(lat, lon, today)
+      Promise.resolve(calculateMoonPhase(date)),
+      getWorldTidesData(lat, lon, date, referenceTime),
+      weatherPromise,
+      getOpenMeteoMarineData(lat, lon, referenceTime || date),
+      getSeaSurfaceTemperature(lat, lon, referenceTime || date)
     ]);
     
     // Normalize tide data for frontend: add human-readable times and trend
