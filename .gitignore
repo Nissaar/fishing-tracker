@@ -15,6 +15,7 @@ frontend/.env.development
 
 docker-compose.yml
 fishing-tracker-deploy-files/*
+deploy.sh
 
 # Node modules
 node_modules/
