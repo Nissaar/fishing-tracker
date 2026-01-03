@@ -155,6 +155,27 @@ const fishSpecies = [
     display: 'Crabe / Crab / Scylla spp.'
   },
   {
+    id: 'batarder',
+    local: 'batarder',
+    english: ' ',
+    scientific: ' .',
+    display: 'batarder / batarder / .'
+  },
+  {
+    id: 'rouget',
+    local: 'rouget',
+    english: ' ',
+    scientific: ' .',
+    display: 'rouget / rouget / .'
+  },
+  {
+    id: 'viel gris',
+    local: 'viel gris',
+    english: ' ',
+    scientific: ' .',
+    display: 'viel gris / viel gris / .'
+  },
+  {
     id: 'mourgate',
     local: 'Mourgate',
     english: 'Squid',
