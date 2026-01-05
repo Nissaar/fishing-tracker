@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: fishing_tracker
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "5432:5432"
@@ -50,6 +50,7 @@ services:
 networks:
   fishing-network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16
 
-volumes:
-  postgres_data:

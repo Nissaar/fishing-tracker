@@ -1,5 +1,5 @@
 -- Create database
-CREATE DATABASE fishing_tracker;
+CREATE DATABASE fishing_tracker IF NOT EXISTS;
 
 -- Connect to database
 \c fishing_tracker;

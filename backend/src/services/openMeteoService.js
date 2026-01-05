@@ -4,9 +4,26 @@ const axios = require('axios');
  * Get marine data from Open-Meteo Marine API
  * Includes: wave height, wave direction, wave period, sea surface temperature
  */
-async function getOpenMeteoMarineData(lat, lon, date) {
+async function getOpenMeteoMarineData(lat, lon, dateOrRef, referenceTime) {
   try {
-    const dateStr = new Date(date).toISOString().split('T')[0];
+    // Determine if dateOrRef is a reference time (ISO string) or date
+    let refTime = referenceTime || dateOrRef;
+    let dateStr;
+    
+    if (typeof refTime === 'string' && refTime.includes('T')) {
+      // referenceTime is ISO string
+      dateStr = refTime.split('T')[0];
+    } else if (typeof dateOrRef === 'string' && dateOrRef.includes('T')) {
+      // dateOrRef is ISO string (legacy call pattern)
+      dateStr = dateOrRef.split('T')[0];
+      refTime = dateOrRef;
+    } else {
+      // dateOrRef is date string
+      dateStr = new Date(dateOrRef).toISOString().split('T')[0];
+      if (!referenceTime) {
+        refTime = new Date(dateStr).toISOString();
+      }
+    }
     
     const response = await axios.get('https://marine-api.open-meteo.com/v1/marine', {
       params: {
@@ -23,13 +40,15 @@ async function getOpenMeteoMarineData(lat, lon, date) {
     });
 
     const data = response.data;
-    const currentHour = new Date(date).getHours();
+    const refDate = new Date(refTime);
+    // Convert UTC time to Mauritius time (UTC+4)
+    const mauritiusHour = (refDate.getUTCHours() + 4) % 24;
     
-    // Get current or closest hour data
-    const waveHeight = data.hourly?.wave_height?.[currentHour] || data.current?.wave_height || 0;
-    const waveDirection = data.hourly?.wave_direction?.[currentHour] || 0;
-    const wavePeriod = data.hourly?.wave_period?.[currentHour] || 0;
-    const currentVelocity = data.hourly?.ocean_current_velocity?.[currentHour] || data.current?.ocean_current_velocity || 0;
+    // Get current or closest hour data based on Mauritius timezone
+    const waveHeight = data.hourly?.wave_height?.[mauritiusHour] || data.current?.wave_height || 0;
+    const waveDirection = data.hourly?.wave_direction?.[mauritiusHour] || 0;
+    const wavePeriod = data.hourly?.wave_period?.[mauritiusHour] || 0;
+    const currentVelocity = data.hourly?.ocean_current_velocity?.[mauritiusHour] || data.current?.ocean_current_velocity || 0;
     
     // Get daily max for reference
     const maxWaveHeight = data.daily?.wave_height_max?.[0] || waveHeight;
@@ -83,7 +102,8 @@ async function getWeatherForReference(lat, lon, referenceTime) {
   try {
     const dt = new Date(referenceTime);
     const dateStr = dt.toISOString().split('T')[0];
-    const hour = dt.getHours();
+    // Convert UTC hour to Mauritius hour (UTC+4)
+    const mauritiusHour = (dt.getUTCHours() + 4) % 24;
 
     const response = await axios.get('https://api.open-meteo.com/v1/forecast', {
       params: {
@@ -104,11 +124,11 @@ async function getWeatherForReference(lat, lon, referenceTime) {
     const clouds = data.hourly?.cloudcover || [];
     const precip = data.hourly?.precipitation || [];
 
-    const temperature = typeof temps[hour] === 'number' ? temps[hour] : (temps[0] || 26);
-    const windSpeed = typeof winds[hour] === 'number' ? winds[hour] / 3.6 : (winds[0] ? winds[0] / 3.6 : 5); // convert km/h to m/s
-    const windDirection = typeof windDirs[hour] === 'number' ? windDirs[hour] : 0;
-    const cloud = typeof clouds[hour] === 'number' ? clouds[hour] : 50;
-    const rain = typeof precip[hour] === 'number' ? precip[hour] : 0;
+    const temperature = typeof temps[mauritiusHour] === 'number' ? temps[mauritiusHour] : (temps[0] || 26);
+    const windSpeed = typeof winds[mauritiusHour] === 'number' ? winds[mauritiusHour] / 3.6 : (winds[0] ? winds[0] / 3.6 : 5); // convert km/h to m/s
+    const windDirection = typeof windDirs[mauritiusHour] === 'number' ? windDirs[mauritiusHour] : 0;
+    const cloud = typeof clouds[mauritiusHour] === 'number' ? clouds[mauritiusHour] : 50;
+    const rain = typeof precip[mauritiusHour] === 'number' ? precip[mauritiusHour] : 0;
 
     // Simple description
     let description = 'Clear';
@@ -222,10 +242,21 @@ async function getTideHeight(lat, lon, date, referenceTimeOverride) {
       return h0 + ratio * (h1 - h0);
     }
 
-    // Compute current height (prefer API current value when available, else interpolated)
-    let currentHeight = typeof data.current?.sea_level_height_msl === 'number'
-      ? data.current.sea_level_height_msl
-      : interpolateAt(refMs);
+    // Compute current height
+    // If referenceTimeOverride is provided, fetch the hourly value for that specific hour
+    let currentHeight;
+    if (referenceTimeOverride) {
+      // Get the Mauritius hour from the reference time
+      const refDate = new Date(referenceTimeOverride);
+      const mauritiusHour = (refDate.getUTCHours() + 4) % 24;
+      // Fetch the exact hourly value from the API response
+      currentHeight = heights[mauritiusHour] || interpolateAt(refMs);
+    } else {
+      // For current conditions, prefer API current value, else interpolate
+      currentHeight = typeof data.current?.sea_level_height_msl === 'number'
+        ? data.current.sea_level_height_msl
+        : interpolateAt(refMs);
+    }
     
     // Determine tide level category
     let level, description;
@@ -339,8 +370,11 @@ async function getTideHeight(lat, lon, date, referenceTimeOverride) {
 /**
  * Get sea surface temperature from Open-Meteo Marine API
  */
-async function getSeaSurfaceTemperature(lat, lon, date) {
+async function getSeaSurfaceTemperature(lat, lon, dateOrRef, referenceTime) {
   try {
+    // Determine if dateOrRef is a reference time (ISO string) or date
+    let refTime = referenceTime || dateOrRef;
+    
     const response = await axios.get('https://marine-api.open-meteo.com/v1/marine', {
       params: {
         latitude: lat,
@@ -353,10 +387,12 @@ async function getSeaSurfaceTemperature(lat, lon, date) {
     });
 
     const data = response.data;
-    const currentHour = new Date(date).getHours();
+    const refDate = new Date(refTime);
+    // Convert UTC time to Mauritius time (UTC+4)
+    const mauritiusHour = (refDate.getUTCHours() + 4) % 24;
     
-    // Get current sea surface temperature
-    const temperature = data.current?.sea_surface_temperature || data.hourly?.sea_surface_temperature?.[currentHour] || 26;
+    // Get current sea surface temperature based on Mauritius timezone
+    const temperature = data.current?.sea_surface_temperature || data.hourly?.sea_surface_temperature?.[mauritiusHour] || 26;
     
     return {
       temperature: temperature.toFixed(1),

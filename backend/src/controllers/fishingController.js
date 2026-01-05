@@ -10,7 +10,7 @@ const pool = require('../config/database');
 exports.getEnvironmentalData = async (req, res) => {
   try {
     const { date, locationId } = req.query;
-    const referenceTime = req.query.referenceTime || null;
+    let referenceTime = req.query.referenceTime ? decodeURIComponent(req.query.referenceTime) : null;
     
     const location = allLocations.find(loc => loc.id === locationId);
     if (!location) {
@@ -27,8 +27,8 @@ exports.getEnvironmentalData = async (req, res) => {
       Promise.resolve(calculateMoonPhase(date)),
       getWorldTidesData(location.lat, location.lon, date, referenceTime),
       weatherPromise,
-      getOpenMeteoMarineData(location.lat, location.lon, referenceTime || date),
-      getSeaSurfaceTemperature(location.lat, location.lon, referenceTime || date)
+      getOpenMeteoMarineData(location.lat, location.lon, date, referenceTime),
+      getSeaSurfaceTemperature(location.lat, location.lon, date, referenceTime)
     ]);
 
     res.json({

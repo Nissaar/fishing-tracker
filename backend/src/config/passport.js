@@ -22,6 +22,10 @@ passport.use(new GoogleStrategy({
   },
   async (accessToken, refreshToken, profile, done) => {
     try {
+      if (!profile.emails || !profile.emails[0]) {
+        return done(new Error('No email provided by Google'), null);
+      }
+
       // Check if user exists
       let result = await pool.query('SELECT * FROM users WHERE email = $1', [profile.emails[0].value]);
       
@@ -33,16 +37,17 @@ passport.use(new GoogleStrategy({
       const newUser = await pool.query(
         'INSERT INTO users (username, email, password_hash, google_id, avatar_url) VALUES ($1, $2, $3, $4, $5) RETURNING *',
         [
-          profile.displayName,
+          profile.displayName || profile.emails[0].value.split('@')[0],
           profile.emails[0].value,
           '',
           profile.id,
-          profile.photos[0]?.value || null
+          profile.photos && profile.photos[0] ? profile.photos[0].value : null
         ]
       );
       
       return done(null, newUser.rows[0]);
     } catch (error) {
+      console.error('Google OAuth error:', error);
       return done(error, null);
     }
   }

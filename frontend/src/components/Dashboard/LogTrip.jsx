@@ -18,6 +18,7 @@ const LogTrip = () => {
   
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
+    time: new Date().toTimeString().split(' ')[0].substring(0, 5), // HH:MM format
     location: '',
     locationName: '',
     fishingType: '',
@@ -52,7 +53,7 @@ const LogTrip = () => {
     if (formData.location && formData.date) {
       loadEnvironmentalData();
     }
-  }, [formData.location, formData.date]);
+  }, [formData.location, formData.date, formData.time]);
 
   useEffect(() => {
     if (locationSearch) {
@@ -86,7 +87,7 @@ const LogTrip = () => {
   const loadEnvironmentalData = async () => {
     setLoadingEnv(true);
     try {
-      const response = await fishingAPI.getEnvironmentalData(formData.date, formData.location);
+      const response = await fishingAPI.getEnvironmentalData(formData.date, formData.time, formData.location);
       setEnvironmentalData(response.data);
     } catch (error) {
       console.error('Failed to load environmental data');
@@ -182,6 +183,7 @@ const LogTrip = () => {
       // Reset form
       setFormData({
         date: new Date().toISOString().split('T')[0],
+        time: new Date().toTimeString().split(' ')[0].substring(0, 5),
         location: '',
         locationName: '',
         fishingType: '',
@@ -209,7 +211,7 @@ const LogTrip = () => {
 
   return (
     <div className="space-y-6">
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid md:grid-cols-3 gap-6">
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">
             <Calendar className="w-4 h-4 inline mr-1" />
@@ -219,6 +221,20 @@ const LogTrip = () => {
             type="date"
             value={formData.date}
             onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <Calendar className="w-4 h-4 inline mr-1" />
+            Time
+          </label>
+          <input
+            type="time"
+            value={formData.time}
+            onChange={(e) => setFormData({ ...formData, time: e.target.value })}
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             required
           />

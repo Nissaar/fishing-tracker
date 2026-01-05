@@ -28,8 +28,10 @@ export const authAPI = {
 
 export const fishingAPI = {
   getLocations: () => api.get('/fishing/locations'),
-  getEnvironmentalData: (date, locationId) => {
-    const dateObj = new Date(date);
+  getEnvironmentalData: (date, time, locationId) => {
+    // Combine date and time into ISO string with Mauritius timezone (+04:00)
+    const dateTimeStr = `${date}T${time}:00+04:00`;
+    const dateObj = new Date(dateTimeStr);
     const ref = encodeURIComponent(dateObj.toISOString());
     return api.get('/fishing/environmental-data', { params: { date, locationId, referenceTime: ref } });
   },

@@ -46,7 +46,7 @@ exports.login = async (req, res) => {
     
     const user = await User.findByEmail(email);
     if (!user) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return res.status(401).json({ error: 'User not found. Please register first.' });
     }
     
     if (!user.password_hash) {

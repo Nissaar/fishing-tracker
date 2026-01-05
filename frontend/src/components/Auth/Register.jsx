@@ -71,6 +71,9 @@ const Register = () => {
           <Fish className="w-16 h-16 text-blue-600 mx-auto mb-4" />
           <h1 className="text-3xl font-bold text-gray-800">Create Account</h1>
           <p className="text-gray-600 mt-2">Join Fishing Tracker Pro</p>
+          <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p className="text-sm text-blue-700">💡 You can use a bogus email - no need to use your real email address</p>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

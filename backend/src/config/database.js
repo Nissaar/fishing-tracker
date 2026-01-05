@@ -9,7 +9,10 @@ const pool = new Pool({
   password: process.env.DB_PASSWORD,
   max: 20,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 15000, // give pool longer to hand out a client during OAuth callbacks
+  statement_timeout: 12000,
+  query_timeout: 12000,
+  keepAlive: true,
 });
 
 pool.on('connect', () => {
