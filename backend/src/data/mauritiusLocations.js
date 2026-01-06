@@ -4,6 +4,7 @@ const mauritiusLocations = {
     { id: 'grand-baie', name: 'Grand Baie', lat: -20.0167, lon: 57.5833, type: 'beach', region: 'North' },
     { id: 'cap-malheureux', name: 'Cap Malheureux', lat: -19.9833, lon: 57.6167, type: 'beach', region: 'North' },
     { id: 'pointe-aux-piments', name: 'Pointe aux Piments', lat: -20.0333, lon: 57.5167, type: 'beach', region: 'North' },
+    { id: 'balaclava', name: 'Balaclava', lat: -20.0830, lon: 57.5165, type: 'beach', region: 'North' },
     { id: 'trou-aux-biches', name: 'Trou aux Biches', lat: -20.0333, lon: 57.5500, type: 'beach', region: 'North' },
     { id: 'pereybere', name: 'Pereybere', lat: -20.0117, lon: 57.5883, type: 'beach', region: 'North' },
     { id: 'calodyne', name: 'Calodyne', lat: -19.9933, lon: 57.6350, type: 'shore', region: 'North' },
