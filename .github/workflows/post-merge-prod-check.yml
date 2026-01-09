@@ -27,7 +27,7 @@ jobs:
           npm install playwright@1.42.0 axios
 
       - name: Install Playwright Browsers
-        run: npx playwright install chromium --with-deps
+        run: npx playwright install chromium
 
       - name: Run checks
         env:
