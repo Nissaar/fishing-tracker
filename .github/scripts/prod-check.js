@@ -8,8 +8,8 @@ const BASE_URL = process.env.BASE_URL || 'https://fishing.nissaar.com';
 async function apiCheck() {
   const results = [];
   const endpoints = [
-    { name: 'Health', url: `${BASE_URL}/api/health` },
-    { name: 'Public locations', url: `${BASE_URL}/api/fishing/locations` }
+    { name: 'Health', url: `${BASE_URL}/health` },
+    { name: 'Public conditions', url: `${BASE_URL}/api/public/conditions` }
   ];
   for (const ep of endpoints) {
     try {
@@ -27,16 +27,17 @@ async function uiCheck() {
   const page = await browser.newPage();
   const report = [];
   try {
-    await page.goto(BASE_URL, { waitUntil: 'networkidle', timeout: 20000 });
-    await page.waitForTimeout(1000);
+    await page.goto(BASE_URL, { waitUntil: 'networkidle', timeout: 30000 });
+    await page.waitForTimeout(2000);
     report.push({ step: 'Landing loads', ok: true });
 
-    // Navigate to Log Trip (public UI sanity)
-    await page.click('text=Log Trip', { timeout: 5000 }).catch(() => {});
-    await page.waitForTimeout(500);
+    // Navigate via primary CTA (public UI sanity)
+    await page.click('text=Get Started Free', { timeout: 12000 }).catch(() => {});
+    await page.waitForTimeout(1000);
+
     const dateField = await page.isVisible('input[type="date"]').catch(() => false);
     const tideCard = await page.locator('text=Tide').first().isVisible().catch(() => false);
-    report.push({ step: 'Log Trip form visible', ok: dateField });
+    report.push({ step: 'Date field visible', ok: dateField });
     report.push({ step: 'Tide card visible', ok: tideCard });
 
     // Simple visual asserts on key cards
