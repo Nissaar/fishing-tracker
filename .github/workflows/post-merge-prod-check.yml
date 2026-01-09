@@ -17,9 +17,17 @@ jobs:
         with:
           node-version: 20
 
+      - name: Install required OS packages for Playwright
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libasound2t64 libnss3 libxss1 libgtk-3-0 libdrm2 libgbm1
+
       - name: Install deps
         run: |
           npm install playwright@1.42.0 axios
+
+      - name: Install Playwright Browsers
+        run: npx playwright install chromium
 
       - name: Run checks
         env:
@@ -28,6 +36,7 @@ jobs:
           node .github/scripts/prod-check.js
 
       - name: Upload HTML report (artifact)
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: prod-check-report
