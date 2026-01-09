@@ -21,6 +21,9 @@ jobs:
         run: |
           npm install playwright@1.42.0 axios
 
+      - name: Install Playwright Browsers
+        run: npx playwright install chromium --with-deps
+
       - name: Run checks
         env:
           BASE_URL: https://fishing.nissaar.com
