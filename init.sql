@@ -1,5 +1,5 @@
 -- Create database
-CREATE DATABASE fishing_tracker IF NOT EXISTS;
+CREATE DATABASE fishing_tracker;
 
 -- Connect to database
 \c fishing_tracker;
@@ -12,6 +12,7 @@ CREATE TABLE users (
     password_hash VARCHAR(255),
     google_id VARCHAR(255) UNIQUE,
     avatar_url VARCHAR(500),
+    is_admin BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -30,6 +31,8 @@ CREATE TABLE fishing_logs (
     sea_level VARCHAR(50),
     tide_data JSONB,
     weather_data JSONB,
+    fish_activity VARCHAR(50),
+    solunar_data JSONB,
     hook_setup VARCHAR(200),
     bait VARCHAR(200),
     notes TEXT,

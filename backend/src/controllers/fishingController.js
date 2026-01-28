@@ -1,5 +1,6 @@
 const FishingLog = require('../models/FishingLog');
 const { calculateMoonPhase } = require('../utils/moonPhase');
+const { calculateSolunarPeriods, getCurrentActivity } = require('../utils/solunarTheory');
 const { getWorldTidesData } = require('../services/tideService');
 const { getCurrentWeather } = require('../services/weatherService');
 const { allLocations } = require('../data/mauritiusLocations');
@@ -31,6 +32,16 @@ exports.getEnvironmentalData = async (req, res) => {
       getSeaSurfaceTemperature(location.lat, location.lon, date, referenceTime)
     ]);
 
+    // Calculate solunar periods
+    const solunarData = await calculateSolunarPeriods(date, location.lat, location.lon);
+    // Get current time in Mauritius timezone (UTC+4)
+    const refDate = new Date(referenceTime || date);
+    const mauritiusOffset = 4 * 60; // UTC+4 in minutes
+    const localOffset = refDate.getTimezoneOffset();
+    const mauritiusTime = new Date(refDate.getTime() + (mauritiusOffset + localOffset) * 60000);
+    const currentTime = mauritiusTime.toTimeString().substring(0, 5);
+    const currentActivity = getCurrentActivity(solunarData, currentTime);
+
     res.json({
       moon: moonData,
       tide: tideData,
@@ -38,6 +49,7 @@ exports.getEnvironmentalData = async (req, res) => {
       weather: weatherData,
       marine: marineData,
       seaTemperature: seaTemp,
+      solunar: { ...solunarData, currentActivity },
       location: location
     });
   } catch (error) {

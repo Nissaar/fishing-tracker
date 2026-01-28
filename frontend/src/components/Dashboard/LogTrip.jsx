@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { fishingAPI } from '../../services/api';
 import axios from 'axios';
 import { toast } from 'react-toastify';
-import { Calendar, MapPin, Fish, Moon, Waves, Sun, Loader, Thermometer, Wind } from 'lucide-react';
+import { Calendar, MapPin, Fish, Moon, Waves, Sun, Loader, Thermometer, Wind, Activity } from 'lucide-react';
 
 const LogTrip = () => {
   const [locations, setLocations] = useState([]);
@@ -11,7 +11,10 @@ const LogTrip = () => {
   const [filteredFish, setFilteredFish] = useState([]);
   const [locationSearch, setLocationSearch] = useState('');
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  const [fishSearch, setFishSearch] = useState({});
+  const [showFishDropdown, setShowFishDropdown] = useState({});
   const locationRef = useRef(null);
+  const fishRefs = useRef({});
   
   const fishingTypes = ['Casting', 'Jigging', 'Lapess Couler/Couler', 'Dropshot'];
   const fishingMethods = ['land', 'boat'];
@@ -44,6 +47,12 @@ const LogTrip = () => {
       if (locationRef.current && !locationRef.current.contains(event.target)) {
         setShowLocationDropdown(false);
       }
+      // Check all fish refs for click outside
+      Object.keys(fishRefs.current).forEach(key => {
+        if (fishRefs.current[key] && !fishRefs.current[key].contains(event.target)) {
+          setShowFishDropdown(prev => ({ ...prev, [key]: false }));
+        }
+      });
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -380,6 +389,9 @@ const LogTrip = () => {
             <p className="text-xl font-bold text-purple-700">
               {environmentalData.moon.emoji} {environmentalData.moon.phase}
             </p>
+            <p className="text-sm text-purple-600 mt-1">
+              {environmentalData.moon.illumination}% illuminated
+            </p>
           </div>
 
           <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
@@ -398,19 +410,42 @@ const LogTrip = () => {
             </p>
           </div>
 
-          <div className="bg-cyan-50 p-4 rounded-lg border border-cyan-200">
-            <Wind className="w-6 h-6 text-cyan-600 mb-2" />
-            <p className="text-sm text-gray-600 mb-1">Wave</p>
-            <p className="text-xl font-bold text-cyan-700">
-              {environmentalData.marine?.waveHeight}m
-            </p>
-          </div>
-
           <div className="bg-teal-50 p-4 rounded-lg border border-teal-200">
             <Thermometer className="w-6 h-6 text-teal-600 mb-2" />
             <p className="text-sm text-gray-600 mb-1">Sea Temp</p>
             <p className="text-xl font-bold text-teal-700">
               {environmentalData.seaTemperature?.temperature}°C
+            </p>
+          </div>
+
+          <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+            <Activity className="w-6 h-6 text-green-600 mb-2" />
+            <p className="text-sm text-gray-600 mb-1">Fish Activity</p>
+            <div className="flex items-center gap-1 mb-1">
+              {environmentalData.solunar?.currentActivity?.level === 'average' && (
+                <>
+                  <Fish className="w-5 h-5 text-yellow-600 fill-current" />
+                  <Fish className="w-5 h-5 text-yellow-600 fill-current" />
+                  <Fish className="w-5 h-5 text-gray-300 fill-current" />
+                </>
+              )}
+              {environmentalData.solunar?.currentActivity?.level === 'low' && (
+                <>
+                  <Fish className="w-5 h-5 text-gray-400 fill-current" />
+                  <Fish className="w-5 h-5 text-gray-300 fill-current" />
+                  <Fish className="w-5 h-5 text-gray-300 fill-current" />
+                </>
+              )}
+              {(!environmentalData.solunar?.currentActivity?.level || environmentalData.solunar?.currentActivity?.level === 'none') && (
+                <>
+                  <Fish className="w-5 h-5 text-gray-300 fill-current" />
+                  <Fish className="w-5 h-5 text-gray-300 fill-current" />
+                  <Fish className="w-5 h-5 text-gray-300 fill-current" />
+                </>
+              )}
+            </div>
+            <p className="text-sm font-semibold text-gray-700 capitalize">
+              {environmentalData.solunar?.currentActivity?.level || 'Low'}
             </p>
           </div>
         </div>
@@ -466,26 +501,49 @@ const LogTrip = () => {
               <label className="block text-sm font-semibold text-gray-700">
                 What fish did you catch?
               </label>
-              {Array.from({ length: formData.fishCount }).map((_, index) => (
-                <div key={index} className="relative">
-                  <input
-                    type="text"
-                    list={`fish-list-${index}`}
-                    placeholder={`Fish ${index + 1} (start typing...)`}
-                    value={formData.fishTypes[index] || ''}
-                    onChange={(e) => {
-                      updateFishType(index, e.target.value);
-                      handleFishSearch(index, e.target.value);
-                    }}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                  />
-                  <datalist id={`fish-list-${index}`}>
-                    {fishSpecies.map(fish => (
-                      <option key={fish.id} value={fish.display} />
-                    ))}
-                  </datalist>
-                </div>
-              ))}
+              {Array.from({ length: formData.fishCount }).map((_, index) => {
+                const fishSearchValue = fishSearch[index] || '';
+                const filteredFishForIndex = fishSearchValue
+                  ? fishSpecies.filter(fish =>
+                      fish.display.toLowerCase().includes(fishSearchValue.toLowerCase())
+                    )
+                  : fishSpecies;
+                
+                return (
+                  <div key={index} ref={el => fishRefs.current[index] = el} className="relative">
+                    <input
+                      type="text"
+                      placeholder={`Fish ${index + 1} (start typing...)`}
+                      value={fishSearch[index] || ''}
+                      onChange={(e) => {
+                        setFishSearch({ ...fishSearch, [index]: e.target.value });
+                        setShowFishDropdown({ ...showFishDropdown, [index]: true });
+                      }}
+                      onFocus={() => setShowFishDropdown({ ...showFishDropdown, [index]: true })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                    />
+                    
+                    {showFishDropdown[index] && filteredFishForIndex.length > 0 && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        {filteredFishForIndex.map((fish) => (
+                          <div
+                            key={fish.id}
+                            onClick={() => {
+                              updateFishType(index, fish.display);
+                              setFishSearch({ ...fishSearch, [index]: fish.display });
+                              setShowFishDropdown({ ...showFishDropdown, [index]: false });
+                            }}
+                            className="px-4 py-3 hover:bg-green-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                          >
+                            <div className="font-semibold text-gray-800">{fish.display}</div>
+                            <div className="text-xs text-gray-500">{fish.scientific || ''}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -520,7 +578,48 @@ const LogTrip = () => {
       </div>
 
       <button
-        onClick={handleSubmit}
+        onClick={async () => {
+          if (!formData.date || !formData.location) {
+            toast.error('Please fill in all required fields');
+            return;
+          }
+
+          setLoading(true);
+          try {
+            const submitData = {
+              ...formData,
+              caughtFish: formData.caughtFish === 'yes',
+              fishActivity: environmentalData?.solunar?.currentActivity?.level,
+              solunarData: environmentalData?.solunar
+            };
+
+            await fishingAPI.createLog(submitData);
+            toast.success('Fishing log saved successfully!');
+            // Reset form
+            setFormData({
+              date: new Date().toISOString().split('T')[0],
+              time: new Date().toTimeString().split(' ')[0].substring(0, 5),
+              location: '',
+              locationName: '',
+              fishingType: '',
+              fishingMethod: 'land',
+              caughtFish: 'no',
+              fishCount: '',
+              fishTypes: [],
+              hookSetup: '',
+              bait: '',
+              baitOther: '',
+              jighead: '',
+              softbait: '',
+              notes: ''
+            });
+          } catch (error) {
+            toast.error('Failed to save fishing log');
+            console.error('Log save error:', error);
+          } finally {
+            setLoading(false);
+          }
+        }}
         disabled={loading || loadingEnv || !environmentalData}
         className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white py-4 px-6 rounded-lg font-semibold hover:from-blue-700 hover:to-cyan-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
       >
@@ -529,5 +628,7 @@ const LogTrip = () => {
     </div>
   );
 };
+
+const handleSubmit = async () => {};
 
 export default LogTrip;

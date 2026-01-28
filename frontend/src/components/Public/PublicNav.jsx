@@ -24,6 +24,12 @@ const PublicNav = () => {
             <Link to="/about" className="text-gray-700 hover:text-blue-600 font-medium">
               About
             </Link>
+            <Link to="/contact" className="text-gray-700 hover:text-blue-600 font-medium">
+              Contact
+            </Link>
+            <Link to="/data-sources" className="text-gray-700 hover:text-blue-600 font-medium">
+              Data Sources
+            </Link>
             <Link to="/privacy" className="text-gray-700 hover:text-blue-600 font-medium">
               Privacy
             </Link>
@@ -82,6 +88,20 @@ const PublicNav = () => {
               onClick={() => setIsOpen(false)}
             >
               About
+            </Link>
+            <Link
+              to="/contact"
+              className="block py-2 text-gray-700 hover:text-blue-600 font-medium"
+              onClick={() => setIsOpen(false)}
+            >
+              Contact
+            </Link>
+            <Link
+              to="/data-sources"
+              className="block py-2 text-gray-700 hover:text-blue-600 font-medium"
+              onClick={() => setIsOpen(false)}
+            >
+              Data Sources
             </Link>
             <Link
               to="/privacy"

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Fish, LogOut, User } from 'lucide-react';
 
@@ -9,13 +10,13 @@ const Header = () => {
     <header className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg">
       <div className="max-w-7xl mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
             <Fish className="w-10 h-10" />
             <div>
               <h1 className="text-2xl font-bold">Fishing Tracker Pro</h1>
               <p className="text-blue-100 text-sm">Mauritius Edition</p>
             </div>
-          </div>
+          </Link>
 
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
