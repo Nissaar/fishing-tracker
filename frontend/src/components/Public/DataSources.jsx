@@ -137,8 +137,7 @@ const DataSources = () => {
                 This means a minor period during a full moon at dawn could rate as "High", while a 
                 major period during a quarter moon might only be "Average".
               </p>
-            </div>
-              <p className="font-semibold mb-2">How Solunar Theory Works:</p>
+              <p className="font-semibold mb-2 mt-4">How Solunar Theory Works:</p>
               <p className="text-sm mb-3">
                 Solunar theory suggests that fish and wildlife are most active during specific 
                 periods related to the moon's position. These periods occur daily:
