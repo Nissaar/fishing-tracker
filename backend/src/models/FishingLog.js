@@ -5,9 +5,9 @@ class FishingLog {
     const query = `
       INSERT INTO fishing_logs (
         user_id, log_date, location, location_name, caught_fish, fish_count, 
-        fish_types, moon_phase, sea_level, tide_data, weather_data, hook_setup, bait, notes
+        fish_types, moon_phase, sea_level, tide_data, weather_data, fish_activity, solunar_data, hook_setup, bait, notes
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       RETURNING *
     `;
     const values = [
@@ -22,6 +22,8 @@ class FishingLog {
       logData.seaLevel,
       JSON.stringify(logData.tideData || {}),
       JSON.stringify(logData.weatherData || {}),
+      logData.fishActivity || null,
+      JSON.stringify(logData.solunarData || {}),
       logData.hookSetup,
       logData.bait,
       logData.notes || ''

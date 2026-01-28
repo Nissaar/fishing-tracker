@@ -23,45 +23,40 @@ function calculateMoonPhase(dateStr) {
   // Convert to 0-29.53 day cycle
   const phase = phaseDecimal * 29.53058867;
   
-  let phaseName, phaseEmoji, illumination;
+  // Calculate accurate illumination using cosine function
+  // Illumination follows a cosine curve through the lunar cycle
+  const illumination = Math.round((1 - Math.cos((phaseDecimal * 2 * Math.PI))) * 50 * 10) / 10;
+  
+  let phaseName, phaseEmoji;
   
   // More accurate phase boundaries
   if (phase < 1.84566) {
     phaseName = 'New Moon';
     phaseEmoji = '🌑';
-    illumination = 0;
   } else if (phase < 5.53699) {
     phaseName = 'Waxing Crescent';
     phaseEmoji = '🌒';
-    illumination = Math.round(phase * 3.4);
   } else if (phase < 9.22831) {
     phaseName = 'First Quarter';
     phaseEmoji = '🌓';
-    illumination = 50;
   } else if (phase < 12.91963) {
     phaseName = 'Waxing Gibbous';
     phaseEmoji = '🌔';
-    illumination = 50 + Math.round((phase - 9.22831) * 13.6);
   } else if (phase < 16.61096) {
     phaseName = 'Full Moon';
     phaseEmoji = '🌕';
-    illumination = 100;
   } else if (phase < 20.30228) {
     phaseName = 'Waning Gibbous';
     phaseEmoji = '🌖';
-    illumination = 100 - Math.round((phase - 16.61096) * 13.6);
   } else if (phase < 23.99361) {
     phaseName = 'Last Quarter';
     phaseEmoji = '🌗';
-    illumination = 50;
   } else if (phase < 27.68493) {
     phaseName = 'Waning Crescent';
     phaseEmoji = '🌘';
-    illumination = 50 - Math.round((phase - 23.99361) * 13.6);
   } else {
     phaseName = 'New Moon';
     phaseEmoji = '🌑';
-    illumination = Math.max(0, 50 - Math.round((phase - 27.68493) * 27));
   }
   
   return {

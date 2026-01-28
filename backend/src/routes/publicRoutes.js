@@ -1,5 +1,6 @@
 const express = require('express');
 const { calculateMoonPhase } = require('../utils/moonPhase');
+const { calculateSolunarPeriods, getCurrentActivity } = require('../utils/solunarTheory');
 const { getWorldTidesData } = require('../services/tideService');
 const { getCurrentWeather } = require('../services/weatherService');
 const { getOpenMeteoMarineData, getSeaSurfaceTemperature, getWeatherForReference } = require('../services/openMeteoService');
@@ -26,6 +27,16 @@ router.get('/conditions', async (req, res) => {
       getOpenMeteoMarineData(lat, lon, referenceTime || date),
       getSeaSurfaceTemperature(lat, lon, referenceTime || date)
     ]);
+    
+    // Calculate solunar periods
+    const solunarData = await calculateSolunarPeriods(date, lat, lon);
+    // Get current time in Mauritius timezone (UTC+4)
+    const refDate = new Date(referenceTime || date);
+    const mauritiusOffset = 4 * 60; // UTC+4 in minutes
+    const localOffset = refDate.getTimezoneOffset();
+    const mauritiusTime = new Date(refDate.getTime() + (mauritiusOffset + localOffset) * 60000);
+    const currentTime = mauritiusTime.toTimeString().substring(0, 5);
+    const currentActivity = getCurrentActivity(solunarData, currentTime);
     
     // Normalize tide data for frontend: add human-readable times and trend
     const tide = tideData || {};
@@ -66,6 +77,7 @@ router.get('/conditions', async (req, res) => {
       weather: weatherData,
       marine: marineData,
       seaTemperature: seaTemp,
+      solunar: { ...solunarData, currentActivity },
       location: { name: 'Port Louis', lat, lon }
     });
   } catch (error) {

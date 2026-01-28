@@ -8,10 +8,13 @@ import './App.css';
 import LandingPage from './components/Public/LandingPage';
 import PrivacyPolicy from './components/Public/PrivacyPolicy';
 import About from './components/Public/About';
+import Contact from './components/Public/Contact';
+import DataSources from './components/Public/DataSources';
 import Login from './components/Auth/Login';
 import Register from './components/Auth/Register';
 import AuthCallback from './components/Auth/AuthCallback';
 import Dashboard from './components/Dashboard/Dashboard';
+import Admin from './components/Dashboard/Admin';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -35,11 +38,14 @@ function App() {
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/about" element={<About />} />
+          <Route path="/contact" element={<Contact />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/data-sources" element={<DataSources />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
         </Routes>
       </Router>
     </AuthProvider>

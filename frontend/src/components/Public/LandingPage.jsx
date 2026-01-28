@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Fish, Moon, Waves, Sun, Wind, Eye, Menu, X, Thermometer, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Fish, Moon, Waves, Sun, Wind, Eye, Menu, X, Thermometer, ChevronLeft, ChevronRight, Activity, Sunrise, Sunset } from 'lucide-react';
 import axios from 'axios';
 import PublicNav from './PublicNav';
 
@@ -133,7 +133,8 @@ const LandingPage = () => {
             <div className="loading-spinner"></div>
           </div>
         ) : conditions ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+          <>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
             {/* Moon Phase */}
             <div className="bg-white rounded-2xl shadow-xl p-6 border-2 border-purple-200 hover:shadow-2xl transition-shadow">
               <Moon className="w-12 h-12 text-purple-600 mb-4" />
@@ -159,6 +160,72 @@ const LandingPage = () => {
               <p className="text-4xl mb-2">{conditions.weather?.icon}</p>
               <p className="text-xl font-bold text-orange-700">{conditions.weather?.temperature}°C</p>
               <p className="text-sm text-gray-600 mt-2">{conditions.weather?.description}</p>
+            </div>
+
+            {/* Fish Activity (Solunar) */}
+            <div className="bg-white rounded-2xl shadow-xl p-6 border-2 border-green-200 hover:shadow-2xl transition-shadow">
+              <Activity className="w-12 h-12 text-green-600 mb-4" />
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">Fish Activity</h3>
+              <div className="flex items-center gap-2 mb-3">
+                {conditions.solunar?.currentActivity?.level === 'average' && (
+                  <>
+                    <Fish className="w-8 h-8 text-yellow-600 fill-current" />
+                    <Fish className="w-8 h-8 text-yellow-600 fill-current" />
+                    <Fish className="w-8 h-8 text-gray-300 fill-current" />
+                  </>
+                )}
+                {conditions.solunar?.currentActivity?.level === 'low' && (
+                  <>
+                    <Fish className="w-8 h-8 text-gray-400 fill-current" />
+                    <Fish className="w-8 h-8 text-gray-300 fill-current" />
+                    <Fish className="w-8 h-8 text-gray-300 fill-current" />
+                  </>
+                )}
+                {(!conditions.solunar?.currentActivity?.level || conditions.solunar?.currentActivity?.level === 'none') && (
+                  <>
+                    <Fish className="w-8 h-8 text-gray-300 fill-current" />
+                    <Fish className="w-8 h-8 text-gray-300 fill-current" />
+                    <Fish className="w-8 h-8 text-gray-300 fill-current" />
+                  </>
+                )}
+              </div>
+              <p className="text-sm font-semibold text-gray-700 capitalize">
+                {conditions.solunar?.currentActivity?.level || 'Low'} Activity
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                {conditions.solunar?.currentActivity?.description || 'Based on solunar theory'}
+              </p>
+            </div>
+
+          </div>
+
+          {/* Second Row - 4 Cards */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+            {/* Sun & Moon Times */}
+            <div className="bg-white rounded-2xl shadow-xl p-6 border-2 border-amber-200 hover:shadow-2xl transition-shadow">
+              <div className="flex items-center gap-2 mb-4">
+                <Sunrise className="w-6 h-6 text-amber-600" />
+                <Sunset className="w-6 h-6 text-amber-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">Sun & Moon</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">☀️ Sunrise:</span>
+                  <span className="font-semibold text-gray-800">{conditions.solunar?.sunrise || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">🌅 Sunset:</span>
+                  <span className="font-semibold text-gray-800">{conditions.solunar?.sunset || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">🌙 Moonrise:</span>
+                  <span className="font-semibold text-gray-800">{conditions.solunar?.moonrise || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">🌑 Moonset:</span>
+                  <span className="font-semibold text-gray-800">{conditions.solunar?.moonset || 'N/A'}</span>
+                </div>
+              </div>
             </div>
 
             {/* Sea Temperature */}
@@ -194,8 +261,76 @@ const LandingPage = () => {
               </p>
             </div>
           </div>
+          </>
         ) : (
           <p className="text-center text-gray-600">Unable to load conditions</p>
+        )}
+
+        {/* Solunar Periods - Best Times to Fish */}
+        {conditions?.solunar && (
+          <div className="bg-white rounded-2xl shadow-xl p-8 mb-12">
+            <h3 className="text-2xl font-bold text-gray-800 mb-6 text-center">
+              🎣 The best times of day for fishing are:
+            </h3>
+            
+            <div className="grid md:grid-cols-2 gap-8">
+              {/* Major Periods */}
+              <div>
+                <h4 className="text-xl font-bold text-gray-900 mb-4">MAJOR PERIODS</h4>
+                <div className="space-y-6">
+                  {conditions.solunar.majorPeriods.map((period, index) => (
+                    <div key={index} className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-6">
+                      <div className="flex items-center gap-4 mb-3">
+                        <div className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center">
+                          <Moon className="w-8 h-8 text-yellow-900" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="text-lg font-bold text-yellow-900">AVERAGE ACTIVITY</p>
+                            <div className="flex gap-1">
+                              <Fish className="w-5 h-5 text-yellow-600 fill-current" />
+                              <Fish className="w-5 h-5 text-yellow-600 fill-current" />
+                              <Fish className="w-5 h-5 text-gray-300 fill-current" />
+                            </div>
+                          </div>
+                          <p className="text-sm text-gray-700">from <span className="font-bold">{period.start}h</span> to <span className="font-bold">{period.end}h</span></p>
+                        </div>
+                      </div>
+                      <p className="text-sm font-semibold text-gray-700">{period.description}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Minor Periods */}
+              <div>
+                <h4 className="text-xl font-bold text-gray-900 mb-4">MINOR PERIODS</h4>
+                <div className="space-y-6">
+                  {conditions.solunar.minorPeriods.map((period, index) => (
+                    <div key={index} className="bg-gray-50 border-2 border-gray-300 rounded-xl p-6">
+                      <div className="flex items-center gap-4 mb-3">
+                        <div className="w-16 h-16 bg-yellow-200 rounded-full flex items-center justify-center">
+                          <Moon className="w-8 h-8 text-gray-700" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="text-lg font-bold text-gray-700">LOW ACTIVITY</p>
+                            <div className="flex gap-1">
+                              <Fish className="w-5 h-5 text-gray-400 fill-current" />
+                              <Fish className="w-5 h-5 text-gray-300 fill-current" />
+                              <Fish className="w-5 h-5 text-gray-300 fill-current" />
+                            </div>
+                          </div>
+                          <p className="text-sm text-gray-700">from <span className="font-bold">{period.start}h</span> to <span className="font-bold">{period.end}h</span></p>
+                        </div>
+                      </div>
+                      <p className="text-sm font-semibold text-gray-700">{period.description}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Tide Timeline */}
@@ -231,7 +366,7 @@ const LandingPage = () => {
               </button>
             </div>
 
-            <TideTimeline tide={conditions.tide} />
+            <TideTimeline tide={conditions.tide} solunar={conditions.solunar} />
           </div>
         )}
 
@@ -317,7 +452,7 @@ const LandingPage = () => {
 };
 
 // Tide Timeline Component
-const TideTimeline = ({ tide }) => {
+const TideTimeline = ({ tide, solunar }) => {
   const series = Array.isArray(tide.series) ? tide.series : [];
   if (!series.length) return null;
 
@@ -332,17 +467,26 @@ const TideTimeline = ({ tide }) => {
   const minH = Math.min(...heights);
   const maxH = Math.max(...heights);
 
-  const width = 800; const height = 160; const padding = 20;
+  const width = 800; const height = 180; const padding = 20;
   const plotWidth = width - padding * 2;
-  const plotHeight = height - padding * 2;
+  const plotHeight = height - padding * 2 - 30; // Extra space for fish activity indicators
 
   const n = points.length;
   const getX = (i) => padding + (i / Math.max(1, n - 1)) * plotWidth;
-  const getY = (h) => padding + (1 - (h - minH) / Math.max(1e-6, (maxH - minH))) * plotHeight;
+  const getY = (h) => padding + 30 + (1 - (h - minH) / Math.max(1e-6, (maxH - minH))) * plotHeight;
 
   const polyPoints = points.map((p, i) => `${getX(i)},${getY(p.height)}`).join(' ');
 
-  // determine 'now' position using referenceTime if available
+  // Convert time string HH:MM to x position
+  const timeToX = (timeStr) => {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    const totalMinutes = hours * 60 + minutes;
+    const dayMinutes = 24 * 60;
+    const fraction = totalMinutes / dayMinutes;
+    return padding + fraction * plotWidth;
+  };
+
+  // Determine 'now' position using referenceTime if available
   let nowX = null;
   if (tide.referenceTime) {
     const refMs = new Date(tide.referenceTime).getTime();
@@ -357,10 +501,72 @@ const TideTimeline = ({ tide }) => {
 
   return (
     <div className="space-y-4">
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-40">
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-48">
+        {/* Fish Activity Indicators (at top) */}
+        {solunar && (
+          <>
+            {/* Major Periods */}
+            {solunar.majorPeriods?.map((period, idx) => {
+              const startX = timeToX(period.start);
+              const endX = timeToX(period.end);
+              return (
+                <g key={`major-${idx}`}>
+                  <rect
+                    x={startX}
+                    y={5}
+                    width={Math.max(2, endX - startX)}
+                    height={20}
+                    fill="#fbbf24"
+                    opacity={0.6}
+                    rx={2}
+                  />
+                  <text
+                    x={(startX + endX) / 2}
+                    y={18}
+                    textAnchor="middle"
+                    fontSize="10"
+                    fill="#78350f"
+                    fontWeight="bold"
+                  >
+                    🐟🐟
+                  </text>
+                </g>
+              );
+            })}
+            
+            {/* Minor Periods */}
+            {solunar.minorPeriods?.map((period, idx) => {
+              const startX = timeToX(period.start);
+              const endX = timeToX(period.end);
+              return (
+                <g key={`minor-${idx}`}>
+                  <rect
+                    x={startX}
+                    y={5}
+                    width={Math.max(2, endX - startX)}
+                    height={20}
+                    fill="#d1d5db"
+                    opacity={0.6}
+                    rx={2}
+                  />
+                  <text
+                    x={(startX + endX) / 2}
+                    y={18}
+                    textAnchor="middle"
+                    fontSize="10"
+                    fill="#374151"
+                  >
+                    🐟
+                  </text>
+                </g>
+              );
+            })}
+          </>
+        )}
+
         {/* grid lines */}
         {[0,0.25,0.5,0.75,1].map((g, idx) => (
-          <line key={idx} x1={padding} x2={width - padding} y1={padding + g * plotHeight} y2={padding + g * plotHeight} stroke="#e6eef9" strokeWidth="1" />
+          <line key={idx} x1={padding} x2={width - padding} y1={padding + 30 + g * plotHeight} y2={padding + 30 + g * plotHeight} stroke="#e6eef9" strokeWidth="1" />
         ))}
 
         {/* polyline tide */}
@@ -374,16 +580,16 @@ const TideTimeline = ({ tide }) => {
         {/* now marker */}
         {nowX !== null && (
           <g>
-            <line x1={nowX} x2={nowX} y1={padding} y2={height - padding} stroke="#ef4444" strokeWidth="1" strokeDasharray="4 2" />
-            <rect x={nowX - 30} y={padding - 18} rx={4} ry={4} width={60} height={16} fill="#ef4444" />
-            <text x={nowX} y={padding - 6} textAnchor="middle" fontSize="10" fill="#fff">Now</text>
+            <line x1={nowX} x2={nowX} y1={padding + 30} y2={height - padding} stroke="#ef4444" strokeWidth="1" strokeDasharray="4 2" />
+            <rect x={nowX - 30} y={padding + 12} rx={4} ry={4} width={60} height={16} fill="#ef4444" />
+            <text x={nowX} y={padding + 24} textAnchor="middle" fontSize="10" fill="#fff">Now</text>
           </g>
         )}
       {/* axis labels inside main SVG: y ticks (heights) on right and x ticks (times) on bottom */}
       {/* y ticks */}
       {[0,1,2,3,4].map((i) => {
         const g = i / 4;
-        const y = padding + g * plotHeight;
+        const y = padding + 30 + g * plotHeight;
         const value = (maxH - g * (maxH - minH)).toFixed(2);
         return (
           <text key={`y-${i}`} x={width - padding + 8} y={y + 4} fontSize={11} fill="#64748b">{value}m</text>
