@@ -96,6 +96,93 @@ const LandingPage = () => {
         </div>
       </div>
 
+      {/* Features Section */}
+      <div className="max-w-7xl mx-auto px-4 py-16 bg-white rounded-3xl shadow-xl mb-12">
+        <div className="text-center mb-12">
+          <h2 className="text-4xl font-bold text-gray-900 mb-4">Why Choose Fishing Tracker Pro?</h2>
+          <p className="text-xl text-gray-600">Everything you need for successful fishing in Mauritius</p>
+        </div>
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {/* Feature 1 */}
+          <div className="text-center p-6 rounded-xl hover:bg-blue-50 transition-colors">
+            <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Activity className="w-8 h-8 text-blue-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Real-Time Conditions</h3>
+            <p className="text-gray-600">
+              Get live updates on tide levels, weather, moon phase, and fish activity based on scientific solunar theory
+            </p>
+          </div>
+
+          {/* Feature 2 */}
+          <div className="text-center p-6 rounded-xl hover:bg-blue-50 transition-colors">
+            <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Fish className="w-8 h-8 text-green-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Track Your Catches</h3>
+            <p className="text-gray-600">
+              Log every fishing trip with details like species caught, bait used, location, and environmental conditions
+            </p>
+          </div>
+
+          {/* Feature 3 */}
+          <div className="text-center p-6 rounded-xl hover:bg-blue-50 transition-colors">
+            <div className="bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Moon className="w-8 h-8 text-purple-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Solunar Predictions</h3>
+            <p className="text-gray-600">
+              Advanced fish activity predictions using moon phases, tides, and astronomical data for optimal fishing times
+            </p>
+          </div>
+
+          {/* Feature 4 */}
+          <div className="text-center p-6 rounded-xl hover:bg-blue-50 transition-colors">
+            <div className="bg-cyan-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Waves className="w-8 h-8 text-cyan-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Tide Timeline</h3>
+            <p className="text-gray-600">
+              24-hour tide predictions with visual charts showing high/low tides and optimal fishing periods throughout the day
+            </p>
+          </div>
+
+          {/* Feature 5 */}
+          <div className="text-center p-6 rounded-xl hover:bg-blue-50 transition-colors">
+            <div className="bg-orange-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Sun className="w-8 h-8 text-orange-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Weather Intelligence</h3>
+            <p className="text-gray-600">
+              Accurate weather forecasts including temperature, wind speed, wave height, and sea surface temperature
+            </p>
+          </div>
+
+          {/* Feature 6 */}
+          <div className="text-center p-6 rounded-xl hover:bg-blue-50 transition-colors">
+            <div className="bg-red-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Eye className="w-8 h-8 text-red-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Analytics & Insights</h3>
+            <p className="text-gray-600">
+              View detailed reports, analyze your fishing patterns, and discover the best times and locations for different species
+            </p>
+          </div>
+        </div>
+
+        {/* CTA Section */}
+        <div className="mt-12 text-center">
+          <Link
+            to="/register"
+            className="inline-block bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-8 py-4 rounded-xl font-bold text-lg hover:from-blue-700 hover:to-cyan-700 transform hover:scale-105 transition-all shadow-lg"
+          >
+            Start Tracking Your Catches - It's Free! 🎣
+          </Link>
+          <p className="mt-4 text-gray-600">Join fishermen across Mauritius using our platform</p>
+        </div>
+      </div>
+
       {/* Current Conditions */}
       <div className="max-w-7xl mx-auto px-4 py-12">
         <h2 className="text-3xl font-bold text-center text-gray-800 mb-4">
