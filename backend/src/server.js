@@ -12,6 +12,7 @@ const fishingRoutes = require('./routes/fishingRoutes');
 const publicRoutes = require('./routes/publicRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const logsRoutes = require('./routes/logsRoutes');
+const contactRoutes = require('./routes/contactRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -39,6 +40,7 @@ app.use(passport.session());
 
 // Public routes (no authentication needed)
 app.use('/api/public', publicRoutes);
+app.use('/api/contact', contactRoutes);
 
 // Protected routes
 app.use('/api/auth', authRoutes);
