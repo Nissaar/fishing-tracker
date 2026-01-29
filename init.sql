@@ -100,5 +100,42 @@ UPDATE fishing_logs
 SET tide_height = CAST((tide_data->>'height')::text AS DECIMAL(5,2))
 WHERE tide_data IS NOT NULL;
 
+-- Create contact_messages table
+CREATE TABLE IF NOT EXISTS contact_messages (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL,
+    subject VARCHAR(200) NOT NULL,
+    message TEXT NOT NULL,
+    status VARCHAR(20) DEFAULT 'unread', -- 'unread', 'read', 'replied'
+    admin_notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_contact_messages_status ON contact_messages(status);
+CREATE INDEX idx_contact_messages_created ON contact_messages(created_at);
+
+CREATE TRIGGER update_contact_messages_updated_at BEFORE UPDATE ON contact_messages
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Create custom_fish_requests table (for "Other" fish entries)
+CREATE TABLE IF NOT EXISTS custom_fish_requests (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    fish_name VARCHAR(200) NOT NULL,
+    fishing_log_id INTEGER REFERENCES fishing_logs(id) ON DELETE SET NULL,
+    status VARCHAR(20) DEFAULT 'pending', -- 'pending', 'approved', 'rejected'
+    admin_notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_custom_fish_requests_status ON custom_fish_requests(status);
+CREATE INDEX idx_custom_fish_requests_user ON custom_fish_requests(user_id);
+
+CREATE TRIGGER update_custom_fish_requests_updated_at BEFORE UPDATE ON custom_fish_requests
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- Exit
 \q

@@ -167,6 +167,13 @@ const LandingPage = () => {
               <Activity className="w-12 h-12 text-green-600 mb-4" />
               <h3 className="text-lg font-semibold text-gray-800 mb-2">Fish Activity</h3>
               <div className="flex items-center gap-2 mb-3">
+                {conditions.solunar?.currentActivity?.level === 'high' && (
+                  <>
+                    <Fish className="w-8 h-8 text-green-600 fill-current" />
+                    <Fish className="w-8 h-8 text-green-600 fill-current" />
+                    <Fish className="w-8 h-8 text-green-600 fill-current" />
+                  </>
+                )}
                 {conditions.solunar?.currentActivity?.level === 'average' && (
                   <>
                     <Fish className="w-8 h-8 text-yellow-600 fill-current" />
@@ -176,12 +183,12 @@ const LandingPage = () => {
                 )}
                 {conditions.solunar?.currentActivity?.level === 'low' && (
                   <>
-                    <Fish className="w-8 h-8 text-gray-400 fill-current" />
+                    <Fish className="w-8 h-8 text-orange-500 fill-current" />
                     <Fish className="w-8 h-8 text-gray-300 fill-current" />
                     <Fish className="w-8 h-8 text-gray-300 fill-current" />
                   </>
                 )}
-                {(!conditions.solunar?.currentActivity?.level || conditions.solunar?.currentActivity?.level === 'none') && (
+                {(!conditions.solunar?.currentActivity?.level || conditions.solunar?.currentActivity?.level === 'very low' || conditions.solunar?.currentActivity?.level === 'none') && (
                   <>
                     <Fish className="w-8 h-8 text-gray-300 fill-current" />
                     <Fish className="w-8 h-8 text-gray-300 fill-current" />
@@ -190,7 +197,7 @@ const LandingPage = () => {
                 )}
               </div>
               <p className="text-sm font-semibold text-gray-700 capitalize">
-                {conditions.solunar?.currentActivity?.level || 'Low'} Activity
+                {conditions.solunar?.currentActivity?.level || 'Very Low'} Activity
               </p>
               <p className="text-xs text-gray-500 mt-1">
                 {conditions.solunar?.currentActivity?.description || 'Based on solunar theory'}
