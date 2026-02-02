@@ -4,6 +4,12 @@ const authMiddleware = require('../middleware/authMiddleware');
 const pool = require('../config/database');
 const logger = require('../config/logger');
 const { allLocations } = require('../data/mauritiusLocations');
+const rateLimit = require('express-rate-limit');
+
+const adminLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 admin requests per windowMs
+});
 
 // Middleware to check if user is admin
 const isAdmin = async (req, res, next) => {
@@ -161,7 +167,7 @@ router.get('/user-entries/:userId', authMiddleware, isAdmin, async (req, res) =>
 // ==================== USER MANAGEMENT ====================
 
 // Update user admin status
-router.patch('/users/:userId/admin', authMiddleware, isAdmin, async (req, res) => {
+router.patch('/users/:userId/admin', authMiddleware, isAdmin, adminLimiter, async (req, res) => {
   try {
     const { userId } = req.params;
     const { isAdmin: makeAdmin } = req.body;
@@ -189,7 +195,7 @@ router.patch('/users/:userId/admin', authMiddleware, isAdmin, async (req, res) =
 });
 
 // Delete user
-router.delete('/users/:userId', authMiddleware, isAdmin, async (req, res) => {
+router.delete('/users/:userId', authMiddleware, isAdmin, adminLimiter, async (req, res) => {
   try {
     const { userId } = req.params;
 
@@ -216,7 +222,7 @@ router.delete('/users/:userId', authMiddleware, isAdmin, async (req, res) => {
 });
 
 // Update user information (username, email)
-router.patch('/users/:userId', authMiddleware, isAdmin, async (req, res) => {
+router.patch('/users/:userId', authMiddleware, isAdmin, adminLimiter, async (req, res) => {
   try {
     const { userId } = req.params;
     const { username, email } = req.body;
