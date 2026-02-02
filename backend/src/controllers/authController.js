@@ -44,17 +44,26 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
     
+    console.log(`Login attempt for email: ${email}`);
+    
     const user = await User.findByEmail(email);
     if (!user) {
+      console.log(`User not found: ${email}`);
       return res.status(401).json({ error: 'User not found. Please register first.' });
     }
     
+    console.log(`User found: ${email}, has password_hash: ${!!user.password_hash}`);
+    
     if (!user.password_hash) {
+      console.log(`No password hash for: ${email}`);
       return res.status(401).json({ error: 'Please use Google Sign-In for this account' });
     }
     
     const isValidPassword = await User.verifyPassword(password, user.password_hash);
+    console.log(`Password verification for ${email}: ${isValidPassword}`);
+    
     if (!isValidPassword) {
+      console.log(`Invalid password for: ${email}`);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     
@@ -72,7 +81,7 @@ exports.login = async (req, res) => {
     });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ error: 'Login failed' });
+    res.status(500).json({ error: 'Login failed', details: error.message });
   }
 };
 
