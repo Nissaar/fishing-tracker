@@ -272,53 +272,57 @@ router.patch('/users/:userId', authMiddleware, isAdmin, adminLimiter, async (req
 router.patch('/fishing-logs/:logId', authMiddleware, isAdmin, adminLimiter, async (req, res) => {
   try {
     const { logId } = req.params;
-    const {
-      log_date,
-      time_start,
-      time_end,
-      location_name,
-      location,
-      caught_fish,
-      fish_count,
-      fishing_type,
-      fishing_method,
-      bait,
-      moon_phase,
-      tide_phase,
-      tide_height,
-      sea_level,
-      fish_activity,
-      hook_setup,
-      notes
-    } = req.body;
 
-    const result = await pool.query(
-      `UPDATE fishing_logs SET
-        log_date = COALESCE($1, log_date),
-        time_start = COALESCE($2, time_start),
-        time_end = COALESCE($3, time_end),
-        location_name = COALESCE($4, location_name),
-        location = COALESCE($5, location),
-        caught_fish = COALESCE($6, caught_fish),
-        fish_count = COALESCE($7, fish_count),
-        fishing_type = COALESCE($8, fishing_type),
-        fishing_method = COALESCE($9, fishing_method),
-        bait = COALESCE($10, bait),
-        moon_phase = COALESCE($11, moon_phase),
-        tide_phase = COALESCE($12, tide_phase),
-        tide_height = COALESCE($13, tide_height),
-        sea_level = COALESCE($14, sea_level),
-        fish_activity = COALESCE($15, fish_activity),
-        hook_setup = COALESCE($16, hook_setup),
-        notes = COALESCE($17, notes),
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = $18
-      RETURNING *`,
-      [log_date, time_start, time_end, location_name, location, caught_fish, fish_count,
-       fishing_type, fishing_method, bait, moon_phase, tide_phase, tide_height, sea_level,
-       fish_activity, hook_setup, notes, logId]
-    );
+    // Define which fields are allowed to be updated
+    const updatableFields = [
+      'log_date',
+      'time_start',
+      'time_end',
+      'location_name',
+      'location',
+      'caught_fish',
+      'fish_count',
+      'fishing_type',
+      'fishing_method',
+      'bait',
+      'moon_phase',
+      'tide_phase',
+      'tide_height',
+      'sea_level',
+      'fish_activity',
+      'hook_setup',
+      'notes'
+    ];
 
+    const updates = [];
+    const values = [];
+    let paramCount = 1;
+
+    // Only update fields that are explicitly present in the request body.
+    // This allows setting a field to NULL by sending `"field": null`.
+    for (const field of updatableFields) {
+      if (Object.prototype.hasOwnProperty.call(req.body, field)) {
+        updates.push(`${field} = $${paramCount++}`);
+        values.push(req.body[field]);
+      }
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No valid fields provided to update' });
+    }
+
+    // Always update the timestamp
+    updates.push('updated_at = CURRENT_TIMESTAMP');
+
+    const query = `
+      UPDATE fishing_logs
+      SET ${updates.join(', ')}
+      WHERE id = $${paramCount}
+      RETURNING *`;
+
+    values.push(logId);
+
+    const result = await pool.query(query, values);
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Fishing log not found' });
     }
