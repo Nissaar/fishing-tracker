@@ -324,15 +324,18 @@ jobs:
           fi
           
           echo "✅ Frontend build successful"
-          nohup npx serve -s build -l 3000 > frontend.log 2>&1 &
+          echo "Installing serve..."
+          npm install -g serve
+          echo "Starting frontend server on port 3000..."
+          nohup serve -s build -l 3000 > frontend.log 2>&1 &
           echo $! > frontend.pid
-          sleep 5
+          sleep 8
           if ! ps -p $(cat frontend.pid) > /dev/null; then
-            echo "Frontend failed to start. Logs:"
+            echo "❌ Frontend process died. Logs:"
             cat frontend.log
             exit 1
           fi
-          echo "✅ Frontend server started successfully on port 3000"
+          echo "✅ Frontend server process started (PID: $(cat frontend.pid))"
         env:
           CI: false
           SKIP_PREFLIGHT_CHECK: true
@@ -353,15 +356,18 @@ jobs:
             sleep 2
           done
           
-          echo "Waiting for frontend..."
+          echo "Waiting for frontend on port 3000..."
           for i in {1..60}; do
-            if curl -s http://localhost:80 > /dev/null 2>&1; then
-              echo "✅ Frontend is ready!"
+            response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/ 2>/dev/null)
+            if [ "$response" = "200" ] || [ "$response" = "304" ]; then
+              echo "✅ Frontend is ready! (HTTP $response)"
               break
             fi
+            echo "  Attempt $i/60 - HTTP response: $response"
             if [ $i -eq 60 ]; then
-              echo "❌ Frontend failed to respond"
-              if [ -f frontend.log ]; then cat frontend.log; fi
+              echo "❌ Frontend failed to respond - last HTTP code: $response"
+              echo "Frontend server logs:"
+              cat frontend.log 2>/dev/null || echo "No frontend logs available"
               exit 1
             fi
             sleep 2
