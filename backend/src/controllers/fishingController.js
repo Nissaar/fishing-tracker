@@ -201,6 +201,12 @@ exports.getGlobalPredictions = async (req, res) => {
   }
 };
 
+const normalizeMoonPhase = (phase) => {
+  if (!phase) return 'Unknown';
+  const cleaned = String(phase).replace(/^[^A-Za-z]+/, '').trim();
+  return cleaned || 'Unknown';
+};
+
 function generatePredictionsFromLogs(logs) {
   const moonPhaseCount = {};
   const seaLevelCount = {};
@@ -208,8 +214,9 @@ function generatePredictionsFromLogs(logs) {
   const locationCount = {};
   const monthCount = {};
 
+
   logs.forEach((log) => {
-    const phase = log.moon_phase?.split(' ')[1] || 'Unknown';
+    const phase = normalizeMoonPhase(log.moon_phase);
     moonPhaseCount[phase] = (moonPhaseCount[phase] || 0) + log.fish_count;
 
     const level = log.sea_level?.split(' ')[0] || 'Unknown';
@@ -313,7 +320,7 @@ exports.getLocationStats = async (req, res) => {
       }
 
       // Count successful conditions
-      const moonPhase = log.moon_phase?.split(' ')[1] || 'Unknown';
+      const moonPhase = normalizeMoonPhase(log.moon_phase);
       const key = `${moonPhase}_${log.sea_level}`;
       conditionsCount[key] = (conditionsCount[key] || 0) + log.fish_count;
     });
@@ -395,7 +402,7 @@ exports.getBestConditions = async (req, res) => {
     const monthCount = {};
 
     logs.forEach(log => {
-      const moonPhase = log.moon_phase?.split(' ')[1] || 'Unknown';
+      const moonPhase = normalizeMoonPhase(log.moon_phase);
       moonPhaseCount[moonPhase] = (moonPhaseCount[moonPhase] || 0) + log.fish_count;
 
       const tide = log.sea_level?.split(' ')[0] || 'Unknown';

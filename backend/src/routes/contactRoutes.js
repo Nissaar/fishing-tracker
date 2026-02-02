@@ -1,11 +1,19 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const pool = require('../config/database');
-const { authenticateToken, requireAdmin } = require('../middleware/authMiddleware');
+const authMiddleware = require('../middleware/authMiddleware');
 const mailgun = require('mailgun-js');
 const logger = require('../config/logger');
 
 const router = express.Router();
+
+// Admin check middleware
+const isAdmin = (req, res, next) => {
+  if (!req.user || !req.user.is_admin) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  next();
+};
 
 // Initialize Mailgun (optional - only if credentials provided)
 let mg;
@@ -85,7 +93,7 @@ router.post(
 );
 
 // Get all contact messages (admin only)
-router.get('/all', authenticateToken, requireAdmin, async (req, res) => {
+router.get('/all', authMiddleware, isAdmin, async (req, res) => {
   try {
     const { status, limit = 50, offset = 0 } = req.query;
 
@@ -121,7 +129,7 @@ router.get('/all', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // Get single contact message (admin only)
-router.get('/:id', authenticateToken, requireAdmin, async (req, res) => {
+router.get('/:id', authMiddleware, isAdmin, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -151,7 +159,7 @@ router.get('/:id', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // Update contact message status (admin only)
-router.patch('/:id/status', authenticateToken, requireAdmin, async (req, res) => {
+router.patch('/:id/status', authMiddleware, isAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { status, adminNotes } = req.body;
@@ -182,7 +190,7 @@ router.patch('/:id/status', authenticateToken, requireAdmin, async (req, res) =>
 });
 
 // Delete contact message (admin only)
-router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
+router.delete('/:id', authMiddleware, isAdmin, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -205,7 +213,7 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // Get contact message statistics (admin only)
-router.get('/stats/summary', authenticateToken, requireAdmin, async (req, res) => {
+router.get('/stats/summary', authMiddleware, isAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT 

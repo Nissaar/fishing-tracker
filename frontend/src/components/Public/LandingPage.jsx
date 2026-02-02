@@ -372,19 +372,29 @@ const LandingPage = () => {
               <div>
                 <h4 className="text-xl font-bold text-gray-900 mb-4">MAJOR PERIODS</h4>
                 <div className="space-y-6">
-                  {conditions.solunar.majorPeriods.map((period, index) => (
-                    <div key={index} className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-6">
+                  {conditions.solunar.majorPeriods.map((period, index) => {
+                    const isHigh = period.activity === 'high';
+                    const isAverage = period.activity === 'average';
+                    const isLow = period.activity === 'low';
+                    const bgColor = isHigh ? 'bg-green-50 border-2 border-green-300' : isAverage ? 'bg-yellow-50 border-2 border-yellow-300' : 'bg-orange-50 border-2 border-orange-300';
+                    const activityLabel = isHigh ? 'HIGH ACTIVITY' : isAverage ? 'AVERAGE ACTIVITY' : 'LOW ACTIVITY';
+                    const activityColor = isHigh ? 'text-green-900' : isAverage ? 'text-yellow-900' : 'text-orange-900';
+                    const fishColor = isHigh ? 'text-green-600' : isAverage ? 'text-yellow-600' : 'text-orange-600';
+                    return (
+                    <div key={index} className={`${bgColor} rounded-xl p-6`}>
                       <div className="flex items-center gap-4 mb-3">
-                        <div className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center">
-                          <Moon className="w-8 h-8 text-yellow-900" />
+                        <div className={`w-16 h-16 ${isHigh ? 'bg-green-400' : isAverage ? 'bg-yellow-400' : 'bg-orange-400'} rounded-full flex items-center justify-center`}>
+                          <Moon className={`w-8 h-8 ${activityColor}`} />
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <p className="text-lg font-bold text-yellow-900">AVERAGE ACTIVITY</p>
+                            <p className={`text-lg font-bold ${activityColor}`}>{activityLabel}</p>
                             <div className="flex gap-1">
-                              <Fish className="w-5 h-5 text-yellow-600 fill-current" />
-                              <Fish className="w-5 h-5 text-yellow-600 fill-current" />
-                              <Fish className="w-5 h-5 text-gray-300 fill-current" />
+                              <Fish className={`w-5 h-5 ${fishColor} fill-current`} />
+                              {(isHigh || isAverage) && <Fish className={`w-5 h-5 ${fishColor} fill-current`} />}
+                              {isHigh && <Fish className={`w-5 h-5 ${fishColor} fill-current`} />}
+                              {!isHigh && <Fish className="w-5 h-5 text-gray-300 fill-current" />}
+                              {isLow && <Fish className="w-5 h-5 text-gray-300 fill-current" />}
                             </div>
                           </div>
                           <p className="text-sm text-gray-700">from <span className="font-bold">{period.start}h</span> to <span className="font-bold">{period.end}h</span></p>
@@ -392,7 +402,8 @@ const LandingPage = () => {
                       </div>
                       <p className="text-sm font-semibold text-gray-700">{period.description}</p>
                     </div>
-                  ))}
+                  );
+                  })}
                 </div>
               </div>
 
@@ -400,19 +411,29 @@ const LandingPage = () => {
               <div>
                 <h4 className="text-xl font-bold text-gray-900 mb-4">MINOR PERIODS</h4>
                 <div className="space-y-6">
-                  {conditions.solunar.minorPeriods.map((period, index) => (
-                    <div key={index} className="bg-gray-50 border-2 border-gray-300 rounded-xl p-6">
+                  {conditions.solunar.minorPeriods.map((period, index) => {
+                    const isHigh = period.activity === 'high';
+                    const isAverage = period.activity === 'average';
+                    const isLow = period.activity === 'low';
+                    const bgColor = isHigh ? 'bg-green-50 border-2 border-green-300' : isAverage ? 'bg-yellow-50 border-2 border-yellow-300' : 'bg-orange-50 border-2 border-orange-300';
+                    const activityLabel = isHigh ? 'HIGH ACTIVITY' : isAverage ? 'AVERAGE ACTIVITY' : 'LOW ACTIVITY';
+                    const activityColor = isHigh ? 'text-green-900' : isAverage ? 'text-yellow-900' : 'text-orange-900';
+                    const fishColor = isHigh ? 'text-green-600' : isAverage ? 'text-yellow-600' : 'text-orange-600';
+                    return (
+                    <div key={index} className={`${bgColor} rounded-xl p-6`}>
                       <div className="flex items-center gap-4 mb-3">
-                        <div className="w-16 h-16 bg-yellow-200 rounded-full flex items-center justify-center">
-                          <Moon className="w-8 h-8 text-gray-700" />
+                        <div className={`w-16 h-16 ${isHigh ? 'bg-green-400' : isAverage ? 'bg-yellow-400' : 'bg-orange-400'} rounded-full flex items-center justify-center`}>
+                          <Moon className={`w-8 h-8 ${activityColor}`} />
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <p className="text-lg font-bold text-gray-700">LOW ACTIVITY</p>
+                            <p className={`text-lg font-bold ${activityColor}`}>{activityLabel}</p>
                             <div className="flex gap-1">
-                              <Fish className="w-5 h-5 text-gray-400 fill-current" />
-                              <Fish className="w-5 h-5 text-gray-300 fill-current" />
-                              <Fish className="w-5 h-5 text-gray-300 fill-current" />
+                              <Fish className={`w-5 h-5 ${fishColor} fill-current`} />
+                              {(isHigh || isAverage) && <Fish className={`w-5 h-5 ${fishColor} fill-current`} />}
+                              {isHigh && <Fish className={`w-5 h-5 ${fishColor} fill-current`} />}
+                              {!isHigh && <Fish className="w-5 h-5 text-gray-300 fill-current" />}
+                              {isLow && <Fish className="w-5 h-5 text-gray-300 fill-current" />}
                             </div>
                           </div>
                           <p className="text-sm text-gray-700">from <span className="font-bold">{period.start}h</span> to <span className="font-bold">{period.end}h</span></p>
@@ -420,7 +441,8 @@ const LandingPage = () => {
                       </div>
                       <p className="text-sm font-semibold text-gray-700">{period.description}</p>
                     </div>
-                  ))}
+                  );
+                  })}
                 </div>
               </div>
             </div>

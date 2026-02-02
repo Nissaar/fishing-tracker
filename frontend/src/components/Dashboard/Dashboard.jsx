@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Calendar, Fish, Activity, TrendingUp, Table, LogOut, User, MapPin } from 'lucide-react';
+import { Calendar, Fish, Activity, TrendingUp, Table, LogOut, User, MapPin, Compass } from 'lucide-react';
 import Header from '../Layout/Header';
 import LogTrip from './LogTrip';
 import Reports from './Reports';
@@ -8,6 +8,7 @@ import Predictions from './Predictions';
 import DataTable from './DataTable';
 import BrowseLocation from './BrowseLocation';
 import BestConditions from './BestConditions';
+import PlanTrip from './PlanTrip';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -16,6 +17,7 @@ const Dashboard = () => {
   const tabs = [
     { id: 'log', name: 'Log Trip', icon: Calendar },
     { id: 'table', name: 'View Data', icon: Table },
+    { id: 'plan', name: 'Plan Trip', icon: Compass },
     { id: 'reports', name: 'Reports', icon: Activity },
     { id: 'predictions', name: 'Predictions', icon: TrendingUp },
     { id: 'browse', name: 'Browse Locations', icon: MapPin },
@@ -50,6 +52,7 @@ const Dashboard = () => {
           <div className="p-6">
             {activeTab === 'log' && <LogTrip />}
             {activeTab === 'table' && <DataTable />}
+            {activeTab === 'plan' && <PlanTrip />}
             {activeTab === 'reports' && <Reports />}
             {activeTab === 'predictions' && <Predictions />}
             {activeTab === 'browse' && <BrowseLocation />}

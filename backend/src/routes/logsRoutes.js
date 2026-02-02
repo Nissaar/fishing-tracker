@@ -1,12 +1,32 @@
 const express = require('express');
 const fs = require('fs').promises;
 const path = require('path');
-const { authenticateToken, requireAdmin } = require('../middleware/authMiddleware');
+const authMiddleware = require('../middleware/authMiddleware');
+const pool = require('../config/database');
+
+// Middleware to check if user is admin
+const isAdmin = async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      'SELECT is_admin FROM users WHERE id = $1',
+      [req.user.id]
+    );
+    
+    if (result.rows.length === 0 || !result.rows[0].is_admin) {
+      return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
+    }
+    
+    next();
+  } catch (error) {
+    console.error('Admin check error:', error);
+    res.status(500).json({ error: 'Server error during admin verification' });
+  }
+};
 
 const router = express.Router();
 
 // Get list of available log files
-router.get('/files', authenticateToken, requireAdmin, async (req, res) => {
+router.get('/files', authMiddleware, isAdmin, async (req, res) => {
   try {
     const logDir = path.join(__dirname, '../../logs');
     const files = await fs.readdir(logDir);
@@ -38,7 +58,7 @@ router.get('/files', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // Get content of a specific log file
-router.get('/content/:filename', authenticateToken, requireAdmin, async (req, res) => {
+router.get('/content/:filename', authMiddleware, isAdmin, async (req, res) => {
   try {
     const { filename } = req.params;
     const { lines = 100, search = '' } = req.query;
@@ -96,7 +116,7 @@ router.get('/content/:filename', authenticateToken, requireAdmin, async (req, re
 });
 
 // Delete old log files
-router.delete('/cleanup', authenticateToken, requireAdmin, async (req, res) => {
+router.delete('/cleanup', authMiddleware, isAdmin, async (req, res) => {
   try {
     const { daysOld = 30 } = req.body;
     const logDir = path.join(__dirname, '../../logs');
