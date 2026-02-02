@@ -231,6 +231,16 @@ router.patch('/users/:userId', authMiddleware, isAdmin, adminLimiter, async (req
       return res.status(400).json({ error: 'Username and email are required' });
     }
 
+    // Validate username format and length
+    if (username.length > 50 || !/^[a-zA-Z0-9_-]+$/.test(username)) {
+      return res.status(400).json({ error: 'Username must be alphanumeric with hyphens/underscores and no more than 50 characters' });
+    }
+
+    // Validate email format and length
+    if (email.length > 100 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: 'Email must be a valid email address and no more than 100 characters' });
+    }
+
     // Check if email is already taken by another user
     const emailCheck = await pool.query(
       'SELECT id FROM users WHERE email = $1 AND id != $2',
