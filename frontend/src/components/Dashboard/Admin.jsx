@@ -1036,6 +1036,7 @@ const EditEntryModal = ({ entry, onSave, onCancel, onChange, dropdownData }) => 
   const [fishSearch, setFishSearch] = useState('');
   const [showFishDropdown, setShowFishDropdown] = useState(false);
   const [filteredBaits, setFilteredBaits] = useState([]);
+  const [activeFishIndex, setActiveFishIndex] = useState(-1);
 
   // Filter baits when fishing type changes
   React.useEffect(() => {
@@ -1087,6 +1088,43 @@ const EditEntryModal = ({ entry, onSave, onCancel, onChange, dropdownData }) => 
     newFish.splice(index, 1);
     onChange({ ...entry, fish_types: newFish });
   };
+
+  const handleFishKeyDown = (e) => {
+    if (!showFishDropdown || filteredFish.length === 0) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setActiveFishIndex(prev => 
+          prev < filteredFish.length - 1 ? prev + 1 : prev
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setActiveFishIndex(prev => prev > 0 ? prev - 1 : 0);
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (activeFishIndex >= 0 && activeFishIndex < filteredFish.length) {
+          const selectedFish = filteredFish[activeFishIndex];
+          handleAddFish(selectedFish.local_name || selectedFish.english_name);
+          setActiveFishIndex(-1);
+        }
+        break;
+      case 'Escape':
+        e.preventDefault();
+        setShowFishDropdown(false);
+        setActiveFishIndex(-1);
+        break;
+      default:
+        break;
+    }
+  };
+
+  // Reset active index when filtered fish changes
+  React.useEffect(() => {
+    setActiveFishIndex(-1);
+  }, [fishSearch]);
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-8 mt-6 border-2 border-blue-500">
@@ -1221,7 +1259,7 @@ const EditEntryModal = ({ entry, onSave, onCancel, onChange, dropdownData }) => 
 
       {/* Fish Species Selection */}
       <div className="mt-6">
-        <label className="block text-sm font-semibold text-gray-700 mb-2">Fish Caught</label>
+        <label id="fish-caught-label" className="block text-sm font-semibold text-gray-700 mb-2">Fish Caught</label>
         <div className="relative">
           <input
             type="text"
@@ -1232,16 +1270,32 @@ const EditEntryModal = ({ entry, onSave, onCancel, onChange, dropdownData }) => 
               setShowFishDropdown(true);
             }}
             onFocus={() => setShowFishDropdown(true)}
+            onKeyDown={handleFishKeyDown}
+            aria-labelledby="fish-caught-label"
+            aria-expanded={showFishDropdown && filteredFish.length > 0}
+            aria-controls="fish-dropdown-list"
+            aria-activedescendant={activeFishIndex >= 0 ? `fish-option-${activeFishIndex}` : undefined}
+            role="combobox"
+            aria-autocomplete="list"
             className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           
           {showFishDropdown && filteredFish.length > 0 && (
-            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-              {filteredFish.map((fish) => (
+            <div 
+              id="fish-dropdown-list"
+              role="listbox"
+              className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+            >
+              {filteredFish.map((fish, index) => (
                 <div
                   key={fish.id}
+                  id={`fish-option-${index}`}
+                  role="option"
+                  aria-selected={index === activeFishIndex}
                   onClick={() => handleAddFish(fish.local_name || fish.english_name)}
-                  className="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                  className={`px-4 py-3 cursor-pointer border-b border-gray-100 last:border-b-0 ${
+                    index === activeFishIndex ? 'bg-blue-100' : 'hover:bg-blue-50'
+                  }`}
                 >
                   <div className="font-semibold text-gray-800">{fish.local_name}</div>
                   {fish.english_name && <div className="text-xs text-gray-600">{fish.english_name}</div>}
