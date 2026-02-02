@@ -282,6 +282,7 @@ router.patch('/fishing-logs/:logId', authMiddleware, adminLimiter, isAdmin, asyn
       'location',
       'caught_fish',
       'fish_count',
+      'fish_types',
       'fishing_type',
       'fishing_method',
       'bait',
