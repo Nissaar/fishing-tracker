@@ -78,19 +78,27 @@ setup.describe('Global Setup', () => {
     await waitForApiHealth(request, API_URL);
     
     console.log('🔧 Setting up test user authentication...');
+    console.log(`📧 Using email: ${TEST_USER.email}`);
+    console.log(`🔐 Using password: ${TEST_USER.password}`);
+    console.log(`🌐 API URL: ${API_URL}`);
     
     // Try to register the test user (will fail if already exists)
     try {
-      await request.post(`${API_URL}/auth/register`, {
+      const registerResponse = await request.post(`${API_URL}/auth/register`, {
         data: {
           username: TEST_USER.username,
           email: TEST_USER.email,
           password: TEST_USER.password
         }
       });
-      console.log('✅ Test user registered successfully');
+      if (registerResponse.ok()) {
+        console.log('✅ Test user registered successfully');
+      } else {
+        const details = await getResponseDetails(registerResponse);
+        console.log(`ℹ️ Registration returned status ${details.status}:`, details.body);
+      }
     } catch (error) {
-      console.log('ℹ️ Test user may already exist, proceeding to login');
+      console.log('ℹ️ Test user may already exist, proceeding to login:', error.message);
     }
     
     // Login as test user
@@ -125,14 +133,17 @@ setup.describe('Global Setup', () => {
       });
 
       if (!loginResponse.ok()) {
+        console.log(`❌ First login attempt failed (status ${loginResponse.status()}), trying registration...`);
+        
         // Try re-registering, then login again
-        await request.post(`${API_URL}/auth/register`, {
+        const reRegisterResponse = await request.post(`${API_URL}/auth/register`, {
           data: {
             username: TEST_USER.username,
             email: TEST_USER.email,
             password: TEST_USER.password
           }
         });
+        console.log(`Re-registration response: ${reRegisterResponse.status()}`);
 
         loginResponse = await request.post(`${API_URL}/auth/login`, {
           data: {
@@ -155,6 +166,8 @@ setup.describe('Global Setup', () => {
         console.log('✅ User authentication state saved via API');
       } else {
         const details = await getResponseDetails(loginResponse);
+        console.error(`❌ Login failed with status ${details.status}`);
+        console.error('Response body:', details.body);
         throw new Error(`Failed to authenticate test user (status ${details.status})`);
       }
     }
@@ -165,19 +178,26 @@ setup.describe('Global Setup', () => {
     await waitForApiHealth(request, API_URL);
     
     console.log('🔧 Setting up admin user authentication...');
+    console.log(`📧 Using email: ${TEST_ADMIN.email}`);
+    console.log(`🔐 Using password: ${TEST_ADMIN.password}`);
     
     // Try to register the admin user
     try {
-      await request.post(`${API_URL}/auth/register`, {
+      const registerResponse = await request.post(`${API_URL}/auth/register`, {
         data: {
           username: TEST_ADMIN.username,
           email: TEST_ADMIN.email,
           password: TEST_ADMIN.password
         }
       });
-      console.log('✅ Admin user registered');
+      if (registerResponse.ok()) {
+        console.log('✅ Admin user registered');
+      } else {
+        const details = await getResponseDetails(registerResponse);
+        console.log(`ℹ️ Admin registration returned status ${details.status}:`, details.body);
+      }
     } catch (error) {
-      console.log('ℹ️ Admin user may already exist');
+      console.log('ℹ️ Admin user may already exist:', error.message);
     }
     
     // Set admin flag via direct database or API if available
@@ -210,13 +230,16 @@ setup.describe('Global Setup', () => {
       });
 
       if (!loginResponse.ok()) {
-        await request.post(`${API_URL}/auth/register`, {
+        console.log(`❌ First admin login attempt failed (status ${loginResponse.status()}), trying registration...`);
+        
+        const reRegisterResponse = await request.post(`${API_URL}/auth/register`, {
           data: {
             username: TEST_ADMIN.username,
             email: TEST_ADMIN.email,
             password: TEST_ADMIN.password
           }
         });
+        console.log(`Admin re-registration response: ${reRegisterResponse.status()}`);
 
         loginResponse = await request.post(`${API_URL}/auth/login`, {
           data: {
@@ -237,6 +260,8 @@ setup.describe('Global Setup', () => {
         console.log('✅ Admin authentication state saved via API');
       } else {
         const details = await getResponseDetails(loginResponse);
+        console.error(`❌ Admin login failed with status ${details.status}`);
+        console.error('Response body:', details.body);
         throw new Error(`Failed to authenticate admin user (status ${details.status})`);
       }
     }

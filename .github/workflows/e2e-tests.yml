@@ -11,9 +11,9 @@ on:
 
 env:
   TEST_USER_EMAIL: e2etest@fishingtracker.mu
-  TEST_USER_PASSWORD: E2ETestPassword123!
+  TEST_USER_PASSWORD: password
   TEST_ADMIN_EMAIL: admin@fishingtracker.mu
-  TEST_ADMIN_PASSWORD: AdminPassword123!
+  TEST_ADMIN_PASSWORD: password
   TEST_BASE_URL: http://localhost:3000
   TEST_API_URL: http://localhost:5000/api
 
