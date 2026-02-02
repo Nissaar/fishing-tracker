@@ -60,7 +60,7 @@ exports.login = async (req, res) => {
     }
     
     const isValidPassword = await User.verifyPassword(password, user.password_hash);
-    console.log(`Password verification for ${email}: ${isValidPassword}`);
+    console.log(`Password verification completed for email: ${email}`);
     
     if (!isValidPassword) {
       console.log(`Invalid password for: ${email}`);
