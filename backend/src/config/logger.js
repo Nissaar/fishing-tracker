@@ -1,9 +1,16 @@
 const winston = require('winston');
 const DailyRotateFile = require('winston-daily-rotate-file');
 const path = require('path');
+const fs = require('fs');
 
 // Define log directory
 const logDir = path.join(__dirname, '../../logs');
+
+// Create logs directory if it doesn't exist
+if (!fs.existsSync(logDir)) {
+  fs.mkdirSync(logDir, { recursive: true });
+  console.log(`📁 Created logs directory: ${logDir}`);
+}
 
 // Define log format
 const logFormat = winston.format.combine(

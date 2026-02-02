@@ -62,33 +62,31 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Something went wrong!' });
 });
 
-// Startup function with error handling
-async function startServer() {
-  try {
-    // Verify database connection
-    const db = require('./config/database');
-    const result = await db.query('SELECT NOW()');
-    logger.info('✅ Database connection verified');
-    
-    const server = app.listen(PORT, '0.0.0.0', () => {
-      logger.info(`🚀 Server running on port ${PORT}`);
-      logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`\n✅ Server started successfully on port ${PORT}\n`);
-    });
-    
-    // Handle server errors
-    server.on('error', (err) => {
-      logger.error(`Server error: ${err.message}`);
-      console.error(`\n❌ Server error: ${err.message}\n`);
-      process.exit(1);
-    });
-    
-  } catch (error) {
-    logger.error(`Failed to start server: ${error.message}`, { stack: error.stack });
-    console.error(`\n❌ Failed to start server: ${error.message}\n`);
-    console.error(error);
-    process.exit(1);
-  }
-}
+// Start server
+const server = app.listen(PORT, '0.0.0.0', () => {
+  logger.info(`🚀 Server running on port ${PORT}`);
+  logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`\n✅ Server started successfully on port ${PORT}\n`);
+});
 
-startServer();
+// Handle server errors
+server.on('error', (err) => {
+  console.error(`\n❌ Server error: ${err.message}\n`);
+  logger.error(`Server error: ${err.message}`);
+  process.exit(1);
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.error(`\n❌ Uncaught Exception: ${err.message}\n`);
+  console.error(err);
+  logger.error(`Uncaught Exception: ${err.message}`, { stack: err.stack });
+  process.exit(1);
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error(`\n❌ Unhandled Rejection at:`, promise, `reason:`, reason);
+  logger.error(`Unhandled Rejection: ${reason}`);
+  process.exit(1);
+});

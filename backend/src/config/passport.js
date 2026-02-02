@@ -15,42 +15,48 @@ passport.deserializeUser(async (id, done) => {
   }
 });
 
-passport.use(new GoogleStrategy({
-    clientID: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: process.env.GOOGLE_CALLBACK_URL
-  },
-  async (accessToken, refreshToken, profile, done) => {
-    try {
-      if (!profile.emails || !profile.emails[0]) {
-        return done(new Error('No email provided by Google'), null);
-      }
+// Only initialize Google Strategy if credentials are provided
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  console.log('🔐 Google OAuth configured');
+  passport.use(new GoogleStrategy({
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: process.env.GOOGLE_CALLBACK_URL
+    },
+    async (accessToken, refreshToken, profile, done) => {
+      try {
+        if (!profile.emails || !profile.emails[0]) {
+          return done(new Error('No email provided by Google'), null);
+        }
 
-      // Check if user exists
-      let result = await pool.query('SELECT * FROM users WHERE email = $1', [profile.emails[0].value]);
-      
-      if (result.rows.length > 0) {
-        return done(null, result.rows[0]);
+        // Check if user exists
+        let result = await pool.query('SELECT * FROM users WHERE email = $1', [profile.emails[0].value]);
+        
+        if (result.rows.length > 0) {
+          return done(null, result.rows[0]);
+        }
+        
+        // Create new user
+        const newUser = await pool.query(
+          'INSERT INTO users (username, email, password_hash, google_id, avatar_url) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+          [
+            profile.displayName || profile.emails[0].value.split('@')[0],
+            profile.emails[0].value,
+            '',
+            profile.id,
+            profile.photos && profile.photos[0] ? profile.photos[0].value : null
+          ]
+        );
+        
+        return done(null, newUser.rows[0]);
+      } catch (error) {
+        console.error('Google OAuth error:', error);
+        return done(error, null);
       }
-      
-      // Create new user
-      const newUser = await pool.query(
-        'INSERT INTO users (username, email, password_hash, google_id, avatar_url) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-        [
-          profile.displayName || profile.emails[0].value.split('@')[0],
-          profile.emails[0].value,
-          '',
-          profile.id,
-          profile.photos && profile.photos[0] ? profile.photos[0].value : null
-        ]
-      );
-      
-      return done(null, newUser.rows[0]);
-    } catch (error) {
-      console.error('Google OAuth error:', error);
-      return done(error, null);
     }
-  }
-));
+  ));
+} else {
+  console.log('⚠️ Google OAuth not configured (GOOGLE_CLIENT_ID missing)');
+}
 
 module.exports = passport;
