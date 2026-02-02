@@ -323,7 +323,7 @@ const Admin = () => {
 
   const handleSaveEntryEdit = async () => {
     try {
-      await axios.patch(`${API_URL}/fishing-logs/${editingEntry}`, editEntryData, getAuthHeaders());
+      await axios.patch(`${API_URL}/admin/fishing-logs/${editingEntry}`, editEntryData, getAuthHeaders());
       toast.success('Entry updated successfully');
       setEditingEntry(null);
       setEditEntryData({});
@@ -338,7 +338,7 @@ const Admin = () => {
   const handleDeleteEntry = async (entryId) => {
     if (!window.confirm('Delete this entry? This cannot be undone.')) return;
     try {
-      await axios.delete(`${API_URL}/fishing-logs/${entryId}`, getAuthHeaders());
+      await axios.delete(`${API_URL}/admin/fishing-logs/${entryId}`, getAuthHeaders());
       toast.success('Entry deleted');
       if (selectedUserId) {
         fetchUserEntries(selectedUserId);
