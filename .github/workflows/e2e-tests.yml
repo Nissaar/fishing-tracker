@@ -75,7 +75,169 @@ jobs:
 
       - name: Initialize database
         run: |
-          PGPASSWORD=testpassword psql -h localhost -U postgres -d fishing_tracker -f init.sql
+          echo "Waiting for PostgreSQL to be fully ready..."
+          sleep 5
+          
+          # Test connection
+          PGPASSWORD=testpassword psql -h localhost -U postgres -d fishing_tracker -c "SELECT 1" || {
+            echo "Failed to connect to database"
+            exit 1
+          }
+          
+          echo "Running database schema initialization..."
+          # Extract only the schema from init.sql (skip CREATE DATABASE line)
+          PGPASSWORD=testpassword psql -h localhost -U postgres -d fishing_tracker << 'EOF'
+          -- Drop existing tables if they exist (for clean test run)
+          DROP TABLE IF EXISTS fishing_logs CASCADE;
+          DROP TABLE IF EXISTS custom_submissions CASCADE;
+          DROP TABLE IF EXISTS contact_messages CASCADE;
+          DROP TABLE IF EXISTS users CASCADE;
+          DROP TABLE IF EXISTS fishing_types CASCADE;
+          DROP TABLE IF EXISTS fish_species CASCADE;
+          DROP TABLE IF EXISTS fishing_methods CASCADE;
+          DROP TABLE IF EXISTS bait_types CASCADE;
+          DROP TABLE IF EXISTS bait_type_mapping CASCADE;
+          DROP TABLE IF EXISTS locations CASCADE;
+          DROP TABLE IF EXISTS system_logs CASCADE;
+          
+          -- Create all tables from init.sql
+          CREATE OR REPLACE FUNCTION update_updated_at_column()
+          RETURNS TRIGGER AS $$
+          BEGIN
+              NEW.updated_at = CURRENT_TIMESTAMP;
+              RETURN NEW;
+          END;
+          $$ language 'plpgsql';
+          
+          CREATE TABLE IF NOT EXISTS users (
+              id SERIAL PRIMARY KEY,
+              username VARCHAR(50) UNIQUE NOT NULL,
+              email VARCHAR(100) UNIQUE NOT NULL,
+              password_hash VARCHAR(255),
+              google_id VARCHAR(255) UNIQUE,
+              avatar_url VARCHAR(500),
+              is_admin BOOLEAN DEFAULT FALSE,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
+              FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+          
+          CREATE TABLE IF NOT EXISTS fishing_types (
+              id SERIAL PRIMARY KEY,
+              name VARCHAR(100) UNIQUE NOT NULL,
+              description TEXT,
+              is_active BOOLEAN DEFAULT TRUE,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          CREATE TABLE IF NOT EXISTS fish_species (
+              id SERIAL PRIMARY KEY,
+              local_name VARCHAR(100) NOT NULL,
+              english_name VARCHAR(100),
+              scientific_name VARCHAR(100) UNIQUE,
+              description TEXT,
+              is_active BOOLEAN DEFAULT TRUE,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          CREATE TABLE IF NOT EXISTS bait_types (
+              id SERIAL PRIMARY KEY,
+              name VARCHAR(100) UNIQUE NOT NULL,
+              description TEXT,
+              is_active BOOLEAN DEFAULT TRUE,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          CREATE TABLE IF NOT EXISTS bait_type_mapping (
+              id SERIAL PRIMARY KEY,
+              fishing_type_id INTEGER REFERENCES fishing_types(id) ON DELETE CASCADE,
+              bait_type_id INTEGER REFERENCES bait_types(id) ON DELETE CASCADE,
+              UNIQUE(fishing_type_id, bait_type_id),
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          CREATE TABLE IF NOT EXISTS fishing_methods (
+              id SERIAL PRIMARY KEY,
+              name VARCHAR(100) UNIQUE NOT NULL,
+              description TEXT,
+              is_active BOOLEAN DEFAULT TRUE,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          CREATE TABLE IF NOT EXISTS locations (
+              id SERIAL PRIMARY KEY,
+              name VARCHAR(100) UNIQUE NOT NULL,
+              latitude DECIMAL(10, 8),
+              longitude DECIMAL(11, 8),
+              description TEXT,
+              is_active BOOLEAN DEFAULT TRUE,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          CREATE TABLE IF NOT EXISTS fishing_logs (
+              id SERIAL PRIMARY KEY,
+              user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+              location_id INTEGER REFERENCES locations(id),
+              fishing_type_id INTEGER REFERENCES fishing_types(id),
+              fish_species_id INTEGER REFERENCES fish_species(id),
+              bait_type_id INTEGER REFERENCES bait_types(id),
+              fishing_method_id INTEGER REFERENCES fishing_methods(id),
+              quantity_caught INTEGER,
+              weight_caught DECIMAL(10, 2),
+              weather_condition VARCHAR(50),
+              wind_speed DECIMAL(5, 2),
+              water_temperature DECIMAL(5, 2),
+              moon_phase VARCHAR(20),
+              tide_status VARCHAR(20),
+              date_caught DATE,
+              time_start TIME,
+              time_end TIME,
+              notes TEXT,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          CREATE TABLE IF NOT EXISTS custom_submissions (
+              id SERIAL PRIMARY KEY,
+              user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+              submission_type VARCHAR(50),
+              value VARCHAR(255),
+              status VARCHAR(20) DEFAULT 'pending',
+              notes TEXT,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          CREATE TABLE IF NOT EXISTS contact_messages (
+              id SERIAL PRIMARY KEY,
+              name VARCHAR(100) NOT NULL,
+              email VARCHAR(100) NOT NULL,
+              subject VARCHAR(255),
+              message TEXT NOT NULL,
+              is_read BOOLEAN DEFAULT FALSE,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          CREATE TABLE IF NOT EXISTS system_logs (
+              id SERIAL PRIMARY KEY,
+              user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+              action VARCHAR(255) NOT NULL,
+              details TEXT,
+              ip_address VARCHAR(45),
+              user_agent TEXT,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          EOF
+          
+          echo "✅ Database schema initialized successfully"
         env:
           PGPASSWORD: testpassword
 

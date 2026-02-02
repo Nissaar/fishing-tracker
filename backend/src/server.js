@@ -62,7 +62,33 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Something went wrong!' });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  logger.info(`🚀 Server running on port ${PORT}`);
-  logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-});
+// Startup function with error handling
+async function startServer() {
+  try {
+    // Verify database connection
+    const db = require('./config/database');
+    const result = await db.query('SELECT NOW()');
+    logger.info('✅ Database connection verified');
+    
+    const server = app.listen(PORT, '0.0.0.0', () => {
+      logger.info(`🚀 Server running on port ${PORT}`);
+      logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`\n✅ Server started successfully on port ${PORT}\n`);
+    });
+    
+    // Handle server errors
+    server.on('error', (err) => {
+      logger.error(`Server error: ${err.message}`);
+      console.error(`\n❌ Server error: ${err.message}\n`);
+      process.exit(1);
+    });
+    
+  } catch (error) {
+    logger.error(`Failed to start server: ${error.message}`, { stack: error.stack });
+    console.error(`\n❌ Failed to start server: ${error.message}\n`);
+    console.error(error);
+    process.exit(1);
+  }
+}
+
+startServer();

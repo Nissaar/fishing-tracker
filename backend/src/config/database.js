@@ -1,6 +1,12 @@
 const { Pool } = require('pg');
 require('dotenv').config();
 
+console.log('📋 Database Configuration:');
+console.log(`  Host: ${process.env.DB_HOST}`);
+console.log(`  Port: ${process.env.DB_PORT}`);
+console.log(`  Database: ${process.env.DB_NAME}`);
+console.log(`  User: ${process.env.DB_USER}`);
+
 const pool = new Pool({
   host: process.env.DB_HOST,
   port: process.env.DB_PORT,
@@ -20,8 +26,9 @@ pool.on('connect', () => {
 });
 
 pool.on('error', (err) => {
-  console.error('❌ Unexpected database error:', err);
-  process.exit(-1);
+  console.error('❌ Database pool error:', err.message);
+  // Don't exit immediately - allow the app to continue and handle reconnection
+  // process.exit(-1);
 });
 
 module.exports = pool;
