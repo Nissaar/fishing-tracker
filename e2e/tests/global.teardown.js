@@ -23,7 +23,7 @@ teardown.describe('Global Teardown', () => {
       const loginResponse = await request.post(`${API_URL}/auth/login`, {
         data: {
           email: process.env.TEST_ADMIN_EMAIL || 'admin@fishingtracker.mu',
-          password: process.env.TEST_ADMIN_PASSWORD || 'AdminPassword123!'
+          password: process.env.TEST_ADMIN_PASSWORD || 'password'
         }
       });
       

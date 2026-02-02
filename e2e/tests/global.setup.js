@@ -10,13 +10,13 @@ const STORAGE_STATE_ADMIN = path.join(__dirname, '../playwright/.auth/admin.json
 // Test user credentials for E2E testing
 const TEST_USER = {
   email: process.env.TEST_USER_EMAIL || 'e2etest@fishingtracker.mu',
-  password: process.env.TEST_USER_PASSWORD || 'E2ETestPassword123!',
+  password: process.env.TEST_USER_PASSWORD || 'password',
   username: 'E2E Test User'
 };
 
 const TEST_ADMIN = {
   email: process.env.TEST_ADMIN_EMAIL || 'admin@fishingtracker.mu',
-  password: process.env.TEST_ADMIN_PASSWORD || 'AdminPassword123!',
+  password: process.env.TEST_ADMIN_PASSWORD || 'password',
   username: 'Admin User'
 };
 

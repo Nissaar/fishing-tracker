@@ -78,7 +78,7 @@ test.describe('API - Authentication Endpoints', () => {
     const API_URL = process.env.TEST_API_URL || 'http://localhost:5000/api';
     
     const email = process.env.TEST_USER_EMAIL || 'e2etest@fishingtracker.mu';
-    const password = process.env.TEST_USER_PASSWORD || 'E2ETestPassword123!';
+      const password = process.env.TEST_USER_PASSWORD || 'password';
     
     const response = await request.post(`${API_URL}/auth/login`, {
       data: { email, password }
@@ -112,7 +112,7 @@ test.describe('API - Authentication Endpoints', () => {
     const API_URL = process.env.TEST_API_URL || 'http://localhost:5000/api';
     
     const email = process.env.TEST_USER_EMAIL || 'e2etest@fishingtracker.mu';
-    const password = process.env.TEST_USER_PASSWORD || 'E2ETestPassword123!';
+      const password = process.env.TEST_USER_PASSWORD || 'password';
     
     // First login to get token
     const loginResponse = await request.post(`${API_URL}/auth/login`, {
@@ -151,7 +151,7 @@ test.describe('API - Fishing Endpoints', () => {
     const API_URL = process.env.TEST_API_URL || 'http://localhost:5000/api';
     
     const email = process.env.TEST_USER_EMAIL || 'e2etest@fishingtracker.mu';
-    const password = process.env.TEST_USER_PASSWORD || 'E2ETestPassword123!';
+    const password = process.env.TEST_USER_PASSWORD || 'password';
     
     const loginResponse = await request.post(`${API_URL}/auth/login`, {
       data: { email, password }
@@ -374,7 +374,7 @@ test.describe('API - Admin Endpoints', () => {
     const API_URL = process.env.TEST_API_URL || 'http://localhost:5000/api';
     
     const email = process.env.TEST_ADMIN_EMAIL || 'admin@fishingtracker.mu';
-    const password = process.env.TEST_ADMIN_PASSWORD || 'AdminPassword123!';
+    const password = process.env.TEST_ADMIN_PASSWORD || 'password';
     
     const loginResponse = await request.post(`${API_URL}/auth/login`, {
       data: { email, password }
@@ -486,7 +486,7 @@ test.describe('API - Admin Endpoints', () => {
     const API_URL = process.env.TEST_API_URL || 'http://localhost:5000/api';
     
     const email = process.env.TEST_USER_EMAIL || 'e2etest@fishingtracker.mu';
-    const password = process.env.TEST_USER_PASSWORD || 'E2ETestPassword123!';
+    const password = process.env.TEST_USER_PASSWORD || 'password';
     
     const loginResponse = await request.post(`${API_URL}/auth/login`, {
       data: { email, password }

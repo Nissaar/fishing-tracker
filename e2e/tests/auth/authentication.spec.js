@@ -54,7 +54,7 @@ test.describe('Authentication - Login', () => {
     await page.goto('/login');
     
     const email = process.env.TEST_USER_EMAIL || 'e2etest@fishingtracker.mu';
-    const password = process.env.TEST_USER_PASSWORD || 'E2ETestPassword123!';
+    const password = process.env.TEST_USER_PASSWORD || 'password';
     
     await page.fill('input[type="email"]', email);
     await page.fill('input[type="password"]', password);
@@ -75,7 +75,7 @@ test.describe('Authentication - Login', () => {
     await page.goto('/login');
     
     const email = process.env.TEST_USER_EMAIL || 'e2etest@fishingtracker.mu';
-    const password = process.env.TEST_USER_PASSWORD || 'E2ETestPassword123!';
+    const password = process.env.TEST_USER_PASSWORD || 'password';
     
     await page.fill('input[type="email"]', email);
     await page.fill('input[type="password"]', password);

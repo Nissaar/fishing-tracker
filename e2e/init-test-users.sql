@@ -3,7 +3,7 @@
 
 -- Wait for users table to be created (handled by docker-entrypoint)
 
--- Create E2E test user with bcrypt hash for 'E2ETestPassword123!'
+-- Create E2E test user with bcrypt hash for 'password'
 INSERT INTO users (username, email, password_hash, is_admin, created_at)
 VALUES (
   'E2E Test User',
@@ -15,7 +15,7 @@ VALUES (
   password_hash = '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
   is_admin = false;
 
--- Create admin test user with bcrypt hash for 'AdminPassword123!'
+-- Create admin test user with bcrypt hash for 'password'
 INSERT INTO users (username, email, password_hash, is_admin, created_at)
 VALUES (
   'Admin User',
