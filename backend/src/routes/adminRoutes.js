@@ -148,7 +148,7 @@ router.get('/users', authMiddleware, isAdmin, async (req, res) => {
 });
 
 // Get user fishing entries
-router.get('/user-entries/:userId', authMiddleware, isAdmin, async (req, res) => {
+router.get('/user-entries/:userId', authMiddleware, isAdmin, adminLimiter, async (req, res) => {
   try {
     const userId = req.params.userId;
     const result = await pool.query(`
