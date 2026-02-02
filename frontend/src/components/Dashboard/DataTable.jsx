@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { fishingAPI } from '../../services/api';
 import { toast } from 'react-toastify';
-import { Trash2, Search } from 'lucide-react';
+import { Trash2, Eye, Search, Filter } from 'lucide-react';
 
 const DataTable = () => {
   const [logs, setLogs] = useState([]);
@@ -14,7 +14,6 @@ const DataTable = () => {
     loadLogs();
   }, []);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     filterLogs();
   }, [logs, searchTerm, filterCaught]);

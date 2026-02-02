@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Moon, Waves, MapPin, Calendar, TrendingUp, Filter } from 'lucide-react';
 
 const BestConditions = () => {
+  const [fishingTypes, setFishingTypes] = useState(['Casting', 'Jigging', 'Lapess Couler/Couler', 'Dropshot']);
   const [selectedType, setSelectedType] = useState('');
   const [selectedBait, setSelectedBait] = useState('');
   const [conditions, setConditions] = useState(null);
@@ -30,7 +31,6 @@ const BestConditions = () => {
     }
   };
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     loadConditions();
   }, [selectedType, selectedBait]);

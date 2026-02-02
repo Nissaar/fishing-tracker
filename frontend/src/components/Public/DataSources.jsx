@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import PublicNav from './PublicNav';
-import { Database, Cloud, Moon, Waves, Wind, Fish, Sun, Thermometer, GitBranch } from 'lucide-react';
+import { Database, Cloud, Moon, Waves, Wind, Fish, Sun, Thermometer, Activity, GitBranch } from 'lucide-react';
 
 const DataSources = () => {
   return (

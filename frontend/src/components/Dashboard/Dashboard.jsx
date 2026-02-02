@@ -11,7 +11,7 @@ import BestConditions from './BestConditions';
 import PlanTrip from './PlanTrip';
 
 const Dashboard = () => {
-  const { } = useAuth();
+  const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('log');
 
   const tabs = [

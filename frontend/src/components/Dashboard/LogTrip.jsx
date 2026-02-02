@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { fishingAPI } from '../../services/api';
 import api from '../../services/api';
+import axios from 'axios';
 import { toast } from 'react-toastify';
-import { Calendar, MapPin, Fish, Moon, Waves, Sun, Loader, Thermometer, Activity, Plus, X, Send } from 'lucide-react';
+import { Calendar, MapPin, Fish, Moon, Waves, Sun, Loader, Thermometer, Wind, Activity, Plus, X, Send } from 'lucide-react';
 
 const LogTrip = () => {
   const [locations, setLocations] = useState([]);
@@ -80,7 +81,6 @@ const LogTrip = () => {
     if (formData.location && formData.date) {
       loadEnvironmentalData();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.location, formData.date, formData.timeStart]);
 
   useEffect(() => {
