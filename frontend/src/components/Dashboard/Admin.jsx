@@ -1179,7 +1179,7 @@ const EditEntryModal = ({ entry, onSave, onCancel, onChange, dropdownData }) => 
           <input
             type="number"
             value={entry.fish_count || ''}
-            onChange={(e) => handleChange('fish_count', e.target.value)}
+            onChange={(e) => handleChange('fish_count', parseInt(e.target.value, 10) || 0)}
             className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             min="0"
           />
