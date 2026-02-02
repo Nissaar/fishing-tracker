@@ -269,7 +269,7 @@ router.patch('/users/:userId', authMiddleware, isAdmin, adminLimiter, async (req
 // ==================== FISHING LOG MANAGEMENT (ADMIN) ====================
 
 // Update fishing log (admin)
-router.patch('/fishing-logs/:logId', authMiddleware, isAdmin, async (req, res) => {
+router.patch('/fishing-logs/:logId', authMiddleware, isAdmin, adminLimiter, async (req, res) => {
   try {
     const { logId } = req.params;
     const {
