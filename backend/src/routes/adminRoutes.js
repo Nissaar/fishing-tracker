@@ -336,7 +336,7 @@ router.patch('/fishing-logs/:logId', authMiddleware, isAdmin, adminLimiter, asyn
 });
 
 // Delete fishing log (admin)
-router.delete('/fishing-logs/:logId', authMiddleware, isAdmin, async (req, res) => {
+router.delete('/fishing-logs/:logId', authMiddleware, isAdmin, adminLimiter, async (req, res) => {
   try {
     const { logId } = req.params;
 
