@@ -198,7 +198,7 @@ router.patch('/users/:userId/admin', authMiddleware, isAdmin, adminLimiter, asyn
 });
 
 // Delete user
-router.delete('/users/:userId', authMiddleware, adminProtected, async (req, res) => {
+router.delete('/users/:userId', authMiddleware, adminLimiter, adminProtected, async (req, res) => {
   try {
     const { userId } = req.params;
 
@@ -225,7 +225,7 @@ router.delete('/users/:userId', authMiddleware, adminProtected, async (req, res)
 });
 
 // Update user information (username, email)
-router.patch('/users/:userId', authMiddleware, adminProtected, async (req, res) => {
+router.patch('/users/:userId', authMiddleware, adminLimiter, adminProtected, async (req, res) => {
   try {
     const { userId } = req.params;
     const { username, email } = req.body;
