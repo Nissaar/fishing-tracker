@@ -1,5 +1,11 @@
+/// <reference path="../types.d.ts" />
+/// <reference path="../fixtures.d.ts" />
 // @ts-check
-const { test, expect } = require('../fixtures');
+/** @type {import('../fixtures')} */
+const fixtures = require('../fixtures');
+const { test: testBase, expect } = fixtures;
+/** @type {import('@playwright/test').TestType<import('../fixtures').Fixtures>} */
+const test = testBase;
 
 /**
  * API & Backend Test Suite
@@ -138,6 +144,7 @@ test.describe('API - Authentication Endpoints', () => {
 });
 
 test.describe('API - Fishing Endpoints', () => {
+  /** @type {string | null} */
   let authToken = null;
   
   test.beforeAll(async ({ request }) => {
@@ -360,6 +367,7 @@ test.describe('API - Fishing Endpoints', () => {
 });
 
 test.describe('API - Admin Endpoints', () => {
+  /** @type {string | null} */
   let adminToken = null;
   
   test.beforeAll(async ({ request }) => {

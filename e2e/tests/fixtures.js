@@ -1,17 +1,65 @@
 // @ts-check
-const { test as base, expect } = require('@playwright/test');
+/** @typedef {import('@playwright/test').APIResponse} APIResponse */
+/** @typedef {import('@playwright/test').Page} Page */
+const { test: base, expect } = require('@playwright/test');
 
 /**
  * Extended Playwright test fixtures for Fishing Tracker E2E Testing
  * Provides reusable helpers and page objects
  */
 
+/**
+ * @typedef {{
+ *   url: string,
+ *   getAuthHeaders: (token: string) => Record<string, string>,
+ *   login: (email: string, password: string) => Promise<string>,
+ *   createFishingLog: (token: string, logData: unknown) => Promise<APIResponse>,
+ *   getFishingLogs: (token: string, limit?: number) => Promise<APIResponse>,
+ *   deleteFishingLog: (token: string, logId: string) => Promise<APIResponse>,
+ *   getLocations: () => Promise<APIResponse>,
+ *   getConditions: () => Promise<APIResponse>,
+ *   submitContact: (data: unknown) => Promise<APIResponse>,
+ *   healthCheck: () => Promise<APIResponse>
+ * }} ApiHelper
+ */
+
+/**
+ * @typedef {{
+ *   waitForToast: (message?: string, type?: 'success' | 'error') => Promise<void>,
+ *   closeToast: () => Promise<void>,
+ *   waitForLoadingComplete: () => Promise<void>,
+ *   navigateToDashboardTab: (tabName: string) => Promise<void>,
+ *   login: (email: string, password: string) => Promise<void>,
+ *   isVisible: (selector: string) => Promise<boolean>,
+ *   getSelectOptions: (selector: string) => Promise<string[]>,
+ *   selectByText: (selector: string, text: string) => Promise<void>,
+ *   fillDate: (selector: string, date: string) => Promise<void>,
+ *   fillTime: (selector: string, time: string) => Promise<void>,
+ *   takeScreenshot: (name: string) => Promise<void>
+ * }} PageHelper
+ */
+
+/**
+ * @typedef {{
+ *   randomUser: () => { username: string, email: string, password: string },
+ *   fishingLog: () => Record<string, unknown>,
+ *   contactMessage: () => { name: string, email: string, subject: string, message: string },
+ *   locations: { id: string, name: string }[],
+ *   fishingTypes: string[],
+ *   fishingMethods: string[]
+ * }} TestData
+ */
+
+/** @typedef {{ apiHelper: ApiHelper, pageHelper: PageHelper, testData: TestData }} Fixtures */
+
 // Custom fixtures extending the base test
+/** @type {import('@playwright/test').TestType<Fixtures>} */
 const test = base.extend({
   // API helper fixture
-  apiHelper: async ({ request }, use) => {
+  apiHelper: async (/** @type {{ request: any }} */ { request }, /** @type {(value: ApiHelper) => Promise<void>} */ use) => {
     const API_URL = process.env.TEST_API_URL || 'http://localhost:5000/api';
     
+    /** @type {ApiHelper} */
     const api = {
       url: API_URL,
       
@@ -88,7 +136,8 @@ const test = base.extend({
   },
   
   // Page helpers fixture
-  pageHelper: async ({ page }, use) => {
+  pageHelper: async (/** @type {{ page: any }} */ { page }, /** @type {(value: PageHelper) => Promise<void>} */ use) => {
+    /** @type {PageHelper} */
     const helper = {
       // Wait for toast message
       async waitForToast(message, type = 'success') {
@@ -182,9 +231,10 @@ const test = base.extend({
   },
   
   // Test data generator fixture
-  testData: async ({}, use) => {
+  testData: async (/** @type {any} */ _ctx, /** @type {(value: TestData) => Promise<void>} */ use) => {
     const { faker } = require('@faker-js/faker');
     
+    /** @type {TestData} */
     const data = {
       // Generate random user
       randomUser() {
