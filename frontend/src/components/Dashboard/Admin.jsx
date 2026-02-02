@@ -516,9 +516,9 @@ const Admin = () => {
                       <th className="text-left py-2 px-4 font-semibold text-gray-700">Date</th>
                       <th className="text-left py-2 px-4 font-semibold text-gray-700">Location</th>
                       <th className="text-left py-2 px-4 font-semibold text-gray-700">Type</th>
+                      <th className="text-left py-2 px-4 font-semibold text-gray-700">Bait</th>
                       <th className="text-center py-2 px-4 font-semibold text-gray-700">Caught</th>
                       <th className="text-center py-2 px-4 font-semibold text-gray-700">Count</th>
-                      <th className="text-left py-2 px-4 font-semibold text-gray-700">Bait</th>
                       <th className="text-left py-2 px-4 font-semibold text-gray-700">Actions</th>
                     </tr>
                   </thead>
@@ -528,9 +528,9 @@ const Admin = () => {
                         <td className="py-3 px-4">{new Date(entry.log_date).toLocaleDateString()}</td>
                         <td className="py-3 px-4">{entry.location_name || entry.location}</td>
                         <td className="py-3 px-4">{entry.fishing_type || '-'}</td>
+                        <td className="py-3 px-4">{entry.bait || '-'}</td>
                         <td className="py-3 px-4 text-center">{entry.caught_fish ? '✓' : '✗'}</td>
                         <td className="py-3 px-4 text-center">{entry.fish_count || '-'}</td>
-                        <td className="py-3 px-4">{entry.bait || '-'}</td>
                         <td className="py-3 px-4">
                           <div className="flex gap-2 text-sm">
                             <button onClick={() => handleEditEntry(entry)} className="text-blue-600 hover:text-blue-800 font-semibold">Edit</button>
@@ -1031,8 +1031,59 @@ const UserManagementTab = ({ users, search, setSearch, onToggleAdmin, onDelete, 
 };
 
 const EditEntryModal = ({ entry, onSave, onCancel, onChange, dropdownData }) => {
+  const [fishSearch, setFishSearch] = useState('');
+  const [showFishDropdown, setShowFishDropdown] = useState(false);
+  const [filteredBaits, setFilteredBaits] = useState([]);
+
+  // Filter baits when fishing type changes
+  React.useEffect(() => {
+    if (entry.fishing_type && dropdownData.fishingBaits) {
+      const selectedType = dropdownData.fishingTypes?.find(t => t.name === entry.fishing_type);
+      if (selectedType) {
+        const baits = dropdownData.fishingBaits.filter(b => b.fishing_type_id === selectedType.id);
+        setFilteredBaits(baits);
+      }
+    } else {
+      setFilteredBaits(dropdownData.fishingBaits || []);
+    }
+  }, [entry.fishing_type, dropdownData]);
+
   const handleChange = (field, value) => {
     onChange({ ...entry, [field]: value });
+  };
+
+  // Filter fish species based on search
+  const filteredFish = React.useMemo(() => {
+    if (!fishSearch) return [];
+    return (dropdownData.fishSpecies || []).filter(fish =>
+      (fish.local_name?.toLowerCase().includes(fishSearch.toLowerCase())) ||
+      (fish.english_name?.toLowerCase().includes(fishSearch.toLowerCase())) ||
+      (fish.scientific_name?.toLowerCase().includes(fishSearch.toLowerCase()))
+    );
+  }, [fishSearch, dropdownData.fishSpecies]);
+
+  // Parse fish_types array for display
+  const currentFish = React.useMemo(() => {
+    if (entry.fish_types && Array.isArray(entry.fish_types)) {
+      return entry.fish_types;
+    }
+    return [];
+  }, [entry.fish_types]);
+
+  const handleAddFish = (fishName) => {
+    const newFish = Array.isArray(entry.fish_types) ? [...entry.fish_types] : [];
+    if (!newFish.includes(fishName)) {
+      newFish.push(fishName);
+      onChange({ ...entry, fish_types: newFish });
+    }
+    setFishSearch('');
+    setShowFishDropdown(false);
+  };
+
+  const handleRemoveFish = (index) => {
+    const newFish = Array.isArray(entry.fish_types) ? [...entry.fish_types] : [];
+    newFish.splice(index, 1);
+    onChange({ ...entry, fish_types: newFish });
   };
 
   return (
@@ -1092,15 +1143,19 @@ const EditEntryModal = ({ entry, onSave, onCancel, onChange, dropdownData }) => 
           </select>
         </div>
 
-        {/* Bait */}
+        {/* Bait - Filtered by Fishing Type */}
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">Bait</label>
-          <input
-            type="text"
+          <select
             value={entry.bait || ''}
             onChange={(e) => handleChange('bait', e.target.value)}
             className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+          >
+            <option value="">Select...</option>
+            {filteredBaits.map(bait => (
+              <option key={bait.id} value={bait.name}>{bait.name}</option>
+            ))}
+          </select>
         </div>
 
         {/* Caught Fish */}
@@ -1150,62 +1205,6 @@ const EditEntryModal = ({ entry, onSave, onCancel, onChange, dropdownData }) => 
           />
         </div>
 
-        {/* Moon Phase */}
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Moon Phase</label>
-          <input
-            type="text"
-            value={entry.moon_phase || ''}
-            onChange={(e) => handleChange('moon_phase', e.target.value)}
-            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="e.g., Full Moon"
-          />
-        </div>
-
-        {/* Tide Phase */}
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Tide Phase</label>
-          <select
-            value={entry.tide_phase || ''}
-            onChange={(e) => handleChange('tide_phase', e.target.value)}
-            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Select...</option>
-            <option value="High Tide">High Tide</option>
-            <option value="Low Tide">Low Tide</option>
-            <option value="Rising">Rising</option>
-            <option value="Falling">Falling</option>
-          </select>
-        </div>
-
-        {/* Sea Level */}
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Sea Level</label>
-          <input
-            type="text"
-            value={entry.sea_level || ''}
-            onChange={(e) => handleChange('sea_level', e.target.value)}
-            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-
-        {/* Fish Activity */}
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Fish Activity</label>
-          <select
-            value={entry.fish_activity || ''}
-            onChange={(e) => handleChange('fish_activity', e.target.value)}
-            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Select...</option>
-            <option value="Very Active">Very Active</option>
-            <option value="Active">Active</option>
-            <option value="Moderate">Moderate</option>
-            <option value="Slow">Slow</option>
-            <option value="No Activity">No Activity</option>
-          </select>
-        </div>
-
         {/* Hook Setup */}
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">Hook Setup</label>
@@ -1216,6 +1215,57 @@ const EditEntryModal = ({ entry, onSave, onCancel, onChange, dropdownData }) => 
             className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
+      </div>
+
+      {/* Fish Species Selection */}
+      <div className="mt-6">
+        <label className="block text-sm font-semibold text-gray-700 mb-2">Fish Caught</label>
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Search fish species by local, english or scientific name..."
+            value={fishSearch}
+            onChange={(e) => {
+              setFishSearch(e.target.value);
+              setShowFishDropdown(true);
+            }}
+            onFocus={() => setShowFishDropdown(true)}
+            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          
+          {showFishDropdown && filteredFish.length > 0 && (
+            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+              {filteredFish.map((fish) => (
+                <div
+                  key={fish.id}
+                  onClick={() => handleAddFish(fish.local_name || fish.english_name)}
+                  className="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                >
+                  <div className="font-semibold text-gray-800">{fish.local_name}</div>
+                  {fish.english_name && <div className="text-xs text-gray-600">{fish.english_name}</div>}
+                  {fish.scientific_name && <div className="text-xs text-gray-500">{fish.scientific_name}</div>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Selected Fish Display */}
+        {currentFish.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {currentFish.map((fish, index) => (
+              <div key={index} className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full flex items-center gap-2">
+                <span>{fish}</span>
+                <button
+                  onClick={() => handleRemoveFish(index)}
+                  className="text-blue-600 hover:text-blue-800 font-bold"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Notes */}
