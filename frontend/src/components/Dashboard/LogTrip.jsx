@@ -13,6 +13,7 @@ const LogTrip = () => {
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
   const [fishSearch, setFishSearch] = useState({});
   const [showFishDropdown, setShowFishDropdown] = useState({});
+  const [activeFishIndex, setActiveFishIndex] = useState({});
   const locationRef = useRef(null);
   const fishRefs = useRef({});
   
@@ -198,6 +199,50 @@ const LogTrip = () => {
     newFishTypes[index] = value;
     setFormData({ ...formData, fishTypes: newFishTypes });
   };
+
+  const handleFishKeyDown = (index, filteredFishForIndex) => (e) => {
+    if (!showFishDropdown[index] || filteredFishForIndex.length === 0) return;
+
+    const currentActiveIndex = activeFishIndex[index] || -1;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setActiveFishIndex({
+          ...activeFishIndex,
+          [index]: currentActiveIndex < filteredFishForIndex.length - 1 ? currentActiveIndex + 1 : currentActiveIndex
+        });
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setActiveFishIndex({
+          ...activeFishIndex,
+          [index]: currentActiveIndex > 0 ? currentActiveIndex - 1 : 0
+        });
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (currentActiveIndex >= 0 && currentActiveIndex < filteredFishForIndex.length) {
+          const selectedFish = filteredFishForIndex[currentActiveIndex];
+          updateFishType(index, selectedFish.display);
+          setFishSearch({ ...fishSearch, [index]: selectedFish.display });
+          setShowFishDropdown({ ...showFishDropdown, [index]: false });
+          setActiveFishIndex({ ...activeFishIndex, [index]: -1 });
+          const newFishTypeOther = formData.fishTypeOther || [];
+          newFishTypeOther[index] = '';
+          setFormData({ ...formData, fishTypeOther: newFishTypeOther });
+        }
+        break;
+      case 'Escape':
+        e.preventDefault();
+        setShowFishDropdown({ ...showFishDropdown, [index]: false });
+        setActiveFishIndex({ ...activeFishIndex, [index]: -1 });
+        break;
+      default:
+        break;
+    }
+  };
+
 
   // Custom submission handler
   const handleOpenCustomModal = (dropdownType) => {
@@ -769,6 +814,8 @@ const LogTrip = () => {
                     )
                   : fishSpecies;
                 
+                const currentActiveIndex = activeFishIndex[index] ?? -1;
+                
                 return (
                   <div key={index} ref={el => fishRefs.current[index] = el} className="relative">
                     <input
@@ -778,6 +825,7 @@ const LogTrip = () => {
                       onChange={(e) => {
                         setFishSearch({ ...fishSearch, [index]: e.target.value });
                         setShowFishDropdown({ ...showFishDropdown, [index]: true });
+                        setActiveFishIndex({ ...activeFishIndex, [index]: -1 });
                       }}
                       onFocus={() => setShowFishDropdown({ ...showFishDropdown, [index]: true })}
                       onBlur={() => {
@@ -788,14 +836,28 @@ const LogTrip = () => {
                         }
                         setShowFishDropdown({ ...showFishDropdown, [index]: false });
                       }}
+                      onKeyDown={handleFishKeyDown(index, filteredFishForIndex)}
+                      aria-label={`Fish ${index + 1}`}
+                      aria-expanded={showFishDropdown[index] && (filteredFishForIndex.length > 0 || fishSearchValue)}
+                      aria-controls={`fish-dropdown-${index}`}
+                      aria-activedescendant={currentActiveIndex >= 0 ? `fish-option-${index}-${currentActiveIndex}` : undefined}
+                      role="combobox"
+                      aria-autocomplete="list"
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                     />
                     
                     {showFishDropdown[index] && (filteredFishForIndex.length > 0 || fishSearchValue) && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                        {filteredFishForIndex.map((fish) => (
+                      <div 
+                        id={`fish-dropdown-${index}`}
+                        role="listbox"
+                        className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+                      >
+                        {filteredFishForIndex.map((fish, fishIdx) => (
                           <div
                             key={fish.id}
+                            id={`fish-option-${index}-${fishIdx}`}
+                            role="option"
+                            aria-selected={fishIdx === currentActiveIndex}
                             onClick={() => {
                               updateFishType(index, fish.display);
                               setFishSearch({ ...fishSearch, [index]: fish.display });
@@ -804,7 +866,9 @@ const LogTrip = () => {
                               newFishTypeOther[index] = '';
                               setFormData({ ...formData, fishTypeOther: newFishTypeOther });
                             }}
-                            className="px-4 py-3 hover:bg-green-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                            className={`px-4 py-3 cursor-pointer border-b border-gray-100 last:border-b-0 ${
+                              fishIdx === currentActiveIndex ? 'bg-green-100' : 'hover:bg-green-50'
+                            }`}
                           >
                             <div className="font-semibold text-gray-800">{fish.display}</div>
                             {fish.englishName && <div className="text-xs text-gray-600">{fish.englishName}</div>}
@@ -813,6 +877,8 @@ const LogTrip = () => {
                         ))}
                         {fishSearchValue && !filteredFishForIndex.some(f => f.display.toLowerCase() === fishSearchValue.toLowerCase()) && (
                           <div
+                            role="option"
+                            aria-selected={false}
                             onClick={() => {
                               updateFishType(index, fishSearchValue);
                               setFishSearch({ ...fishSearch, [index]: fishSearchValue });
