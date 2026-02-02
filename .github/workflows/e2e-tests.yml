@@ -63,7 +63,10 @@ jobs:
         run: |
           cd frontend
           npm cache clean --force
+          rm -rf node_modules package-lock.json
           npm install --legacy-peer-deps --no-optional --no-fund
+        env:
+          CI: true
 
       - name: Install E2E test dependencies
         run: |
@@ -330,6 +333,9 @@ jobs:
             exit 1
           fi
           echo "✅ Frontend server started successfully"
+        env:
+          CI: true
+          SKIP_PREFLIGHT_CHECK: true
 
       - name: Wait for services to be ready
         run: |
