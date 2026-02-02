@@ -525,7 +525,9 @@ const Admin = () => {
                   <tbody>
                     {userEntries.map(entry => (
                       <tr key={entry.id} className="border-b border-gray-100 hover:bg-gray-50">
-                        <td className="py-3 px-4">{new Date(entry.log_date).toLocaleDateString()}</td>
+                        <td className="py-3 px-4">
+                          {new Date(entry.log_date + 'T00:00:00Z').toLocaleDateString(undefined, { timeZone: 'UTC' })}
+                        </td>
                         <td className="py-3 px-4">{entry.location_name || entry.location}</td>
                         <td className="py-3 px-4">{entry.fishing_type || '-'}</td>
                         <td className="py-3 px-4">{entry.bait || '-'}</td>
