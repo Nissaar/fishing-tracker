@@ -231,7 +231,7 @@ const test = base.extend({
   },
   
   // Test data generator fixture
-  testData: async (/** @type {any} */ _ctx, /** @type {(value: TestData) => Promise<void>} */ use) => {
+  testData: async ({}, /** @type {(value: TestData) => Promise<void>} */ use) => {
     const { faker } = require('@faker-js/faker');
     
     /** @type {TestData} */
