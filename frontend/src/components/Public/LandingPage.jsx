@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Fish, Moon, Waves, Sun, Wind, Eye, Menu, X, Thermometer, ChevronLeft, ChevronRight, Activity, Sunrise, Sunset } from 'lucide-react';
+import { Fish, Moon, Waves, Sun, Wind, Eye, Thermometer, ChevronLeft, ChevronRight, Activity, Sunrise, Sunset } from 'lucide-react';
 import axios from 'axios';
 import PublicNav from './PublicNav';
 

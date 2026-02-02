@@ -4,7 +4,7 @@ import {
   Users, FileText, TrendingUp, Activity, Calendar, MapPin, 
   Fish as FishIcon, Target, Bell, Settings, 
   Mail, CheckCircle, XCircle, Eye, Trash2, Edit2, Plus,
-  AlertTriangle, Info, RefreshCw
+  RefreshCw
 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
@@ -72,6 +72,7 @@ const Admin = () => {
     { id: 'users', name: 'User Management', icon: Users },
   ];
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchStats();
     fetchUsers();
@@ -84,6 +85,7 @@ const Admin = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (activeTab === 'submissions') fetchSubmissions();
     else if (activeTab === 'contact') fetchContactMessages();
@@ -744,6 +746,7 @@ const SystemLogsTab = ({ logs, filter, setFilter, onRefresh }) => {
   }, []);
 
   // Fetch selected file content
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   React.useEffect(() => {
     if (!selectedFile) return;
     const fetchFileContent = async () => {

@@ -14,7 +14,7 @@ env:
   TEST_USER_PASSWORD: E2ETestPassword123!
   TEST_ADMIN_EMAIL: admin@fishingtracker.mu
   TEST_ADMIN_PASSWORD: AdminPassword123!
-  TEST_BASE_URL: http://localhost:80
+  TEST_BASE_URL: http://localhost:3000
   TEST_API_URL: http://localhost:5000/api
 
 jobs:
@@ -324,7 +324,7 @@ jobs:
           fi
           
           echo "✅ Frontend build successful"
-          nohup npx serve -s build -l 80 > frontend.log 2>&1 &
+          nohup npx serve -s build -l 3000 > frontend.log 2>&1 &
           echo $! > frontend.pid
           sleep 5
           if ! ps -p $(cat frontend.pid) > /dev/null; then
@@ -332,7 +332,7 @@ jobs:
             cat frontend.log
             exit 1
           fi
-          echo "✅ Frontend server started successfully"
+          echo "✅ Frontend server started successfully on port 3000"
         env:
           CI: true
           SKIP_PREFLIGHT_CHECK: true
@@ -373,7 +373,7 @@ jobs:
           npx playwright test --reporter=html,github,json
         env:
           CI: true
-          TEST_BASE_URL: http://localhost:80
+          TEST_BASE_URL: http://localhost:3000
           TEST_API_URL: http://localhost:5000/api
 
       - name: Collect server logs on failure
