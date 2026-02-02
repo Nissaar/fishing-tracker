@@ -26,10 +26,56 @@ if (!fs.existsSync(authDir)) {
   fs.mkdirSync(authDir, { recursive: true });
 }
 
+const getApiUrl = () => {
+  if (process.env.TEST_API_URL) {
+    return process.env.TEST_API_URL;
+  }
+
+  const baseUrl = process.env.TEST_BASE_URL || 'http://localhost:80';
+  const url = new URL(baseUrl);
+  return `${url.origin}/api`;
+};
+
+const waitForApiHealth = async (request, apiUrl, retries = 10, delayMs = 3000) => {
+  const healthUrl = `${apiUrl.replace(/\/api\/?$/, '')}/health`;
+
+  for (let attempt = 1; attempt <= retries; attempt += 1) {
+    try {
+      const response = await request.get(healthUrl);
+      if (response.ok()) {
+        return;
+      }
+    } catch (error) {
+      // ignore and retry
+    }
+
+    if (attempt < retries) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+
+  throw new Error(`API not healthy at ${healthUrl}`);
+};
+
+const getResponseDetails = async (response) => {
+  try {
+    const body = await response.json();
+    return { status: response.status(), body };
+  } catch (error) {
+    try {
+      const body = await response.text();
+      return { status: response.status(), body };
+    } catch (innerError) {
+      return { status: response.status(), body: null };
+    }
+  }
+};
+
 setup.describe('Global Setup', () => {
   
   setup('Create test user and authenticate', async ({ page, request }) => {
-    const API_URL = process.env.TEST_API_URL || 'http://localhost:5000/api';
+    const API_URL = getApiUrl();
+    await waitForApiHealth(request, API_URL);
     
     console.log('🔧 Setting up test user authentication...');
     
@@ -71,32 +117,52 @@ setup.describe('Global Setup', () => {
       console.log('⚠️ Login via UI failed, attempting API registration...');
       
       // Attempt direct API login
-      const loginResponse = await request.post(`${API_URL}/auth/login`, {
+      let loginResponse = await request.post(`${API_URL}/auth/login`, {
         data: {
           email: TEST_USER.email,
           password: TEST_USER.password
         }
       });
-      
+
+      if (!loginResponse.ok()) {
+        // Try re-registering, then login again
+        await request.post(`${API_URL}/auth/register`, {
+          data: {
+            username: TEST_USER.username,
+            email: TEST_USER.email,
+            password: TEST_USER.password
+          }
+        });
+
+        loginResponse = await request.post(`${API_URL}/auth/login`, {
+          data: {
+            email: TEST_USER.email,
+            password: TEST_USER.password
+          }
+        });
+      }
+
       if (loginResponse.ok()) {
         const loginData = await loginResponse.json();
-        
+
         // Set token in localStorage via page context
         await page.evaluate((token) => {
           localStorage.setItem('token', token);
         }, loginData.token);
-        
+
         await page.goto('/dashboard');
         await page.context().storageState({ path: STORAGE_STATE_USER });
         console.log('✅ User authentication state saved via API');
       } else {
-        throw new Error('Failed to authenticate test user');
+        const details = await getResponseDetails(loginResponse);
+        throw new Error(`Failed to authenticate test user (status ${details.status})`);
       }
     }
   });
 
   setup('Create admin user and authenticate', async ({ page, request }) => {
-    const API_URL = process.env.TEST_API_URL || 'http://localhost:5000/api';
+    const API_URL = getApiUrl();
+    await waitForApiHealth(request, API_URL);
     
     console.log('🔧 Setting up admin user authentication...');
     
@@ -136,12 +202,29 @@ setup.describe('Global Setup', () => {
     } catch (error) {
       console.log('⚠️ Admin login via UI failed, attempting API...');
       
-      const loginResponse = await request.post(`${API_URL}/auth/login`, {
+      let loginResponse = await request.post(`${API_URL}/auth/login`, {
         data: {
           email: TEST_ADMIN.email,
           password: TEST_ADMIN.password
         }
       });
+
+      if (!loginResponse.ok()) {
+        await request.post(`${API_URL}/auth/register`, {
+          data: {
+            username: TEST_ADMIN.username,
+            email: TEST_ADMIN.email,
+            password: TEST_ADMIN.password
+          }
+        });
+
+        loginResponse = await request.post(`${API_URL}/auth/login`, {
+          data: {
+            email: TEST_ADMIN.email,
+            password: TEST_ADMIN.password
+          }
+        });
+      }
       
       if (loginResponse.ok()) {
         const loginData = await loginResponse.json();
@@ -153,9 +236,8 @@ setup.describe('Global Setup', () => {
         await page.context().storageState({ path: STORAGE_STATE_ADMIN });
         console.log('✅ Admin authentication state saved via API');
       } else {
-        // Create a placeholder admin auth state
-        await page.context().storageState({ path: STORAGE_STATE_ADMIN });
-        console.log('⚠️ Admin authentication may require manual setup');
+        const details = await getResponseDetails(loginResponse);
+        throw new Error(`Failed to authenticate admin user (status ${details.status})`);
       }
     }
   });
