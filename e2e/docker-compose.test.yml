@@ -1,0 +1,102 @@
+version: '3.8'
+
+# Docker Compose for E2E Testing
+# This is a standalone test environment
+
+services:
+  test-postgres:
+    image: postgres:15-alpine
+    container_name: fishing-tracker-test-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: testpassword
+      POSTGRES_DB: fishing_tracker
+    volumes:
+      - ../init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./init-test-users.sql:/docker-entrypoint-initdb.d/02-test-users.sql
+    ports:
+      - "5433:5432"
+    networks:
+      - test-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  test-backend:
+    build: 
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: fishing-tracker-test-backend
+    environment:
+      NODE_ENV: test
+      PORT: 5000
+      DB_HOST: test-postgres
+      DB_PORT: 5432
+      DB_NAME: fishing_tracker
+      DB_USER: postgres
+      DB_PASSWORD: testpassword
+      JWT_SECRET: e2e-test-jwt-secret-key
+      SESSION_SECRET: e2e-test-session-secret
+      CORS_ORIGIN: http://localhost:3000,http://test-frontend
+    ports:
+      - "5001:5000"
+    depends_on:
+      test-postgres:
+        condition: service_healthy
+    networks:
+      - test-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  test-frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      args:
+        REACT_APP_API_URL: http://localhost:5001/api
+    container_name: fishing-tracker-test-frontend
+    ports:
+      - "3001:80"
+    depends_on:
+      - test-backend
+    networks:
+      - test-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  playwright:
+    image: mcr.microsoft.com/playwright:v1.42.0-jammy
+    container_name: fishing-tracker-playwright
+    working_dir: /e2e
+    environment:
+      TEST_BASE_URL: http://test-frontend
+      TEST_API_URL: http://test-backend:5000/api
+      TEST_USER_EMAIL: e2etest@fishingtracker.mu
+      TEST_USER_PASSWORD: E2ETestPassword123!
+      TEST_ADMIN_EMAIL: admin@fishingtracker.mu
+      TEST_ADMIN_PASSWORD: AdminPassword123!
+      CI: "true"
+    volumes:
+      - .:/e2e
+      - ./playwright-report:/e2e/playwright-report
+      - ./test-results:/e2e/test-results
+    depends_on:
+      test-frontend:
+        condition: service_healthy
+      test-backend:
+        condition: service_healthy
+    networks:
+      - test-network
+    command: npx playwright test --reporter=html,json
+
+networks:
+  test-network:
+    driver: bridge
