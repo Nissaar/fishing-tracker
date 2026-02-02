@@ -243,15 +243,6 @@ const LogTrip = () => {
     }
   };
 
-  // Reset active index when fish search changes
-  useEffect(() => {
-    const resetIndexes = {};
-    Object.keys(fishSearch).forEach(key => {
-      resetIndexes[key] = -1;
-    });
-    setActiveFishIndex(resetIndexes);
-  }, [fishSearch]);
-
 
   // Custom submission handler
   const handleOpenCustomModal = (dropdownType) => {
@@ -823,6 +814,8 @@ const LogTrip = () => {
                     )
                   : fishSpecies;
                 
+                const currentActiveIndex = activeFishIndex[index] ?? -1;
+                
                 return (
                   <div key={index} ref={el => fishRefs.current[index] = el} className="relative">
                     <input
@@ -832,6 +825,7 @@ const LogTrip = () => {
                       onChange={(e) => {
                         setFishSearch({ ...fishSearch, [index]: e.target.value });
                         setShowFishDropdown({ ...showFishDropdown, [index]: true });
+                        setActiveFishIndex({ ...activeFishIndex, [index]: -1 });
                       }}
                       onFocus={() => setShowFishDropdown({ ...showFishDropdown, [index]: true })}
                       onBlur={() => {
@@ -846,7 +840,7 @@ const LogTrip = () => {
                       aria-label={`Fish ${index + 1}`}
                       aria-expanded={showFishDropdown[index] && (filteredFishForIndex.length > 0 || fishSearchValue)}
                       aria-controls={`fish-dropdown-${index}`}
-                      aria-activedescendant={(activeFishIndex[index] || -1) >= 0 ? `fish-option-${index}-${activeFishIndex[index]}` : undefined}
+                      aria-activedescendant={currentActiveIndex >= 0 ? `fish-option-${index}-${currentActiveIndex}` : undefined}
                       role="combobox"
                       aria-autocomplete="list"
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
@@ -863,7 +857,7 @@ const LogTrip = () => {
                             key={fish.id}
                             id={`fish-option-${index}-${fishIdx}`}
                             role="option"
-                            aria-selected={fishIdx === (activeFishIndex[index] || -1)}
+                            aria-selected={fishIdx === currentActiveIndex}
                             onClick={() => {
                               updateFishType(index, fish.display);
                               setFishSearch({ ...fishSearch, [index]: fish.display });
@@ -873,7 +867,7 @@ const LogTrip = () => {
                               setFormData({ ...formData, fishTypeOther: newFishTypeOther });
                             }}
                             className={`px-4 py-3 cursor-pointer border-b border-gray-100 last:border-b-0 ${
-                              fishIdx === (activeFishIndex[index] || -1) ? 'bg-green-100' : 'hover:bg-green-50'
+                              fishIdx === currentActiveIndex ? 'bg-green-100' : 'hover:bg-green-50'
                             }`}
                           >
                             <div className="font-semibold text-gray-800">{fish.display}</div>
