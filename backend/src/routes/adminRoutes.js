@@ -30,6 +30,9 @@ const isAdmin = async (req, res, next) => {
   }
 };
 
+// Combined middleware to rate-limit admin checks before accessing the database
+const adminProtected = [adminLimiter, isAdmin];
+
 // Get admin statistics
 router.get('/stats', authMiddleware, isAdmin, async (req, res) => {
   try {
@@ -195,7 +198,7 @@ router.patch('/users/:userId/admin', authMiddleware, isAdmin, adminLimiter, asyn
 });
 
 // Delete user
-router.delete('/users/:userId', authMiddleware, isAdmin, adminLimiter, async (req, res) => {
+router.delete('/users/:userId', authMiddleware, adminProtected, async (req, res) => {
   try {
     const { userId } = req.params;
 
@@ -222,7 +225,7 @@ router.delete('/users/:userId', authMiddleware, isAdmin, adminLimiter, async (re
 });
 
 // Update user information (username, email)
-router.patch('/users/:userId', authMiddleware, isAdmin, adminLimiter, async (req, res) => {
+router.patch('/users/:userId', authMiddleware, adminProtected, async (req, res) => {
   try {
     const { userId } = req.params;
     const { username, email } = req.body;
