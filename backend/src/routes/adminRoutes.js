@@ -124,7 +124,7 @@ router.get('/stats', authMiddleware, isAdmin, async (req, res) => {
 });
 
 // Get all users (for admin management)
-router.get('/users', authMiddleware, isAdmin, async (req, res) => {
+router.get('/users', authMiddleware, isAdmin, adminLimiter, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT 
