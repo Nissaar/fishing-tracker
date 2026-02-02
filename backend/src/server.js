@@ -48,8 +48,17 @@ app.use('/api/fishing', fishingRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/logs', logsRoutes);
 
-app.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+const pool = require('./config/database');
+
+app.get('/health', async (req, res) => {
+  try {
+    // Verify database connectivity
+    await pool.query('SELECT 1');
+    res.json({ status: 'OK', timestamp: new Date().toISOString(), database: 'connected' });
+  } catch (error) {
+    logger.error('Health check failed:', error.message);
+    res.status(503).json({ status: 'ERROR', timestamp: new Date().toISOString(), database: 'disconnected', error: error.message });
+  }
 });
 
 app.use((err, req, res, next) => {

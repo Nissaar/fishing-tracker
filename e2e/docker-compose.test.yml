@@ -12,7 +12,7 @@ services:
       POSTGRES_PASSWORD: testpassword
       POSTGRES_DB: fishing_tracker
     volumes:
-      - ../init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ../init.sql:/docker-entrypoint-initdb.d/01-init.sql
       - ./init-test-users.sql:/docker-entrypoint-initdb.d/02-test-users.sql
     ports:
       - "5433:5432"

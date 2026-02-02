@@ -3,11 +3,8 @@
 -- Supports fresh database initialization with all required tables, columns, and default data
 -- ==================== END HEADER ====================
 
--- Create database
-CREATE DATABASE fishing_tracker;
-
--- Connect to database
-\c fishing_tracker;
+-- Note: Database is created by Docker via POSTGRES_DB environment variable
+-- The CREATE DATABASE and \c commands are skipped when running in docker-entrypoint-initdb.d
 
 -- ==================== UTILITY FUNCTIONS ====================
 
