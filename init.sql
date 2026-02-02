@@ -310,9 +310,9 @@ INSERT INTO fish_species (local_name, english_name, scientific_name) VALUES
     ('Marlin bleu', 'Blue marlin', 'Makaira nigricans'),
     ('Homard', 'Spiny lobster', 'Panulirus spp.'),
     ('Crabe', 'Crab', 'Scylla spp.'),
-    ('Batarder', 'Batarder', ''),
-    ('Rouget', 'Rouget', ''),
-    ('Viel gris', 'Viel gris', ''),
+    ('Batarder', 'Batarder', NULL),
+    ('Rouget', 'Rouget', NULL),
+    ('Viel gris', 'Viel gris', NULL),
     ('Mourgate', 'Squid', 'Loligo spp.')
 ON CONFLICT DO NOTHING;
 
