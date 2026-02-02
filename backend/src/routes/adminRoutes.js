@@ -232,25 +232,21 @@ router.patch('/users/:userId', authMiddleware, isAdmin, adminLimiter, async (req
     }
 
     // Check if email is already taken by another user
-    if (email) {
-      const emailCheck = await pool.query(
-        'SELECT id FROM users WHERE email = $1 AND id != $2',
-        [email, userId]
-      );
-      if (emailCheck.rows.length > 0) {
-        return res.status(400).json({ error: 'Email is already in use' });
-      }
+    const emailCheck = await pool.query(
+      'SELECT id FROM users WHERE email = $1 AND id != $2',
+      [email, userId]
+    );
+    if (emailCheck.rows.length > 0) {
+      return res.status(400).json({ error: 'Email is already in use' });
     }
 
     // Check if username is already taken by another user
-    if (username) {
-      const usernameCheck = await pool.query(
-        'SELECT id FROM users WHERE username = $1 AND id != $2',
-        [username, userId]
-      );
-      if (usernameCheck.rows.length > 0) {
-        return res.status(400).json({ error: 'Username is already in use' });
-      }
+    const usernameCheck = await pool.query(
+      'SELECT id FROM users WHERE username = $1 AND id != $2',
+      [username, userId]
+    );
+    if (usernameCheck.rows.length > 0) {
+      return res.status(400).json({ error: 'Username is already in use' });
     }
 
     const result = await pool.query(
