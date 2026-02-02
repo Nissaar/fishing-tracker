@@ -56,22 +56,27 @@ jobs:
       - name: Install backend dependencies
         run: |
           cd backend
-          npm install --legacy-peer-deps
+          npm cache clean --force
+          npm install --legacy-peer-deps --no-optional --no-fund
 
       - name: Install frontend dependencies
         run: |
           cd frontend
-          npm install --legacy-peer-deps
+          npm cache clean --force
+          npm install --legacy-peer-deps --no-optional --no-fund
 
       - name: Install E2E test dependencies
         run: |
           cd e2e
-          npm install
+          npm cache clean --force
+          npm install --no-optional --no-fund
 
       - name: Install Playwright browsers
         run: |
           cd e2e
           npx playwright install --with-deps chromium firefox
+          npx playwright install-deps
+        continue-on-error: false
 
       - name: Initialize database
         run: |
@@ -289,21 +294,33 @@ jobs:
       - name: Start backend server
         run: |
           cd backend
+          echo "Starting backend server..."
           nohup npm start > backend.log 2>&1 &
           echo $! > backend.pid
           sleep 10
           if ! ps -p $(cat backend.pid) > /dev/null; then
-            echo "Backend failed to start. Logs:"
+            echo "❌ Backend failed to start"
+            echo "=== BACKEND LOGS ==="
             cat backend.log
             exit 1
           fi
+          echo "✅ Backend server started (PID: $(cat backend.pid))"
         env:
           NODE_ENV: test
 
       - name: Build and start frontend
         run: |
           cd frontend
-          npm run build
+          echo "Building frontend..."
+          npm run build 2>&1 | tee frontend-build.log
+          
+          if [ ! -d "build" ]; then
+            echo "❌ Frontend build failed - no build directory created"
+            cat frontend-build.log
+            exit 1
+          fi
+          
+          echo "✅ Frontend build successful"
           nohup npx serve -s build -l 80 > frontend.log 2>&1 &
           echo $! > frontend.pid
           sleep 5
@@ -312,6 +329,7 @@ jobs:
             cat frontend.log
             exit 1
           fi
+          echo "✅ Frontend server started successfully"
 
       - name: Wait for services to be ready
         run: |
