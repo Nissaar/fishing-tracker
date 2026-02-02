@@ -36,17 +36,22 @@ const getApiUrl = () => {
   return `${url.origin}/api`;
 };
 
-const waitForApiHealth = async (request, apiUrl, retries = 10, delayMs = 3000) => {
+const waitForApiHealth = async (request, apiUrl, retries = 15, delayMs = 2000) => {
   const healthUrl = `${apiUrl.replace(/\/api\/?$/, '')}/health`;
 
+  console.log(`🏥 Waiting for API health at ${healthUrl}...`);
+  
   for (let attempt = 1; attempt <= retries; attempt += 1) {
     try {
       const response = await request.get(healthUrl);
+      console.log(`  Attempt ${attempt}/${retries}: Health status = ${response.status()}`);
+      
       if (response.ok()) {
+        console.log(`✅ API is healthy`);
         return;
       }
     } catch (error) {
-      // ignore and retry
+      console.log(`  Attempt ${attempt}/${retries}: ${error.message}`);
     }
 
     if (attempt < retries) {
@@ -54,7 +59,7 @@ const waitForApiHealth = async (request, apiUrl, retries = 10, delayMs = 3000) =
     }
   }
 
-  throw new Error(`API not healthy at ${healthUrl}`);
+  throw new Error(`API not healthy at ${healthUrl} after ${retries} attempts`);
 };
 
 const getResponseDetails = async (response) => {
@@ -125,6 +130,7 @@ setup.describe('Global Setup', () => {
       console.log('⚠️ Login via UI failed, attempting API registration...');
       
       // Attempt direct API login
+      console.log(`📡 Attempting API login at ${API_URL}/auth/login`);
       let loginResponse = await request.post(`${API_URL}/auth/login`, {
         data: {
           email: TEST_USER.email,
