@@ -215,6 +215,142 @@ router.delete('/users/:userId', authMiddleware, isAdmin, async (req, res) => {
   }
 });
 
+// Update user information (username, email)
+router.patch('/users/:userId', authMiddleware, isAdmin, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { username, email } = req.body;
+
+    if (!username || !email) {
+      return res.status(400).json({ error: 'Username and email are required' });
+    }
+
+    // Check if email is already taken by another user
+    if (email) {
+      const emailCheck = await pool.query(
+        'SELECT id FROM users WHERE email = $1 AND id != $2',
+        [email, userId]
+      );
+      if (emailCheck.rows.length > 0) {
+        return res.status(400).json({ error: 'Email is already in use' });
+      }
+    }
+
+    // Check if username is already taken by another user
+    if (username) {
+      const usernameCheck = await pool.query(
+        'SELECT id FROM users WHERE username = $1 AND id != $2',
+        [username, userId]
+      );
+      if (usernameCheck.rows.length > 0) {
+        return res.status(400).json({ error: 'Username is already in use' });
+      }
+    }
+
+    const result = await pool.query(
+      'UPDATE users SET username = $1, email = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 RETURNING id, username, email, is_admin',
+      [username, email, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    logger.info(`User ${userId} information updated by admin ${req.user.id}`);
+    res.json({ user: result.rows[0], message: 'User updated successfully' });
+  } catch (error) {
+    console.error('Error updating user:', error);
+    res.status(500).json({ error: 'Failed to update user' });
+  }
+});
+
+// ==================== FISHING LOG MANAGEMENT (ADMIN) ====================
+
+// Update fishing log (admin)
+router.patch('/fishing-logs/:logId', authMiddleware, isAdmin, async (req, res) => {
+  try {
+    const { logId } = req.params;
+    const {
+      log_date,
+      time_start,
+      time_end,
+      location_name,
+      location,
+      caught_fish,
+      fish_count,
+      fishing_type,
+      fishing_method,
+      bait,
+      moon_phase,
+      tide_phase,
+      tide_height,
+      sea_level,
+      fish_activity,
+      hook_setup,
+      notes
+    } = req.body;
+
+    const result = await pool.query(
+      `UPDATE fishing_logs SET
+        log_date = COALESCE($1, log_date),
+        time_start = COALESCE($2, time_start),
+        time_end = COALESCE($3, time_end),
+        location_name = COALESCE($4, location_name),
+        location = COALESCE($5, location),
+        caught_fish = COALESCE($6, caught_fish),
+        fish_count = COALESCE($7, fish_count),
+        fishing_type = COALESCE($8, fishing_type),
+        fishing_method = COALESCE($9, fishing_method),
+        bait = COALESCE($10, bait),
+        moon_phase = COALESCE($11, moon_phase),
+        tide_phase = COALESCE($12, tide_phase),
+        tide_height = COALESCE($13, tide_height),
+        sea_level = COALESCE($14, sea_level),
+        fish_activity = COALESCE($15, fish_activity),
+        hook_setup = COALESCE($16, hook_setup),
+        notes = COALESCE($17, notes),
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $18
+      RETURNING *`,
+      [log_date, time_start, time_end, location_name, location, caught_fish, fish_count,
+       fishing_type, fishing_method, bait, moon_phase, tide_phase, tide_height, sea_level,
+       fish_activity, hook_setup, notes, logId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Fishing log not found' });
+    }
+
+    logger.info(`Fishing log ${logId} updated by admin ${req.user.id}`);
+    res.json({ log: result.rows[0], message: 'Fishing log updated successfully' });
+  } catch (error) {
+    console.error('Error updating fishing log:', error);
+    res.status(500).json({ error: 'Failed to update fishing log' });
+  }
+});
+
+// Delete fishing log (admin)
+router.delete('/fishing-logs/:logId', authMiddleware, isAdmin, async (req, res) => {
+  try {
+    const { logId } = req.params;
+
+    const result = await pool.query(
+      'DELETE FROM fishing_logs WHERE id = $1 RETURNING id, user_id, log_date',
+      [logId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Fishing log not found' });
+    }
+
+    logger.info(`Fishing log ${logId} deleted by admin ${req.user.id}`);
+    res.json({ message: 'Fishing log deleted successfully', log: result.rows[0] });
+  } catch (error) {
+    console.error('Error deleting fishing log:', error);
+    res.status(500).json({ error: 'Failed to delete fishing log' });
+  }
+});
+
 // ==================== DROPDOWN MANAGEMENT ====================
 
 // Helper function to check if a table exists

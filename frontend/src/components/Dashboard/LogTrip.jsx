@@ -807,7 +807,8 @@ const LogTrip = () => {
                             className="px-4 py-3 hover:bg-green-50 cursor-pointer border-b border-gray-100 last:border-b-0"
                           >
                             <div className="font-semibold text-gray-800">{fish.display}</div>
-                            <div className="text-xs text-gray-500">{fish.scientific || ''}</div>
+                            {fish.englishName && <div className="text-xs text-gray-600">{fish.englishName}</div>}
+                            {fish.scientific && <div className="text-xs text-gray-500">{fish.scientific}</div>}
                           </div>
                         ))}
                         {fishSearchValue && !filteredFishForIndex.some(f => f.display.toLowerCase() === fishSearchValue.toLowerCase()) && (
