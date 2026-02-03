@@ -5,6 +5,17 @@ const morgan = require('morgan');
 const session = require('express-session');
 require('dotenv').config();
 
+// Validate required environment variables
+if (!process.env.SESSION_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('FATAL ERROR: SESSION_SECRET environment variable is required in production');
+    process.exit(1);
+  } else {
+    console.warn('WARNING: SESSION_SECRET not set. Using default value for development only.');
+    console.warn('Set SESSION_SECRET environment variable for production use.');
+  }
+}
+
 const logger = require('./config/logger');
 const passport = require('./config/passport');
 const authRoutes = require('./routes/authRoutes');
@@ -30,7 +41,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(session({
-  secret: process.env.SESSION_SECRET,
+  secret: process.env.SESSION_SECRET || 'dev-session-secret-change-in-production',
   resave: false,
   saveUninitialized: false,
   cookie: {
