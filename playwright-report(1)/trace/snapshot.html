@@ -14,7 +14,17 @@
         const params = new URLSearchParams();
         params.set('trace', traceUrl);
         await fetch('contexts?' + params.toString());
-        document.querySelector('iframe').src = new URLSearchParams(location.search).get('r');
+        const rParam = new URLSearchParams(location.search).get('r');
+        if (rParam) {
+          // Disallow absolute/protocol-relative URLs to prevent open redirects.
+          const isAbsoluteOrProtocolRelative = /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(rParam) || rParam.startsWith('//');
+          if (!isAbsoluteOrProtocolRelative) {
+            const iframeUrl = new URL(rParam, window.location.origin);
+            if (iframeUrl.origin === window.location.origin) {
+              document.querySelector('iframe').src = iframeUrl.toString();
+            }
+          }
+        }
       })();
     </script>
   </body>
