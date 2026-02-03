@@ -1,0 +1,115 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: ['*']
+  pull_request:
+    branches: ['*']
+
+env:
+  TEST_USER_EMAIL: e2etest@fishingtracker.mu
+  TEST_USER_PASSWORD: password
+  TEST_ADMIN_EMAIL: admin@fishingtracker.mu
+  TEST_ADMIN_PASSWORD: password
+
+jobs:
+  e2e-tests:
+    name: Run E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: fishing_tracker
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          cd backend && npm install --legacy-peer-deps
+          cd ../frontend && npm install --legacy-peer-deps
+          cd ../e2e && npm install
+
+      - name: Install Playwright
+        run: cd e2e && npx playwright install chromium --with-deps
+
+      - name: Initialize database
+        run: |
+          PGPASSWORD=testpassword psql -h localhost -U postgres -d fishing_tracker -f init.sql
+          PGPASSWORD=testpassword psql -h localhost -U postgres -d fishing_tracker -f e2e/init-test-users.sql
+
+      - name: Start backend
+        run: |
+          cd backend
+          cat > .env << EOF
+          NODE_ENV=test
+          PORT=5000
+          DB_HOST=localhost
+          DB_PORT=5432
+          DB_NAME=fishing_tracker
+          DB_USER=postgres
+          DB_PASSWORD=testpassword
+          JWT_SECRET=test-jwt-secret
+          JWT_EXPIRE=7d
+          SESSION_SECRET=test-session-secret
+          CORS_ORIGIN=http://localhost:3000
+          EOF
+          npm start &
+          sleep 10
+
+      - name: Build and serve frontend
+        run: |
+          cd frontend
+          REACT_APP_API_URL=http://localhost:5000/api npm run build
+          npx serve -s build -l 3000 &
+          sleep 5
+        env:
+          CI: false
+
+      - name: Wait for services
+        run: |
+          timeout 60 bash -c 'until curl -s http://localhost:5000/health; do sleep 2; done'
+          timeout 30 bash -c 'until curl -s http://localhost:3000; do sleep 2; done'
+
+      - name: Run E2E tests
+        run: |
+          cd e2e
+          npx playwright test --reporter=list,html,json
+        env:
+          TEST_BASE_URL: http://localhost:3000
+          TEST_API_URL: http://localhost:5000/api
+          CI: true
+
+      - name: Upload HTML report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-${{ github.run_id }}
+          path: e2e/playwright-report/
+          retention-days: 30
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ github.run_id }}
+          path: e2e/test-results/
+          retention-days: 30

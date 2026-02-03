@@ -1,7 +1,7 @@
 FROM node:20-alpine
 
-# Install Python and pip
-RUN apk add --no-cache python3 py3-pip
+# Install Python, pip, and curl for healthchecks
+RUN apk add --no-cache python3 py3-pip curl
 
 WORKDIR /app
 

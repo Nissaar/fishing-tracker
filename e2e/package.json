@@ -1,16 +1,13 @@
 {
   "name": "fishing-tracker-e2e-tests",
   "version": "1.0.0",
-  "description": "Comprehensive E2E tests for Fishing Tracker Pro using Playwright",
+  "description": "E2E tests for Fishing Tracker Pro",
   "scripts": {
     "test": "playwright test",
     "test:headed": "playwright test --headed",
-    "test:ui": "playwright test --ui",
     "test:debug": "playwright test --debug",
-    "test:report": "playwright show-report",
-    "test:ci": "playwright test --reporter=html,github",
-    "setup": "playwright install --with-deps chromium firefox",
-    "cleanup": "node scripts/cleanup.js"
+    "report": "playwright show-report",
+    "install-browsers": "playwright install chromium --with-deps"
   },
   "devDependencies": {
     "@faker-js/faker": "^8.4.0",
