@@ -127,7 +127,7 @@ router.get('/stats', authMiddleware, isAdmin, async (req, res) => {
 });
 
 // Get all users (for admin management)
-router.get('/users', authMiddleware, isAdmin, adminLimiter, async (req, res) => {
+router.get('/users', adminLimiter, authMiddleware, isAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT 
@@ -151,7 +151,7 @@ router.get('/users', authMiddleware, isAdmin, adminLimiter, async (req, res) => 
 });
 
 // Get user fishing entries
-router.get('/user-entries/:userId', authMiddleware, isAdmin, adminLimiter, async (req, res) => {
+router.get('/user-entries/:userId', adminLimiter, authMiddleware, isAdmin, async (req, res) => {
   try {
     const userId = req.params.userId;
     const result = await pool.query(`
@@ -170,7 +170,7 @@ router.get('/user-entries/:userId', authMiddleware, isAdmin, adminLimiter, async
 // ==================== USER MANAGEMENT ====================
 
 // Update user admin status
-router.patch('/users/:userId/admin', authMiddleware, isAdmin, adminLimiter, async (req, res) => {
+router.patch('/users/:userId/admin', adminLimiter, authMiddleware, isAdmin, async (req, res) => {
   try {
     const { userId } = req.params;
     const { isAdmin: makeAdmin } = req.body;
