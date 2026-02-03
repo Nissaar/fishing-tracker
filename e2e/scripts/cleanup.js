@@ -7,10 +7,11 @@
 
 const fs = require('fs');
 const path = require('path');
-const { exec } = require('child_process');
+const { exec, execFile } = require('child_process');
 const util = require('util');
 
 const execPromise = util.promisify(exec);
+const execFilePromise = util.promisify(execFile);
 
 console.log('🧹 Starting E2E Test Cleanup...\n');
 
@@ -75,8 +76,9 @@ async function cleanup() {
     const dbPassword = process.env.DB_PASSWORD || '';
     
     if (dbPassword) {
-      const command = `PGPASSWORD="${dbPassword}" psql -h ${dbHost} -p ${dbPort} -U ${dbUser} -d ${dbName} -f ${sqlPath}`;
-      await execPromise(command);
+      const env = { ...process.env, PGPASSWORD: dbPassword };
+      const args = ['-h', dbHost, '-p', dbPort, '-U', dbUser, '-d', dbName, '-f', sqlPath];
+      await execFilePromise('psql', args, { env });
       console.log('   ✅ Database test data cleaned');
     } else {
       console.log('   ⏭️  Skipped database cleanup (no password provided)');
