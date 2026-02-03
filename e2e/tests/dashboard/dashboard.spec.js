@@ -4,6 +4,20 @@ const { test, expect } = require('../fixtures');
 /**
  * Dashboard Test Suite
  * Tests all dashboard tabs and functionality
+ * 
+ * Manual Testing Guide:
+ * 1. Login with test user: e2etest@fishingtracker.mu / password
+ * 2. Dashboard has 7 tabs:
+ *    - Log Trip: Record fishing sessions
+ *    - View Data: See logged trips in table
+ *    - Plan Trip: Get recommendations for future trips
+ *    - Reports: View statistics and charts
+ *    - Predictions: See community insights
+ *    - Browse Locations: Explore all fishing spots
+ *    - Best Conditions: Historical analysis
+ * 3. All endpoints require authentication
+ * 
+ * Detailed steps: See TEST_DOCUMENTATION.md
  */
 
 test.describe('Dashboard - Main Navigation', () => {
@@ -14,7 +28,14 @@ test.describe('Dashboard - Main Navigation', () => {
   });
   
   test('should render dashboard with all tabs', async ({ page }) => {
-    // Check all tabs are present
+    /**
+     * Steps:
+     * 1. Navigate to /dashboard
+     * 2. Wait for page to load (networkidle)
+     * 3. Verify all 7 navigation tabs are visible:
+     *    - Log Trip, View Data, Plan Trip, Reports, Predictions, Browse Locations, Best Conditions
+     * Expected: User should see all tabs at the top of the dashboard
+     */
     await expect(page.locator('button:has-text("Log Trip")')).toBeVisible();
     await expect(page.locator('button:has-text("View Data")')).toBeVisible();
     await expect(page.locator('button:has-text("Plan Trip")')).toBeVisible();

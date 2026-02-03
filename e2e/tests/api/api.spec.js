@@ -10,6 +10,25 @@ const test = testBase;
 /**
  * API & Backend Test Suite
  * Tests all API endpoints and backend functionality
+ * 
+ * Manual Testing Guide:
+ * All API endpoints require Bearer token authentication:
+ * 
+ * 1. Get Auth Token:
+ *    POST /api/auth/login
+ *    Body: {"email":"e2etest@fishingtracker.mu","password":"password"}
+ * 
+ * 2. Use Token in Headers:
+ *    Authorization: Bearer {token}
+ * 
+ * Key Endpoints Tested:
+ * - GET /api/fishing/locations - Get all fishing spots
+ * - GET /api/fishing/environmental-data - Weather, tide, moon data
+ * - POST /api/fishing/logs - Create new fishing log
+ * - GET /api/fishing/statistics - User statistics
+ * - POST /api/fishing/global-predictions - Community insights
+ * 
+ * Detailed steps: See TEST_DOCUMENTATION.md
  */
 
 test.describe('API - Health & Status', () => {

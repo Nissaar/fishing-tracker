@@ -4,6 +4,17 @@ const { test, expect } = require('../fixtures');
 /**
  * Authentication Test Suite
  * Tests login, registration, logout, and protected route access
+ * 
+ * Manual Testing Guide:
+ * Test User Credentials:
+ * - Email: e2etest@fishingtracker.mu
+ * - Password: password
+ * 
+ * Admin User Credentials:
+ * - Email: admin@fishingtracker.mu  
+ * - Password: password
+ * 
+ * See TEST_DOCUMENTATION.md for step-by-step reproduction instructions
  */
 
 test.describe('Authentication - Login', () => {

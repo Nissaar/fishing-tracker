@@ -4,12 +4,25 @@ const { test, expect } = require('../fixtures');
 /**
  * Public Pages Test Suite
  * Tests all publicly accessible pages without authentication
+ * 
+ * Manual Testing Guide:
+ * 1. Start backend: cd backend && npm start
+ * 2. Start frontend: cd frontend && npm start (port 3000)
+ * 3. No login required - all tests work as public user
+ * 4. Check TEST_DOCUMENTATION.md for detailed steps per test
  */
 
 test.describe('Public Pages - Rendering & Display', () => {
   
   test.describe('Landing Page', () => {
     test('should render landing page correctly', async ({ page }) => {
+      /**
+       * Manual Reproduction:
+       * 1. Open http://localhost:3000 in browser
+       * 2. Wait for page to load
+       * 3. Verify h1 title is visible
+       * Expected: Landing page displays with main heading
+       */
       await page.goto('/');
       await page.waitForLoadState('networkidle');
       

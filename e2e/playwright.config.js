@@ -55,7 +55,8 @@ module.exports = defineConfig({
       outputFolder: 'playwright-report',
       open: 'never'
     }],
-    ['json', { outputFile: 'test-results/results.json' }]
+    ['json', { outputFile: 'test-results/results.json' }],
+    ['./custom-reporter.js']  // Custom reporter for test documentation
   ],
   
   // Global settings - Chrome only

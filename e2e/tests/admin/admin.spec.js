@@ -8,12 +8,22 @@ const USER_AUTH = path.join(__dirname, '../../playwright/.auth/user.json');
 /**
  * Admin Panel Test Suite
  * Comprehensive tests for all admin functionality including:
- * - Overview/Statistics
- * - Custom Submissions Review
- * - Contact Messages
- * - Dropdown Management
- * - User Management
- * - System Logs
+ * - Overview/Statistics Dashboard
+ * - Custom Submissions Review & Approval
+ * - Contact Messages Management
+ * - Dropdown Management (Baits, Fish Species, etc)
+ * - User Management & Admin Status
+ * - System Logs Viewing
+ * 
+ * Manual Testing Guide:
+ * Admin Credentials:
+ * - Email: admin@fishingtracker.mu
+ * - Password: password
+ * 
+ * Only admin users can access /admin routes
+ * Non-admin users are redirected to dashboard
+ * 
+ * Detailed steps: See TEST_DOCUMENTATION.md
  */
 
 test.describe('Admin - Access Control', () => {
