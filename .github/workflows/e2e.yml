@@ -98,6 +98,52 @@ jobs:
           TEST_API_URL: http://localhost:5000/api
           CI: true
 
+      - name: Parse test results
+        if: always()
+        run: |
+          cd e2e
+          if [ -f test-results/results.json ]; then
+            echo "PLAYWRIGHT_SUMMARY=$(cat test-results/results.json | jq -r '.stats | "✅ Passed: \(.expected) | ❌ Failed: \(.failed)"')" >> $GITHUB_ENV
+            echo "TEST_PASSED=$(cat test-results/results.json | jq '.stats.failed == 0')" >> $GITHUB_ENV
+          fi
+
+      - name: Comment PR with test results
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let results = { stats: { expected: 0, failed: 0, skipped: 0 } };
+            
+            try {
+              const content = fs.readFileSync('e2e/test-results/results.json', 'utf8');
+              results = JSON.parse(content);
+            } catch (e) {
+              console.log('Could not parse results file');
+            }
+            
+            const passed = results.stats.expected - results.stats.failed;
+            const status = results.stats.failed === 0 ? '✅' : '⚠️';
+            const reportUrl = `https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}`;
+            
+            const comment = `${status} **E2E Test Results**
+            
+| Result | Count |
+|--------|-------|
+| ✅ Passed | ${passed} |
+| ❌ Failed | ${results.stats.failed} |
+| ⏭️ Skipped | ${results.stats.skipped} |
+| **Total** | **${results.stats.expected}** |
+
+[📊 View Full Report](${reportUrl})`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
       - name: Upload HTML report
         uses: actions/upload-artifact@v4
         if: always()
