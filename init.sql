@@ -283,35 +283,34 @@ INSERT INTO fishing_baits (name, fishing_type_id)
 SELECT 'Ton Zorz', id FROM fishing_types WHERE name = 'Casting'
 ON CONFLICT DO NOTHING;
 
--- Insert comprehensive Mauritius fish species (local/creole, English, scientific names)
-INSERT INTO fish_species (local_name, english_name, scientific_name) VALUES 
-    ('Capitaine', 'Spangled Emperor', 'Lethrinus nebulosus'),
-    ('Dame berri', 'Blackspot Emperor', 'Lethrinus mahsena'),
-    ('Caya', 'Yellow-eye Emperor', 'Lethrinus rubrioperculatus'),
-    ('Vieille rouge', 'Red Grouper', 'Epinephelus fasciatus'),
-    ('Vacoas', 'Green Jobfish', 'Aprion virescens'),
-    ('Croissant queue jaune', 'Yellow-edged Lyretail', 'Variola louti'),
-    ('Croissant queue blanc', 'White-edged Lyretail', 'Variola albimarginata'),
-    ('Sacré chien rouge', 'Ruby Snapper', 'Etelis cabunculus'),
-    ('Sacré chien blanc', 'Bluestriped Snapper', 'Pristipomoides filamentosus'),
-    ('Rouget fayan', 'Goatfish', 'Parupeneus spp.'),
-    ('Madame tombée', 'Flower Wrasse', 'Cheilinus chlorourus'),
-    ('Dorade', 'Mahi-mahi', 'Coryphaena hippurus'),
-    ('Thon jaune', 'Yellowfin tuna', 'Thunnus albacares'),
-    ('Bonite', 'Skipjack', 'Katsuwonus pelamis'),
-    ('Tazar', 'Great Barracuda', 'Sphyraena barracuda'),
-    ('Licorne', 'Unicorn fish', 'Naso unicornis'),
-    ('Carangue saumon', 'Rainbow Runner', 'Elagatis bipinnulata'),
-    ('Becune', 'Trevally', 'Carangidae'),
-    ('Espadon', 'Swordfish', 'Xiphias gladius'),
+    -- Insert comprehensive Mauritius fish species (local/creole, English, scientific names)
+    INSERT INTO fish_species (local_name, english_name, scientific_name) VALUES 
+        ('Capitaine', 'Spangled Emperor', 'Lethrinus nebulosus'),
+        ('Dame berri', 'Blackspot Emperor', 'Lethrinus mahsena'),
+        ('Caya', 'Yellow-eye Emperor', 'Lethrinus rubrioperculatus'),
+        ('Vieille rouge', 'Red Grouper', 'Epinephelus fasciatus'),
+        ('Vacoas', 'Green Jobfish', 'Aprion virescens'),
+        ('Croissant queue jaune', 'Yellow-edged Lyretail', 'Variola louti'),
+        ('Croissant queue blanc', 'White-edged Lyretail', 'Variola albimarginata'),
+        ('Sacré chien rouge', 'Ruby Snapper', 'Etelis cabunculus'),
+        ('Sacré chien blanc', 'Bluestriped Snapper', 'Pristipomoides filamentosus'),
+        ('Rouget fayan', 'Goatfish', 'Parupeneus spp.'),
+        ('Madame tombée', 'Flower Wrasse', 'Cheilinus chlorourus'),
+        ('Dorade', 'Mahi-mahi', 'Coryphaena hippurus'),
+        ('Thon jaune', 'Yellowfin tuna', 'Thunnus albacares'),
+        ('Bonite', 'Skipjack', 'Katsuwonus pelamis'),
+        ('Tazar', 'Great Barracuda', 'Sphyraena barracuda'),
+        ('Licorne', 'Unicorn fish', 'Naso unicornis'),
+        ('Carangue saumon', 'Rainbow Runner', 'Elagatis bipinnulata'),
+        ('Becune', 'Trevally', 'Carangidae'),
+        ('Espadon', 'Swordfish', 'Xiphias gladius'),
     ('Marlin bleu', 'Blue marlin', 'Makaira nigricans'),
-    ('Homard', 'Spiny lobster', 'Panulirus spp.'),
-    ('Crabe', 'Crab', 'Scylla spp.'),
-    ('Batarder', 'Batarder', NULL),
-    ('Rouget', 'Rouget', NULL),
-    ('Viel gris', 'Viel gris', NULL),
-    ('Mourgate', 'Squid', 'Loligo spp.')
-ON CONFLICT DO NOTHING;
+        ('Homard', 'Spiny lobster', 'Panulirus spp.'),
+        ('Crabe', 'Crab', 'Scylla spp.'),
+        ('Batarder', 'Batarder', NULL),
+        ('Rouget', 'Rouget', NULL),
+        ('Viel gris', 'Viel gris', NULL),
+        ('Mourgate', 'Squid', 'Loligo spp.');
 
--- Exit
-\q
+    -- Exit
+    \q
