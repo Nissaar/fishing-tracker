@@ -140,6 +140,11 @@ CREATE TABLE IF NOT EXISTS fishing_logs (
     solunar_data JSONB,
     hook_setup VARCHAR(200),
     notes TEXT,
+    CHECK (
+        time_start IS NULL
+        OR time_end IS NULL
+        OR time_end > time_start
+    ),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
