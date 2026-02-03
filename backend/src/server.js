@@ -6,7 +6,7 @@ const session = require('express-session');
 require('dotenv').config();
 
 // Validate required environment variables
-if (!process.env.SESSION_SECRET) {
+if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.trim() === '') {
   if (process.env.NODE_ENV === 'production') {
     console.error('FATAL ERROR: SESSION_SECRET environment variable is required in production');
     process.exit(1);
