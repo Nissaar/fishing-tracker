@@ -18,7 +18,17 @@ docker run --name e2e-test-postgres \
     -e POSTGRES_PASSWORD=testpassword \
     -e POSTGRES_DB=fishing_tracker \
     -p 5434:5432 -d postgres:15-alpine
-sleep 5
+
+# Wait for PostgreSQL to be ready
+echo "Waiting for PostgreSQL to be ready..."
+for i in {1..30}; do
+    if docker exec e2e-test-postgres pg_isready -U postgres > /dev/null 2>&1; then
+        echo "PostgreSQL is ready!"
+        break
+    fi
+    echo "  Attempt $i/30..."
+    sleep 1
+done
 
 # Initialize schema
 echo "Initializing schema..."

@@ -20,11 +20,40 @@ const TEST_ADMIN = {
   username: 'Admin User'
 };
 
-// Ensure auth directory exists
+// Ensure auth directory exists - create it now and also in setup
 const authDir = path.join(__dirname, '../playwright/.auth');
+console.log(`📁 Auth directory path: ${authDir}`);
 if (!fs.existsSync(authDir)) {
   fs.mkdirSync(authDir, { recursive: true });
+  console.log(`📁 Created auth directory: ${authDir}`);
 }
+
+// Helper function to ensure auth directory exists
+const ensureAuthDir = () => {
+  if (!fs.existsSync(authDir)) {
+    fs.mkdirSync(authDir, { recursive: true });
+    console.log(`📁 Created auth directory in setup: ${authDir}`);
+  }
+};
+
+// Helper function to save storage state with retry
+const saveStorageState = async (page, filePath, label) => {
+  ensureAuthDir();
+  try {
+    await page.context().storageState({ path: filePath });
+    console.log(`✅ ${label} authentication state saved to ${filePath}`);
+    
+    // Verify file was created
+    if (fs.existsSync(filePath)) {
+      console.log(`✅ Verified ${filePath} exists`);
+    } else {
+      console.error(`❌ File ${filePath} was not created!`);
+    }
+  } catch (error) {
+    console.error(`❌ Failed to save storage state: ${error.message}`);
+    throw error;
+  }
+};
 
 const getApiUrl = () => {
   if (process.env.TEST_API_URL) {
@@ -123,8 +152,7 @@ setup.describe('Global Setup', () => {
       console.log('✅ Test user logged in successfully');
       
       // Save authentication state
-      await page.context().storageState({ path: STORAGE_STATE_USER });
-      console.log('✅ User authentication state saved');
+      await saveStorageState(page, STORAGE_STATE_USER, 'User');
     } else {
       // If login failed, try to create user via API directly
       console.log('⚠️ Login via UI failed, attempting API registration...');
@@ -168,8 +196,7 @@ setup.describe('Global Setup', () => {
         }, loginData.token);
 
         await page.goto('/dashboard');
-        await page.context().storageState({ path: STORAGE_STATE_USER });
-        console.log('✅ User authentication state saved via API');
+        await saveStorageState(page, STORAGE_STATE_USER, 'User (via API)');
       } else {
         const details = await getResponseDetails(loginResponse);
         console.error(`❌ Login failed with status ${details.status}`);
@@ -222,8 +249,7 @@ setup.describe('Global Setup', () => {
       
       if (page.url().includes('/dashboard') || page.url().includes('/admin')) {
         console.log('✅ Admin user logged in successfully');
-        await page.context().storageState({ path: STORAGE_STATE_ADMIN });
-        console.log('✅ Admin authentication state saved');
+        await saveStorageState(page, STORAGE_STATE_ADMIN, 'Admin');
       }
     } catch (error) {
       console.log('⚠️ Admin login via UI failed, attempting API...');
@@ -262,8 +288,7 @@ setup.describe('Global Setup', () => {
         }, loginData.token);
         
         await page.goto('/dashboard');
-        await page.context().storageState({ path: STORAGE_STATE_ADMIN });
-        console.log('✅ Admin authentication state saved via API');
+        await saveStorageState(page, STORAGE_STATE_ADMIN, 'Admin (via API)');
       } else {
         const details = await getResponseDetails(loginResponse);
         console.error(`❌ Admin login failed with status ${details.status}`);
