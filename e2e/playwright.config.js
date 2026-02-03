@@ -91,6 +91,34 @@ module.exports = defineConfig({
       testMatch: /global\.setup\.js/,
     },
     
+    // API tests - don't need storage state
+    {
+      name: 'api',
+      testMatch: '**/api/**/*.spec.js',
+      use: {
+        ...devices['Desktop Chrome'],
+      },
+    },
+
+    // Auth tests - testing login UI itself, no storage state
+    {
+      name: 'auth',
+      testMatch: '**/auth/**/*.spec.js',
+      use: {
+        ...devices['Desktop Chrome'],
+      },
+    },
+
+    // Public pages - no auth needed
+    {
+      name: 'public',
+      testMatch: '**/public/**/*.spec.js',
+      use: {
+        ...devices['Desktop Chrome'],
+      },
+    },
+
+    // UI tests with user authentication (dashboard, etc)
     {
       name: 'chromium',
       use: { 
@@ -98,7 +126,7 @@ module.exports = defineConfig({
         storageState: 'playwright/.auth/user.json',
       },
       dependencies: ['setup'],
-      testIgnore: '**/admin/**/*.spec.js',
+      testIgnore: ['**/admin/**/*.spec.js', '**/api/**/*.spec.js', '**/auth/**/*.spec.js', '**/public/**/*.spec.js'],
     },
 
     // Skip Firefox in CI - only run in local dev
@@ -110,6 +138,7 @@ module.exports = defineConfig({
           storageState: 'playwright/.auth/user.json',
         },
         dependencies: ['setup'],
+        testIgnore: ['**/admin/**/*.spec.js', '**/api/**/*.spec.js', '**/auth/**/*.spec.js', '**/public/**/*.spec.js'],
       },
     ]),
 
@@ -122,6 +151,7 @@ module.exports = defineConfig({
           storageState: 'playwright/.auth/user.json',
         },
         dependencies: ['setup'],
+        testIgnore: ['**/admin/**/*.spec.js', '**/api/**/*.spec.js', '**/auth/**/*.spec.js', '**/public/**/*.spec.js'],
       },
     ]),
 
