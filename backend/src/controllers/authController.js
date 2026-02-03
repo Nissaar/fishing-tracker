@@ -47,6 +47,9 @@ exports.login = async (req, res) => {
     // Security note: We intentionally return a generic "Invalid credentials" message
     // when no user is found, to avoid revealing whether an email is registered and
     // reduce the risk of account enumeration. This trades off some UX for security.
+    // Security note: We intentionally return a generic "Invalid credentials" message
+    // when no user is found, to avoid revealing whether an email is registered and
+    // reduce the risk of account enumeration. This trades off some UX for security.
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
