@@ -1,40 +1,18 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
+const { isAdmin, adminLimiter } = require('../middleware/adminMiddleware');
 const pool = require('../config/database');
 const logger = require('../config/logger');
 const { allLocations } = require('../data/mauritiusLocations');
-const rateLimit = require('express-rate-limit');
 
-const adminLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 admin requests per windowMs
-});
-
-// Middleware to check if user is admin
-const isAdmin = async (req, res, next) => {
-  try {
-    const result = await pool.query(
-      'SELECT is_admin FROM users WHERE id = $1',
-      [req.user.id]
-    );
-    
-    if (result.rows.length === 0 || !result.rows[0].is_admin) {
-      return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
-    }
-    
-    next();
-  } catch (error) {
-    console.error('Admin check error:', error);
-    res.status(500).json({ error: 'Server error during admin verification' });
-  }
-};
-
-// Combined middleware to rate-limit admin checks before accessing the database
-const adminProtected = [adminLimiter, isAdmin];
+// Apply authentication and admin check to all routes
+router.use(authMiddleware);
+router.use(adminLimiter);
+router.use(isAdmin);
 
 // Get admin statistics
-router.get('/stats', authMiddleware, isAdmin, async (req, res) => {
+router.get('/stats', async (req, res) => {
   try {
     // Get total users count
     const usersResult = await pool.query('SELECT COUNT(*) as count FROM users');
@@ -121,13 +99,13 @@ router.get('/stats', authMiddleware, isAdmin, async (req, res) => {
       methodDistribution: methodDistribution.rows
     });
   } catch (error) {
-    console.error('Error fetching admin stats:', error);
+    logger.error('Error fetching admin stats:', error);
     res.status(500).json({ error: 'Failed to fetch statistics' });
   }
 });
 
 // Get all users (for admin management)
-router.get('/users', adminLimiter, authMiddleware, isAdmin, async (req, res) => {
+router.get('/users', async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT 
@@ -145,13 +123,13 @@ router.get('/users', adminLimiter, authMiddleware, isAdmin, async (req, res) => 
     
     res.json({ users: result.rows });
   } catch (error) {
-    console.error('Error fetching users:', error);
+    logger.error('Error fetching users:', error);
     res.status(500).json({ error: 'Failed to fetch users' });
   }
 });
 
 // Get user fishing entries
-router.get('/user-entries/:userId', adminLimiter, authMiddleware, isAdmin, async (req, res) => {
+router.get('/user-entries/:userId', async (req, res) => {
   try {
     const userId = req.params.userId;
     const result = await pool.query(`
@@ -162,7 +140,7 @@ router.get('/user-entries/:userId', adminLimiter, authMiddleware, isAdmin, async
     
     res.json({ logs: result.rows });
   } catch (error) {
-    console.error('Error fetching user entries:', error);
+    logger.error('Error fetching user entries:', error);
     res.status(500).json({ error: 'Failed to fetch user entries' });
   }
 });
@@ -170,7 +148,7 @@ router.get('/user-entries/:userId', adminLimiter, authMiddleware, isAdmin, async
 // ==================== USER MANAGEMENT ====================
 
 // Update user admin status
-router.patch('/users/:userId/admin', adminLimiter, authMiddleware, isAdmin, async (req, res) => {
+router.patch('/users/:userId/admin', async (req, res) => {
   try {
     const { userId } = req.params;
     const { isAdmin: makeAdmin } = req.body;
@@ -192,13 +170,13 @@ router.patch('/users/:userId/admin', adminLimiter, authMiddleware, isAdmin, asyn
     logger.info(`User ${userId} admin status updated to ${makeAdmin} by admin ${req.user.id}`);
     res.json({ user: result.rows[0], message: `Admin status ${makeAdmin ? 'granted' : 'revoked'} successfully` });
   } catch (error) {
-    console.error('Error updating user admin status:', error);
+    logger.error('Error updating user admin status:', error);
     res.status(500).json({ error: 'Failed to update user admin status' });
   }
 });
 
 // Delete user
-router.delete('/users/:userId', authMiddleware, adminLimiter, adminProtected, async (req, res) => {
+router.delete('/users/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
 
@@ -219,13 +197,13 @@ router.delete('/users/:userId', authMiddleware, adminLimiter, adminProtected, as
     logger.info(`User ${userId} deleted by admin ${req.user.id}`);
     res.json({ message: 'User deleted successfully', user: result.rows[0] });
   } catch (error) {
-    console.error('Error deleting user:', error);
+    logger.error('Error deleting user:', error);
     res.status(500).json({ error: 'Failed to delete user' });
   }
 });
 
 // Update user information (username, email)
-router.patch('/users/:userId', authMiddleware, adminLimiter, adminProtected, async (req, res) => {
+router.patch('/users/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
     const { username, email } = req.body;
@@ -274,7 +252,7 @@ router.patch('/users/:userId', authMiddleware, adminLimiter, adminProtected, asy
     logger.info(`User ${userId} information updated by admin ${req.user.id}`);
     res.json({ user: result.rows[0], message: 'User updated successfully' });
   } catch (error) {
-    console.error('Error updating user:', error);
+    logger.error('Error updating user:', error);
     res.status(500).json({ error: 'Failed to update user' });
   }
 });
@@ -282,7 +260,7 @@ router.patch('/users/:userId', authMiddleware, adminLimiter, adminProtected, asy
 // ==================== FISHING LOG MANAGEMENT (ADMIN) ====================
 
 // Update fishing log (admin)
-router.patch('/fishing-logs/:logId', authMiddleware, adminLimiter, isAdmin, async (req, res) => {
+router.patch('/fishing-logs/:logId', async (req, res) => {
   try {
     const { logId } = req.params;
 
@@ -344,13 +322,13 @@ router.patch('/fishing-logs/:logId', authMiddleware, adminLimiter, isAdmin, asyn
     logger.info(`Fishing log ${logId} updated by admin ${req.user.id}`);
     res.json({ log: result.rows[0], message: 'Fishing log updated successfully' });
   } catch (error) {
-    console.error('Error updating fishing log:', error);
+    logger.error('Error updating fishing log:', error);
     res.status(500).json({ error: 'Failed to update fishing log' });
   }
 });
 
 // Delete fishing log (admin)
-router.delete('/fishing-logs/:logId', authMiddleware, adminLimiter, isAdmin, async (req, res) => {
+router.delete('/fishing-logs/:logId', async (req, res) => {
   try {
     const { logId } = req.params;
 
@@ -366,7 +344,7 @@ router.delete('/fishing-logs/:logId', authMiddleware, adminLimiter, isAdmin, asy
     logger.info(`Fishing log ${logId} deleted by admin ${req.user.id}`);
     res.json({ message: 'Fishing log deleted successfully', log: result.rows[0] });
   } catch (error) {
-    console.error('Error deleting fishing log:', error);
+    logger.error('Error deleting fishing log:', error);
     res.status(500).json({ error: 'Failed to delete fishing log' });
   }
 });
@@ -391,7 +369,7 @@ const tableExists = async (tableName) => {
 };
 
 // Get all fishing types
-router.get('/fishing-types', authMiddleware, isAdmin, async (req, res) => {
+router.get('/fishing-types', async (req, res) => {
   try {
     if (!(await tableExists('fishing_types'))) {
       return res.json([]);
@@ -399,13 +377,13 @@ router.get('/fishing-types', authMiddleware, isAdmin, async (req, res) => {
     const result = await pool.query('SELECT * FROM fishing_types ORDER BY name');
     res.json(result.rows);
   } catch (error) {
-    console.error('Error fetching fishing types:', error);
+    logger.error('Error fetching fishing types:', error);
     res.status(500).json({ error: 'Failed to fetch fishing types' });
   }
 });
 
 // Create fishing type
-router.post('/fishing-types', authMiddleware, isAdmin, async (req, res) => {
+router.post('/fishing-types', async (req, res) => {
   try {
     const { name, description } = req.body;
     const result = await pool.query(
@@ -418,13 +396,13 @@ router.post('/fishing-types', authMiddleware, isAdmin, async (req, res) => {
     if (error.code === '23505') {
       return res.status(400).json({ error: 'Fishing type already exists' });
     }
-    console.error('Error creating fishing type:', error);
+    logger.error('Error creating fishing type:', error);
     res.status(500).json({ error: 'Failed to create fishing type' });
   }
 });
 
 // Update fishing type
-router.put('/fishing-types/:id', authMiddleware, isAdmin, async (req, res) => {
+router.put('/fishing-types/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { name, description, is_active } = req.body;
@@ -437,13 +415,13 @@ router.put('/fishing-types/:id', authMiddleware, isAdmin, async (req, res) => {
     }
     res.json({ fishingType: result.rows[0] });
   } catch (error) {
-    console.error('Error updating fishing type:', error);
+    logger.error('Error updating fishing type:', error);
     res.status(500).json({ error: 'Failed to update fishing type' });
   }
 });
 
 // Delete fishing type
-router.delete('/fishing-types/:id', authMiddleware, isAdmin, async (req, res) => {
+router.delete('/fishing-types/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query('DELETE FROM fishing_types WHERE id = $1 RETURNING *', [id]);
@@ -452,13 +430,13 @@ router.delete('/fishing-types/:id', authMiddleware, isAdmin, async (req, res) =>
     }
     res.json({ message: 'Fishing type deleted successfully' });
   } catch (error) {
-    console.error('Error deleting fishing type:', error);
+    logger.error('Error deleting fishing type:', error);
     res.status(500).json({ error: 'Failed to delete fishing type' });
   }
 });
 
 // Get all fishing methods
-router.get('/fishing-methods', authMiddleware, isAdmin, async (req, res) => {
+router.get('/fishing-methods', async (req, res) => {
   try {
     if (!(await tableExists('fishing_methods'))) {
       return res.json([]);
@@ -466,13 +444,13 @@ router.get('/fishing-methods', authMiddleware, isAdmin, async (req, res) => {
     const result = await pool.query('SELECT * FROM fishing_methods ORDER BY name');
     res.json(result.rows);
   } catch (error) {
-    console.error('Error fetching fishing methods:', error);
+    logger.error('Error fetching fishing methods:', error);
     res.status(500).json({ error: 'Failed to fetch fishing methods' });
   }
 });
 
 // Create fishing method
-router.post('/fishing-methods', authMiddleware, isAdmin, async (req, res) => {
+router.post('/fishing-methods', async (req, res) => {
   try {
     const { name, description } = req.body;
     const result = await pool.query(
@@ -484,13 +462,13 @@ router.post('/fishing-methods', authMiddleware, isAdmin, async (req, res) => {
     if (error.code === '23505') {
       return res.status(400).json({ error: 'Fishing method already exists' });
     }
-    console.error('Error creating fishing method:', error);
+    logger.error('Error creating fishing method:', error);
     res.status(500).json({ error: 'Failed to create fishing method' });
   }
 });
 
 // Update fishing method
-router.put('/fishing-methods/:id', authMiddleware, isAdmin, async (req, res) => {
+router.put('/fishing-methods/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { name, description, is_active } = req.body;
@@ -503,13 +481,13 @@ router.put('/fishing-methods/:id', authMiddleware, isAdmin, async (req, res) => 
     }
     res.json({ fishingMethod: result.rows[0] });
   } catch (error) {
-    console.error('Error updating fishing method:', error);
+    logger.error('Error updating fishing method:', error);
     res.status(500).json({ error: 'Failed to update fishing method' });
   }
 });
 
 // Delete fishing method
-router.delete('/fishing-methods/:id', authMiddleware, isAdmin, async (req, res) => {
+router.delete('/fishing-methods/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query('DELETE FROM fishing_methods WHERE id = $1 RETURNING *', [id]);
@@ -518,13 +496,13 @@ router.delete('/fishing-methods/:id', authMiddleware, isAdmin, async (req, res) 
     }
     res.json({ message: 'Fishing method deleted successfully' });
   } catch (error) {
-    console.error('Error deleting fishing method:', error);
+    logger.error('Error deleting fishing method:', error);
     res.status(500).json({ error: 'Failed to delete fishing method' });
   }
 });
 
 // Get all fishing baits (with optional fishing_type filter)
-router.get('/fishing-baits', authMiddleware, isAdmin, async (req, res) => {
+router.get('/fishing-baits', async (req, res) => {
   try {
     if (!(await tableExists('fishing_baits'))) {
       return res.json([]);
@@ -546,13 +524,13 @@ router.get('/fishing-baits', authMiddleware, isAdmin, async (req, res) => {
     const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (error) {
-    console.error('Error fetching fishing baits:', error);
+    logger.error('Error fetching fishing baits:', error);
     res.status(500).json({ error: 'Failed to fetch fishing baits' });
   }
 });
 
 // Create fishing bait
-router.post('/fishing-baits', authMiddleware, isAdmin, async (req, res) => {
+router.post('/fishing-baits', async (req, res) => {
   try {
     const { name, description, fishing_type_id } = req.body;
     const result = await pool.query(
@@ -561,13 +539,13 @@ router.post('/fishing-baits', authMiddleware, isAdmin, async (req, res) => {
     );
     res.status(201).json({ fishingBait: result.rows[0] });
   } catch (error) {
-    console.error('Error creating fishing bait:', error);
+    logger.error('Error creating fishing bait:', error);
     res.status(500).json({ error: 'Failed to create fishing bait' });
   }
 });
 
 // Update fishing bait
-router.put('/fishing-baits/:id', authMiddleware, isAdmin, async (req, res) => {
+router.put('/fishing-baits/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { name, description, fishing_type_id, is_active } = req.body;
@@ -580,13 +558,13 @@ router.put('/fishing-baits/:id', authMiddleware, isAdmin, async (req, res) => {
     }
     res.json({ fishingBait: result.rows[0] });
   } catch (error) {
-    console.error('Error updating fishing bait:', error);
+    logger.error('Error updating fishing bait:', error);
     res.status(500).json({ error: 'Failed to update fishing bait' });
   }
 });
 
 // Delete fishing bait
-router.delete('/fishing-baits/:id', authMiddleware, isAdmin, async (req, res) => {
+router.delete('/fishing-baits/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query('DELETE FROM fishing_baits WHERE id = $1 RETURNING *', [id]);
@@ -595,13 +573,13 @@ router.delete('/fishing-baits/:id', authMiddleware, isAdmin, async (req, res) =>
     }
     res.json({ message: 'Fishing bait deleted successfully' });
   } catch (error) {
-    console.error('Error deleting fishing bait:', error);
+    logger.error('Error deleting fishing bait:', error);
     res.status(500).json({ error: 'Failed to delete fishing bait' });
   }
 });
 
 // Get all fish species
-router.get('/fish-species', authMiddleware, isAdmin, async (req, res) => {
+router.get('/fish-species', async (req, res) => {
   try {
     if (!(await tableExists('fish_species'))) {
       return res.json([]);
@@ -609,13 +587,13 @@ router.get('/fish-species', authMiddleware, isAdmin, async (req, res) => {
     const result = await pool.query('SELECT * FROM fish_species ORDER BY local_name');
     res.json(result.rows);
   } catch (error) {
-    console.error('Error fetching fish species:', error);
+    logger.error('Error fetching fish species:', error);
     res.status(500).json({ error: 'Failed to fetch fish species' });
   }
 });
 
 // Create fish species
-router.post('/fish-species', authMiddleware, isAdmin, async (req, res) => {
+router.post('/fish-species', async (req, res) => {
   try {
     const { local_name, english_name, scientific_name, description } = req.body;
     const result = await pool.query(
@@ -624,13 +602,13 @@ router.post('/fish-species', authMiddleware, isAdmin, async (req, res) => {
     );
     res.status(201).json({ fishSpecies: result.rows[0] });
   } catch (error) {
-    console.error('Error creating fish species:', error);
+    logger.error('Error creating fish species:', error);
     res.status(500).json({ error: 'Failed to create fish species' });
   }
 });
 
 // Update fish species
-router.put('/fish-species/:id', authMiddleware, isAdmin, async (req, res) => {
+router.put('/fish-species/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { local_name, english_name, scientific_name, description, is_active } = req.body;
@@ -643,13 +621,13 @@ router.put('/fish-species/:id', authMiddleware, isAdmin, async (req, res) => {
     }
     res.json({ fishSpecies: result.rows[0] });
   } catch (error) {
-    console.error('Error updating fish species:', error);
+    logger.error('Error updating fish species:', error);
     res.status(500).json({ error: 'Failed to update fish species' });
   }
 });
 
 // Delete fish species
-router.delete('/fish-species/:id', authMiddleware, isAdmin, async (req, res) => {
+router.delete('/fish-species/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query('DELETE FROM fish_species WHERE id = $1 RETURNING *', [id]);
@@ -658,13 +636,13 @@ router.delete('/fish-species/:id', authMiddleware, isAdmin, async (req, res) => 
     }
     res.json({ message: 'Fish species deleted successfully' });
   } catch (error) {
-    console.error('Error deleting fish species:', error);
+    logger.error('Error deleting fish species:', error);
     res.status(500).json({ error: 'Failed to delete fish species' });
   }
 });
 
 // Get all locations
-router.get('/locations', authMiddleware, isAdmin, async (req, res) => {
+router.get('/locations', async (req, res) => {
   try {
     if (!(await tableExists('fishing_locations'))) {
       return res.json([]);
@@ -689,13 +667,13 @@ router.get('/locations', authMiddleware, isAdmin, async (req, res) => {
     }
     res.json(result.rows);
   } catch (error) {
-    console.error('Error fetching locations:', error);
+    logger.error('Error fetching locations:', error);
     res.status(500).json({ error: 'Failed to fetch locations' });
   }
 });
 
 // Create location
-router.post('/locations', authMiddleware, isAdmin, async (req, res) => {
+router.post('/locations', async (req, res) => {
   try {
     const { name, region, type, latitude, longitude, description } = req.body;
     const result = await pool.query(
@@ -704,13 +682,13 @@ router.post('/locations', authMiddleware, isAdmin, async (req, res) => {
     );
     res.status(201).json({ location: result.rows[0] });
   } catch (error) {
-    console.error('Error creating location:', error);
+    logger.error('Error creating location:', error);
     res.status(500).json({ error: 'Failed to create location' });
   }
 });
 
 // Update location
-router.put('/locations/:id', authMiddleware, isAdmin, async (req, res) => {
+router.put('/locations/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { name, region, type, latitude, longitude, description, is_active } = req.body;
@@ -723,13 +701,13 @@ router.put('/locations/:id', authMiddleware, isAdmin, async (req, res) => {
     }
     res.json({ location: result.rows[0] });
   } catch (error) {
-    console.error('Error updating location:', error);
+    logger.error('Error updating location:', error);
     res.status(500).json({ error: 'Failed to update location' });
   }
 });
 
 // Delete location
-router.delete('/locations/:id', authMiddleware, isAdmin, async (req, res) => {
+router.delete('/locations/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query('DELETE FROM fishing_locations WHERE id = $1 RETURNING *', [id]);
@@ -738,7 +716,7 @@ router.delete('/locations/:id', authMiddleware, isAdmin, async (req, res) => {
     }
     res.json({ message: 'Location deleted successfully' });
   } catch (error) {
-    console.error('Error deleting location:', error);
+    logger.error('Error deleting location:', error);
     res.status(500).json({ error: 'Failed to delete location' });
   }
 });
@@ -746,7 +724,7 @@ router.delete('/locations/:id', authMiddleware, isAdmin, async (req, res) => {
 // ==================== CUSTOM SUBMISSIONS MANAGEMENT ====================
 
 // Get all custom dropdown submissions from both custom_dropdown_submissions table and fishing_logs
-router.get('/submissions', authMiddleware, isAdmin, async (req, res) => {
+router.get('/submissions', async (req, res) => {
   try {
     // Combined query that gets submissions from both sources
     const result = await pool.query(`
@@ -854,13 +832,13 @@ router.get('/submissions', authMiddleware, isAdmin, async (req, res) => {
       counts
     });
   } catch (error) {
-    console.error('Error fetching submissions:', error);
+    logger.error('Error fetching submissions:', error);
     res.status(500).json({ error: 'Failed to fetch submissions', details: error.message });
   }
 });
 
 // Update submission status (approve/reject)
-router.patch('/submissions/:id', authMiddleware, isAdmin, async (req, res) => {
+router.patch('/submissions/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { status, admin_notes } = req.body;
@@ -884,7 +862,7 @@ router.patch('/submissions/:id', authMiddleware, isAdmin, async (req, res) => {
     logger.info(`Submission ${id} ${status} by admin ${req.user.id}`);
     res.json({ submission: result.rows[0], message: `Submission ${status} successfully` });
   } catch (error) {
-    console.error('Error updating submission:', error);
+    logger.error('Error updating submission:', error);
     res.status(500).json({ error: 'Failed to update submission' });
   }
 });
@@ -892,7 +870,7 @@ router.patch('/submissions/:id', authMiddleware, isAdmin, async (req, res) => {
 // ==================== SYSTEM LOGS ====================
 
 // Get system logs
-router.get('/system-logs', authMiddleware, isAdmin, async (req, res) => {
+router.get('/system-logs', async (req, res) => {
   try {
     // Check if table exists
     if (!(await tableExists('system_logs'))) {
@@ -925,7 +903,7 @@ router.get('/system-logs', authMiddleware, isAdmin, async (req, res) => {
       offset: parseInt(offset)
     });
   } catch (error) {
-    console.error('Error fetching system logs:', error);
+    logger.error('Error fetching system logs:', error);
     res.status(500).json({ error: 'Failed to fetch system logs' });
   }
 });
@@ -935,7 +913,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Get list of log files
-router.get('/log-files', authMiddleware, isAdmin, async (req, res) => {
+router.get('/log-files', async (req, res) => {
   try {
     const logsDir = path.join(__dirname, '../../logs');
     
@@ -965,13 +943,13 @@ router.get('/log-files', authMiddleware, isAdmin, async (req, res) => {
 
     res.json({ files: [...new Set(files)] });
   } catch (error) {
-    console.error('Error listing log files:', error);
+    logger.error('Error listing log files:', error);
     res.status(500).json({ error: 'Failed to list log files', files: [] });
   }
 });
 
 // Get content of a specific log file
-router.get('/log-files/:filename', authMiddleware, isAdmin, async (req, res) => {
+router.get('/log-files/:filename', async (req, res) => {
   try {
     const { filename } = req.params;
     const decodedFilename = decodeURIComponent(filename);
@@ -1012,7 +990,7 @@ router.get('/log-files/:filename', authMiddleware, isAdmin, async (req, res) => 
 
     res.json({ content, filename: decodedFilename, size: stats.size });
   } catch (error) {
-    console.error('Error reading log file:', error);
+    logger.error('Error reading log file:', error);
     res.status(500).json({ error: 'Failed to read log file', content: '' });
   }
 });
@@ -1020,7 +998,7 @@ router.get('/log-files/:filename', authMiddleware, isAdmin, async (req, res) => 
 // ==================== CONTACT MESSAGES MANAGEMENT ====================
 
 // Get all contact messages
-router.get('/contact-messages', authMiddleware, isAdmin, async (req, res) => {
+router.get('/contact-messages', async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT * FROM contact_messages 
@@ -1040,13 +1018,13 @@ router.get('/contact-messages', authMiddleware, isAdmin, async (req, res) => {
       stats: statsResult.rows[0] || { unread: 0, total: 0 }
     });
   } catch (error) {
-    console.error('Error fetching contact messages:', error);
+    logger.error('Error fetching contact messages:', error);
     res.status(500).json({ error: 'Failed to fetch contact messages' });
   }
 });
 
 // Update contact message status
-router.patch('/contact-messages/:id', authMiddleware, isAdmin, async (req, res) => {
+router.patch('/contact-messages/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -1062,20 +1040,20 @@ router.patch('/contact-messages/:id', authMiddleware, isAdmin, async (req, res) 
 
     res.json(result.rows[0]);
   } catch (error) {
-    console.error('Error updating contact message:', error);
+    logger.error('Error updating contact message:', error);
     res.status(500).json({ error: 'Failed to update message' });
   }
 });
 
 // Delete contact message
-router.delete('/contact-messages/:id', authMiddleware, isAdmin, async (req, res) => {
+router.delete('/contact-messages/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
     await pool.query('DELETE FROM contact_messages WHERE id = $1', [id]);
     res.json({ message: 'Message deleted successfully' });
   } catch (error) {
-    console.error('Error deleting contact message:', error);
+    logger.error('Error deleting contact message:', error);
     res.status(500).json({ error: 'Failed to delete message' });
   }
 });

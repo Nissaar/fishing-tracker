@@ -7,6 +7,7 @@ const { allLocations } = require('../data/mauritiusLocations');
 const { fishSpecies } = require('../data/fishSpecies');
 const { getOpenMeteoMarineData, getSeaSurfaceTemperature, getWeatherForReference } = require('../services/openMeteoService');
 const pool = require('../config/database');
+const logger = require('../config/logger');
 
 exports.getEnvironmentalData = async (req, res) => {
   try {
@@ -169,12 +170,9 @@ exports.getStatistics = async (req, res) => {
 exports.getGlobalPredictions = async (req, res) => {
   try {
     // Get ALL fishing logs from ALL users for predictions
-    // Handle both boolean true and string 'yes' for backwards compatibility
     const query = `
       SELECT * FROM fishing_logs 
       WHERE caught_fish = true 
-      OR caught_fish = 'yes'
-      OR CAST(caught_fish AS TEXT) = 'true'
       ORDER BY log_date DESC 
       LIMIT 500
     `;

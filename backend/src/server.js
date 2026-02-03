@@ -30,9 +30,14 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'fishing-tracker-secret',
+  secret: process.env.SESSION_SECRET,
   resave: false,
-  saveUninitialized: false
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
 }));
 
 app.use(passport.initialize());
@@ -73,29 +78,24 @@ app.use((err, req, res, next) => {
 
 // Start server
 const server = app.listen(PORT, '0.0.0.0', () => {
-  logger.info(`🚀 Server running on port ${PORT}`);
-  logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`\n✅ Server started successfully on port ${PORT}\n`);
+  logger.info(`Server running on port ${PORT}`);
+  logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
 // Handle server errors
 server.on('error', (err) => {
-  console.error(`\n❌ Server error: ${err.message}\n`);
   logger.error(`Server error: ${err.message}`);
   process.exit(1);
 });
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (err) => {
-  console.error(`\n❌ Uncaught Exception: ${err.message}\n`);
-  console.error(err);
   logger.error(`Uncaught Exception: ${err.message}`, { stack: err.stack });
   process.exit(1);
 });
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
-  console.error(`\n❌ Unhandled Rejection at:`, promise, `reason:`, reason);
   logger.error(`Unhandled Rejection: ${reason}`);
   process.exit(1);
 });

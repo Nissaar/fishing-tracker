@@ -2,18 +2,11 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const pool = require('../config/database');
 const authMiddleware = require('../middleware/authMiddleware');
+const { isAdmin } = require('../middleware/adminMiddleware');
 const mailgun = require('mailgun-js');
 const logger = require('../config/logger');
 
 const router = express.Router();
-
-// Admin check middleware
-const isAdmin = (req, res, next) => {
-  if (!req.user || !req.user.is_admin) {
-    return res.status(403).json({ error: 'Admin access required' });
-  }
-  next();
-};
 
 // Initialize Mailgun (optional - only if credentials provided)
 let mg;
