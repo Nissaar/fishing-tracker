@@ -2,7 +2,6 @@ const express = require('express');
 const fishingController = require('../controllers/fishingController');
 const authMiddleware = require('../middleware/authMiddleware');
 const pool = require('../config/database');
-const logger = require('../config/logger');
 
 const router = express.Router();
 

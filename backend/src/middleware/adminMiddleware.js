@@ -30,6 +30,7 @@ const isAdmin = async (req, res, next) => {
     
     next();
   } catch (error) {
+    console.error('Error during admin verification for user:', req.user && req.user.id, error);
     res.status(500).json({ error: 'Server error during admin verification' });
   }
 };

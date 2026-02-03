@@ -7,7 +7,6 @@ const { allLocations } = require('../data/mauritiusLocations');
 const { fishSpecies } = require('../data/fishSpecies');
 const { getOpenMeteoMarineData, getSeaSurfaceTemperature, getWeatherForReference } = require('../services/openMeteoService');
 const pool = require('../config/database');
-const logger = require('../config/logger');
 
 exports.getEnvironmentalData = async (req, res) => {
   try {

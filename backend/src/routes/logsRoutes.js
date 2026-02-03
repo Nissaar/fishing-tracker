@@ -4,7 +4,6 @@ const path = require('path');
 const authMiddleware = require('../middleware/authMiddleware');
 const { isAdmin } = require('../middleware/adminMiddleware');
 const pool = require('../config/database');
-const logger = require('../config/logger');
 
 const router = express.Router();
 
