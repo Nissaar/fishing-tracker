@@ -127,7 +127,7 @@ jobs:
             const reportUrl = `https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}`;
             
             const comment = `${status} **E2E Test Results**
-            
+
 | Result | Count |
 |--------|-------|
 | ✅ Passed | ${passed} |
