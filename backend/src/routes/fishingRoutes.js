@@ -369,31 +369,4 @@ function analyzeConditions(trips) {
   };
 }
 
-// Helper function to generate recommendation text
-function generateRecommendation(successRate, conditions, dataPoints) {
-  if (dataPoints < 3) {
-    return {
-      type: 'info',
-      message: 'Limited data - recommendations should be taken as general guidance'
-    };
-  }
-
-  if (successRate >= 70) {
-    return {
-      type: 'success',
-      message: `This is a good choice! Historically ${successRate}% of trips using this bait at this location have been successful.`
-    };
-  } else if (successRate >= 40) {
-    return {
-      type: 'warning',
-      message: `Moderate success rate of ${successRate}%. Consider conditions carefully.`
-    };
-  } else {
-    return {
-      type: 'caution',
-      message: `Lower historical success rate of ${successRate}%. You might want to try different bait or location.`
-    };
-  }
-}
-
 module.exports = router;

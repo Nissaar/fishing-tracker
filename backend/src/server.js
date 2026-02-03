@@ -5,6 +5,17 @@ const morgan = require('morgan');
 const session = require('express-session');
 require('dotenv').config();
 
+// Validate required environment variables
+if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.trim() === '') {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('FATAL ERROR: SESSION_SECRET environment variable is required in production');
+    process.exit(1);
+  } else {
+    console.warn('WARNING: SESSION_SECRET not set. Using default value for development only.');
+    console.warn('Set SESSION_SECRET environment variable for production use.');
+  }
+}
+
 const logger = require('./config/logger');
 const passport = require('./config/passport');
 const authRoutes = require('./routes/authRoutes');
@@ -30,9 +41,14 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'fishing-tracker-secret',
+  secret: process.env.SESSION_SECRET || 'dev-session-secret-change-in-production',
   resave: false,
-  saveUninitialized: false
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
 }));
 
 app.use(passport.initialize());
@@ -73,29 +89,24 @@ app.use((err, req, res, next) => {
 
 // Start server
 const server = app.listen(PORT, '0.0.0.0', () => {
-  logger.info(`🚀 Server running on port ${PORT}`);
-  logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`\n✅ Server started successfully on port ${PORT}\n`);
+  logger.info(`Server running on port ${PORT}`);
+  logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
 // Handle server errors
 server.on('error', (err) => {
-  console.error(`\n❌ Server error: ${err.message}\n`);
   logger.error(`Server error: ${err.message}`);
   process.exit(1);
 });
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (err) => {
-  console.error(`\n❌ Uncaught Exception: ${err.message}\n`);
-  console.error(err);
   logger.error(`Uncaught Exception: ${err.message}`, { stack: err.stack });
   process.exit(1);
 });
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
-  console.error(`\n❌ Unhandled Rejection at:`, promise, `reason:`, reason);
   logger.error(`Unhandled Rejection: ${reason}`);
   process.exit(1);
 });

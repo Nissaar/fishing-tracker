@@ -1,10 +1,9 @@
 -- ==================== FISHING TRACKER DATABASE INITIALIZATION ====================
--- This comprehensive init.sql file includes ALL database schema and migrations
--- Supports fresh database initialization with all required tables, columns, and default data
+-- Comprehensive init.sql for fresh database initialization
+-- All tables, indexes, triggers, and seed data included
 -- ==================== END HEADER ====================
 
 -- Note: Database is created by Docker via POSTGRES_DB environment variable
--- The CREATE DATABASE and \c commands are skipped when running in docker-entrypoint-initdb.d
 
 -- ==================== UTILITY FUNCTIONS ====================
 
@@ -32,6 +31,10 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Index for faster email lookups
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+
+DROP TRIGGER IF EXISTS update_users_updated_at ON users;
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -47,6 +50,7 @@ CREATE TABLE IF NOT EXISTS fishing_types (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+DROP TRIGGER IF EXISTS update_fishing_types_updated_at ON fishing_types;
 CREATE TRIGGER update_fishing_types_updated_at BEFORE UPDATE ON fishing_types
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -60,6 +64,7 @@ CREATE TABLE IF NOT EXISTS fishing_methods (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+DROP TRIGGER IF EXISTS update_fishing_methods_updated_at ON fishing_methods;
 CREATE TRIGGER update_fishing_methods_updated_at BEFORE UPDATE ON fishing_methods
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -76,6 +81,7 @@ CREATE TABLE IF NOT EXISTS fishing_baits (
 
 CREATE INDEX IF NOT EXISTS idx_fishing_baits_type ON fishing_baits(fishing_type_id);
 
+DROP TRIGGER IF EXISTS update_fishing_baits_updated_at ON fishing_baits;
 CREATE TRIGGER update_fishing_baits_updated_at BEFORE UPDATE ON fishing_baits
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -91,6 +97,7 @@ CREATE TABLE IF NOT EXISTS fish_species (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+DROP TRIGGER IF EXISTS update_fish_species_updated_at ON fish_species;
 CREATE TRIGGER update_fish_species_updated_at BEFORE UPDATE ON fish_species
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -108,6 +115,7 @@ CREATE TABLE IF NOT EXISTS fishing_locations (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+DROP TRIGGER IF EXISTS update_fishing_locations_updated_at ON fishing_locations;
 CREATE TRIGGER update_fishing_locations_updated_at BEFORE UPDATE ON fishing_locations
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -140,19 +148,19 @@ CREATE TABLE IF NOT EXISTS fishing_logs (
     solunar_data JSONB,
     hook_setup VARCHAR(200),
     notes TEXT,
-    CHECK (
-        time_start IS NULL
-        OR time_end IS NULL
-        OR time_end > time_start
-    ),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT valid_time_range CHECK (
+        time_start IS NULL OR time_end IS NULL OR time_end > time_start
+    )
 );
 
 CREATE INDEX IF NOT EXISTS idx_fishing_logs_user_id ON fishing_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_fishing_logs_date ON fishing_logs(log_date);
 CREATE INDEX IF NOT EXISTS idx_fishing_logs_location ON fishing_logs(location);
+CREATE INDEX IF NOT EXISTS idx_fishing_logs_caught ON fishing_logs(caught_fish);
 
+DROP TRIGGER IF EXISTS update_fishing_logs_updated_at ON fishing_logs;
 CREATE TRIGGER update_fishing_logs_updated_at BEFORE UPDATE ON fishing_logs
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -173,10 +181,11 @@ CREATE TABLE IF NOT EXISTS contact_messages (
 CREATE INDEX IF NOT EXISTS idx_contact_messages_status ON contact_messages(status);
 CREATE INDEX IF NOT EXISTS idx_contact_messages_created ON contact_messages(created_at);
 
+DROP TRIGGER IF EXISTS update_contact_messages_updated_at ON contact_messages;
 CREATE TRIGGER update_contact_messages_updated_at BEFORE UPDATE ON contact_messages
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- ==================== CUSTOM SUBMISSIONS TABLES ====================
+-- ==================== CUSTOM SUBMISSIONS TABLE ====================
 
 -- Custom dropdown submissions table (for user-submitted "Other" options)
 CREATE TABLE IF NOT EXISTS custom_dropdown_submissions (
@@ -202,6 +211,7 @@ CREATE INDEX IF NOT EXISTS idx_custom_submissions_status ON custom_dropdown_subm
 CREATE INDEX IF NOT EXISTS idx_custom_submissions_user ON custom_dropdown_submissions(user_id);
 CREATE INDEX IF NOT EXISTS idx_custom_submissions_type ON custom_dropdown_submissions(submission_type);
 
+DROP TRIGGER IF EXISTS update_custom_submissions_updated_at ON custom_dropdown_submissions;
 CREATE TRIGGER update_custom_submissions_updated_at BEFORE UPDATE ON custom_dropdown_submissions
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -220,6 +230,7 @@ CREATE TABLE IF NOT EXISTS custom_fish_requests (
 CREATE INDEX IF NOT EXISTS idx_custom_fish_requests_status ON custom_fish_requests(status);
 CREATE INDEX IF NOT EXISTS idx_custom_fish_requests_user ON custom_fish_requests(user_id);
 
+DROP TRIGGER IF EXISTS update_custom_fish_requests_updated_at ON custom_fish_requests;
 CREATE TRIGGER update_custom_fish_requests_updated_at BEFORE UPDATE ON custom_fish_requests
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -256,66 +267,52 @@ INSERT INTO fishing_methods (name, description) VALUES
 ON CONFLICT (name) DO NOTHING;
 
 -- Insert default baits linked to fishing types
-INSERT INTO fishing_baits (name, fishing_type_id) 
-SELECT 'Calamar', id FROM fishing_types WHERE name = 'Lapess Couler/Couler'
-ON CONFLICT DO NOTHING;
+DO $$
+DECLARE
+    lapess_type_id INTEGER;
+    casting_type_id INTEGER;
+BEGIN
+    SELECT id INTO lapess_type_id FROM fishing_types WHERE name = 'Lapess Couler/Couler';
+    SELECT id INTO casting_type_id FROM fishing_types WHERE name = 'Casting';
+    
+    INSERT INTO fishing_baits (name, fishing_type_id) VALUES
+        ('Calamar', lapess_type_id),
+        ('Baby calamar', lapess_type_id),
+        ('Shrimp/Crevette', lapess_type_id),
+        ('Macro', lapess_type_id),
+        ('Bonit', lapess_type_id),
+        ('Tidelures', casting_type_id),
+        ('Ti Tracer', casting_type_id),
+        ('Ton Zorz', casting_type_id)
+    ON CONFLICT DO NOTHING;
+END $$;
 
-INSERT INTO fishing_baits (name, fishing_type_id) 
-SELECT 'Baby calamar', id FROM fishing_types WHERE name = 'Lapess Couler/Couler'
-ON CONFLICT DO NOTHING;
-
-INSERT INTO fishing_baits (name, fishing_type_id) 
-SELECT 'Shrimp/Crevette', id FROM fishing_types WHERE name = 'Lapess Couler/Couler'
-ON CONFLICT DO NOTHING;
-
-INSERT INTO fishing_baits (name, fishing_type_id) 
-SELECT 'Macro', id FROM fishing_types WHERE name = 'Lapess Couler/Couler'
-ON CONFLICT DO NOTHING;
-
-INSERT INTO fishing_baits (name, fishing_type_id) 
-SELECT 'Bonit', id FROM fishing_types WHERE name = 'Lapess Couler/Couler'
-ON CONFLICT DO NOTHING;
-
-INSERT INTO fishing_baits (name, fishing_type_id) 
-SELECT 'Tidelures', id FROM fishing_types WHERE name = 'Casting'
-ON CONFLICT DO NOTHING;
-
-INSERT INTO fishing_baits (name, fishing_type_id) 
-SELECT 'Ti Tracer', id FROM fishing_types WHERE name = 'Casting'
-ON CONFLICT DO NOTHING;
-
-INSERT INTO fishing_baits (name, fishing_type_id) 
-SELECT 'Ton Zorz', id FROM fishing_types WHERE name = 'Casting'
-ON CONFLICT DO NOTHING;
-
-    -- Insert comprehensive Mauritius fish species (local/creole, English, scientific names)
-    INSERT INTO fish_species (local_name, english_name, scientific_name) VALUES 
-        ('Capitaine', 'Spangled Emperor', 'Lethrinus nebulosus'),
-        ('Dame berri', 'Blackspot Emperor', 'Lethrinus mahsena'),
-        ('Caya', 'Yellow-eye Emperor', 'Lethrinus rubrioperculatus'),
-        ('Vieille rouge', 'Red Grouper', 'Epinephelus fasciatus'),
-        ('Vacoas', 'Green Jobfish', 'Aprion virescens'),
-        ('Croissant queue jaune', 'Yellow-edged Lyretail', 'Variola louti'),
-        ('Croissant queue blanc', 'White-edged Lyretail', 'Variola albimarginata'),
-        ('Sacré chien rouge', 'Ruby Snapper', 'Etelis cabunculus'),
-        ('Sacré chien blanc', 'Bluestriped Snapper', 'Pristipomoides filamentosus'),
-        ('Rouget fayan', 'Goatfish', 'Parupeneus spp.'),
-        ('Madame tombée', 'Flower Wrasse', 'Cheilinus chlorourus'),
-        ('Dorade', 'Mahi-mahi', 'Coryphaena hippurus'),
-        ('Thon jaune', 'Yellowfin tuna', 'Thunnus albacares'),
-        ('Bonite', 'Skipjack', 'Katsuwonus pelamis'),
-        ('Tazar', 'Great Barracuda', 'Sphyraena barracuda'),
-        ('Licorne', 'Unicorn fish', 'Naso unicornis'),
-        ('Carangue saumon', 'Rainbow Runner', 'Elagatis bipinnulata'),
-        ('Becune', 'Trevally', 'Carangidae'),
-        ('Espadon', 'Swordfish', 'Xiphias gladius'),
+-- Insert comprehensive Mauritius fish species
+INSERT INTO fish_species (local_name, english_name, scientific_name) VALUES 
+    ('Capitaine', 'Spangled Emperor', 'Lethrinus nebulosus'),
+    ('Dame berri', 'Blackspot Emperor', 'Lethrinus mahsena'),
+    ('Caya', 'Yellow-eye Emperor', 'Lethrinus rubrioperculatus'),
+    ('Vieille rouge', 'Red Grouper', 'Epinephelus fasciatus'),
+    ('Vacoas', 'Green Jobfish', 'Aprion virescens'),
+    ('Croissant queue jaune', 'Yellow-edged Lyretail', 'Variola louti'),
+    ('Croissant queue blanc', 'White-edged Lyretail', 'Variola albimarginata'),
+    ('Sacré chien rouge', 'Ruby Snapper', 'Etelis cabunculus'),
+    ('Sacré chien blanc', 'Bluestriped Snapper', 'Pristipomoides filamentosus'),
+    ('Rouget fayan', 'Goatfish', 'Parupeneus spp.'),
+    ('Madame tombée', 'Flower Wrasse', 'Cheilinus chlorourus'),
+    ('Dorade', 'Mahi-mahi', 'Coryphaena hippurus'),
+    ('Thon jaune', 'Yellowfin tuna', 'Thunnus albacares'),
+    ('Bonite', 'Skipjack', 'Katsuwonus pelamis'),
+    ('Tazar', 'Great Barracuda', 'Sphyraena barracuda'),
+    ('Licorne', 'Unicorn fish', 'Naso unicornis'),
+    ('Carangue saumon', 'Rainbow Runner', 'Elagatis bipinnulata'),
+    ('Becune', 'Trevally', 'Carangidae'),
+    ('Espadon', 'Swordfish', 'Xiphias gladius'),
     ('Marlin bleu', 'Blue marlin', 'Makaira nigricans'),
-        ('Homard', 'Spiny lobster', 'Panulirus spp.'),
-        ('Crabe', 'Crab', 'Scylla spp.'),
-        ('Batarder', 'Batarder', NULL),
-        ('Rouget', 'Rouget', NULL),
-        ('Viel gris', 'Viel gris', NULL),
-        ('Mourgate', 'Squid', 'Loligo spp.');
-
-    -- Exit
-    \q
+    ('Homard', 'Spiny lobster', 'Panulirus spp.'),
+    ('Crabe', 'Crab', 'Scylla spp.'),
+    ('Batarder', 'Batarder', NULL),
+    ('Rouget', 'Rouget', NULL),
+    ('Viel gris', 'Viel gris', NULL),
+    ('Mourgate', 'Squid', 'Loligo spp.')
+ON CONFLICT DO NOTHING;

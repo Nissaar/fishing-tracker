@@ -2,26 +2,8 @@ const express = require('express');
 const fs = require('fs').promises;
 const path = require('path');
 const authMiddleware = require('../middleware/authMiddleware');
+const { isAdmin } = require('../middleware/adminMiddleware');
 const pool = require('../config/database');
-
-// Middleware to check if user is admin
-const isAdmin = async (req, res, next) => {
-  try {
-    const result = await pool.query(
-      'SELECT is_admin FROM users WHERE id = $1',
-      [req.user.id]
-    );
-    
-    if (result.rows.length === 0 || !result.rows[0].is_admin) {
-      return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
-    }
-    
-    next();
-  } catch (error) {
-    console.error('Admin check error:', error);
-    res.status(500).json({ error: 'Server error during admin verification' });
-  }
-};
 
 const router = express.Router();
 

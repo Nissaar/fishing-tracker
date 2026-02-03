@@ -17,7 +17,6 @@ passport.deserializeUser(async (id, done) => {
 
 // Only initialize Google Strategy if credentials are provided
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
-  console.log('🔐 Google OAuth configured');
   passport.use(new GoogleStrategy({
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
@@ -50,13 +49,12 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
         
         return done(null, newUser.rows[0]);
       } catch (error) {
-        console.error('Google OAuth error:', error);
         return done(error, null);
       }
     }
   ));
 } else {
-  console.log('⚠️ Google OAuth not configured (GOOGLE_CLIENT_ID missing)');
+  // Google OAuth not configured
 }
 
 module.exports = passport;

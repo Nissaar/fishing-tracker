@@ -48,6 +48,10 @@ postgres_data/
 
 # IDE
 .vscode/
+
+# Test Reports
+playwright-report/
+playwright-report*/
 .idea/
 
 # OS files
