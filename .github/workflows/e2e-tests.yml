@@ -291,6 +291,7 @@ jobs:
           DB_USER=postgres
           DB_PASSWORD=testpassword
           JWT_SECRET=test-jwt-secret-for-e2e-testing
+          JWT_EXPIRE=7d
           SESSION_SECRET=test-session-secret
           CORS_ORIGIN=http://localhost:3000,http://localhost:80
           EOF
