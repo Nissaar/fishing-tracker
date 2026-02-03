@@ -136,26 +136,53 @@ setup.describe('Global Setup', () => {
     }
     
     // Login as test user
-    await page.goto('/login');
-    await page.waitForLoadState('networkidle');
+    console.log('🌐 Navigating to login page...');
+    try {
+      await page.goto('/login', { timeout: 10000 });
+      await page.waitForLoadState('networkidle', { timeout: 10000 });
+      console.log('✅ Login page loaded');
+    } catch (error) {
+      console.error('❌ Failed to load login page:', error.message);
+      throw new Error(`Frontend not accessible at login page: ${error.message}`);
+    }
     
     // Fill login form
+    console.log('📝 Filling login form...');
     await page.fill('input[type="email"]', TEST_USER.email);
     await page.fill('input[type="password"]', TEST_USER.password);
     await page.click('button[type="submit"]');
+    console.log('🔄 Submitted login form, waiting for redirect...');
     
     // Wait for successful login redirect
-    await page.waitForURL(/\/(dashboard|login)/, { timeout: 30000 });
+    try {
+      await page.waitForURL(/\/(dashboard|login)/, { timeout: 30000 });
+      console.log(`📍 Current URL after login attempt: ${page.url()}`);
+    } catch (error) {
+      console.error('❌ Timeout waiting for redirect:', error.message);
+      console.log(`📍 Current URL: ${page.url()}`);
+      // Check for error messages on page
+      const pageContent = await page.content();
+      console.log('Page content sample:', pageContent.substring(0, 500));
+      throw error;
+    }
     
     // Check if login was successful
     if (page.url().includes('/dashboard')) {
-      console.log('✅ Test user logged in successfully');
+      console.log('✅ Test user logged in successfully via UI');
       
       // Save authentication state
       await saveStorageState(page, STORAGE_STATE_USER, 'User');
     } else {
       // If login failed, try to create user via API directly
-      console.log('⚠️ Login via UI failed, attempting API registration...');
+      console.log('⚠️ Login via UI failed (still on login page), attempting API login...');
+      
+      // Check for error message on page
+      try {
+        const errorMsg = await page.locator('[role="alert"], .error, .alert').first().textContent({ timeout: 1000 });
+        console.log(`🔴 Error message on page: ${errorMsg}`);
+      } catch (e) {
+        console.log('ℹ️ No error message found on page');
+      }
       
       // Attempt direct API login
       console.log(`📡 Attempting API login at ${API_URL}/auth/login`);
@@ -204,6 +231,13 @@ setup.describe('Global Setup', () => {
         throw new Error(`Failed to authenticate test user (status ${details.status})`);
       }
     }
+    
+    // Final verification that storage state file exists
+    if (!fs.existsSync(STORAGE_STATE_USER)) {
+      console.error(`❌ CRITICAL: Storage state file was not created at ${STORAGE_STATE_USER}`);
+      throw new Error('User storage state file does not exist after setup');
+    }
+    console.log(`✅ Verified user storage state exists at ${STORAGE_STATE_USER}`);
   });
 
   setup('Create admin user and authenticate', async ({ page, request }) => {
@@ -237,22 +271,41 @@ setup.describe('Global Setup', () => {
     // For now, we'll login and assume admin is set up
     
     // Login as admin
-    await page.goto('/login');
-    await page.waitForLoadState('networkidle');
+    console.log('🌐 Navigating to login page for admin...');
+    try {
+      await page.goto('/login', { timeout: 10000 });
+      await page.waitForLoadState('networkidle', { timeout: 10000 });
+      console.log('✅ Login page loaded for admin');
+    } catch (error) {
+      console.error('❌ Failed to load login page:', error.message);
+      throw new Error(`Frontend not accessible at login page: ${error.message}`);
+    }
     
+    console.log('📝 Filling login form for admin...');
     await page.fill('input[type="email"]', TEST_ADMIN.email);
     await page.fill('input[type="password"]', TEST_ADMIN.password);
     await page.click('button[type="submit"]');
+    console.log('🔄 Submitted admin login form...');
     
     try {
       await page.waitForURL(/\/(dashboard|admin)/, { timeout: 30000 });
+      console.log(`📍 Admin current URL: ${page.url()}`);
       
       if (page.url().includes('/dashboard') || page.url().includes('/admin')) {
-        console.log('✅ Admin user logged in successfully');
+        console.log('✅ Admin user logged in successfully via UI');
         await saveStorageState(page, STORAGE_STATE_ADMIN, 'Admin');
       }
     } catch (error) {
       console.log('⚠️ Admin login via UI failed, attempting API...');
+      console.log(`📍 Current URL: ${page.url()}`);
+      
+      // Check for error message
+      try {
+        const errorMsg = await page.locator('[role="alert"], .error, .alert').first().textContent({ timeout: 1000 });
+        console.log(`🔴 Error message on page: ${errorMsg}`);
+      } catch (e) {
+        console.log('ℹ️ No error message found on page');
+      }
       
       let loginResponse = await request.post(`${API_URL}/auth/login`, {
         data: {
@@ -296,6 +349,13 @@ setup.describe('Global Setup', () => {
         throw new Error(`Failed to authenticate admin user (status ${details.status})`);
       }
     }
+    
+    // Final verification that storage state file exists
+    if (!fs.existsSync(STORAGE_STATE_ADMIN)) {
+      console.error(`❌ CRITICAL: Storage state file was not created at ${STORAGE_STATE_ADMIN}`);
+      throw new Error('Admin storage state file does not exist after setup');
+    }
+    console.log(`✅ Verified admin storage state exists at ${STORAGE_STATE_ADMIN}`);
   });
 });
 
