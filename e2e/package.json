@@ -13,8 +13,8 @@
     "cleanup": "node scripts/cleanup.js"
   },
   "devDependencies": {
-    "@playwright/test": "^1.42.0",
     "@faker-js/faker": "^8.4.0",
+    "@playwright/test": "^1.42.0",
     "@types/node": "^20.12.12"
   }
 }

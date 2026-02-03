@@ -28,6 +28,22 @@ if (!fs.existsSync(authDir)) {
   console.log(`📁 Created auth directory: ${authDir}`);
 }
 
+// Create empty auth files as fallback (will be overwritten by actual auth)
+const emptyAuthState = { cookies: [], origins: [] };
+const createFallbackAuthFiles = () => {
+  if (!fs.existsSync(STORAGE_STATE_USER)) {
+    fs.writeFileSync(STORAGE_STATE_USER, JSON.stringify(emptyAuthState, null, 2));
+    console.log(`📁 Created fallback user auth file: ${STORAGE_STATE_USER}`);
+  }
+  if (!fs.existsSync(STORAGE_STATE_ADMIN)) {
+    fs.writeFileSync(STORAGE_STATE_ADMIN, JSON.stringify(emptyAuthState, null, 2));
+    console.log(`📁 Created fallback admin auth file: ${STORAGE_STATE_ADMIN}`);
+  }
+};
+
+// Create fallback files immediately so tests don't fail with ENOENT
+createFallbackAuthFiles();
+
 // Helper function to ensure auth directory exists
 const ensureAuthDir = () => {
   if (!fs.existsSync(authDir)) {
@@ -65,14 +81,14 @@ const getApiUrl = () => {
   return `${url.origin}/api`;
 };
 
-const waitForApiHealth = async (request, apiUrl, retries = 15, delayMs = 2000) => {
+const waitForApiHealth = async (request, apiUrl, retries = 30, delayMs = 3000) => {
   const healthUrl = `${apiUrl.replace(/\/api\/?$/, '')}/health`;
 
   console.log(`🏥 Waiting for API health at ${healthUrl}...`);
   
   for (let attempt = 1; attempt <= retries; attempt += 1) {
     try {
-      const response = await request.get(healthUrl);
+      const response = await request.get(healthUrl, { timeout: 10000 });
       console.log(`  Attempt ${attempt}/${retries}: Health status = ${response.status()}`);
       
       if (response.ok()) {

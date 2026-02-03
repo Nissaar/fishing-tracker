@@ -80,6 +80,7 @@ module.exports = defineConfig({
         storageState: 'playwright/.auth/user.json',
       },
       dependencies: ['setup'],
+      testIgnore: '**/admin/**/*.spec.js',
     },
 
     // Skip Firefox in CI - only run in local dev

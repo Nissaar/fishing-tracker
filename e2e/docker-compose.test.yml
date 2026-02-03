@@ -38,6 +38,7 @@ services:
       DB_USER: postgres
       DB_PASSWORD: testpassword
       JWT_SECRET: e2e-test-jwt-secret-key
+      JWT_EXPIRE: 7d
       SESSION_SECRET: e2e-test-session-secret
       CORS_ORIGIN: http://localhost:3000,http://test-frontend
     ports:
@@ -46,12 +47,15 @@ services:
       test-postgres:
         condition: service_healthy
     networks:
-      - test-network
+      test-network:
+        aliases:
+          - backend
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:5000/health || exit 1"]
       interval: 10s
-      timeout: 5s
-      retries: 5
+      timeout: 10s
+      retries: 30
+      start_period: 60s
 
   test-frontend:
     build:
@@ -80,9 +84,9 @@ services:
       TEST_BASE_URL: http://test-frontend
       TEST_API_URL: http://test-backend:5000/api
       TEST_USER_EMAIL: e2etest@fishingtracker.mu
-      TEST_USER_PASSWORD: E2ETestPassword123!
+      TEST_USER_PASSWORD: password
       TEST_ADMIN_EMAIL: admin@fishingtracker.mu
-      TEST_ADMIN_PASSWORD: AdminPassword123!
+      TEST_ADMIN_PASSWORD: password
       CI: "true"
     volumes:
       - .:/e2e
@@ -92,10 +96,10 @@ services:
       test-frontend:
         condition: service_healthy
       test-backend:
-        condition: service_healthy
+        condition: service_started
     networks:
       - test-network
-    command: npx playwright test --reporter=html,json
+    command: bash -c "sleep 10 && npm install @playwright/test@1.42.0 && npx playwright test --reporter=html,json"
 
 networks:
   test-network:

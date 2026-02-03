@@ -1,5 +1,9 @@
 // @ts-check
 const { test, expect } = require('../fixtures');
+const path = require('path');
+
+// Storage state paths
+const USER_AUTH = path.join(__dirname, '../../playwright/.auth/user.json');
 
 /**
  * Admin Panel Test Suite
@@ -14,7 +18,12 @@ const { test, expect } = require('../fixtures');
 
 test.describe('Admin - Access Control', () => {
   
-  test('should redirect non-admin users to dashboard', async ({ page }) => {
+  // This test needs to run as a non-admin user
+  test('should redirect non-admin users to dashboard', async ({ browser }) => {
+    // Create a new context with user (non-admin) auth state
+    const context = await browser.newContext({ storageState: USER_AUTH });
+    const page = await context.newPage();
+    
     await page.goto('/admin');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
@@ -25,6 +34,8 @@ test.describe('Admin - Access Control', () => {
     
     // Either redirected away from admin or shown access denied
     expect(url.includes('/dashboard') || url.includes('/admin') || hasAccessDenied).toBeTruthy();
+    
+    await context.close();
   });
   
   test('should show admin tabs for admin users', async ({ page }) => {
