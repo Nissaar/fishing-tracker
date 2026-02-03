@@ -1,5 +1,23 @@
 // @ts-check
 const { defineConfig, devices } = require('@playwright/test');
+const fs = require('fs');
+const path = require('path');
+
+// Create auth directory and fallback files BEFORE config is loaded
+const authDir = path.join(__dirname, 'playwright/.auth');
+const userAuthFile = path.join(authDir, 'user.json');
+const adminAuthFile = path.join(authDir, 'admin.json');
+const emptyAuthState = JSON.stringify({ cookies: [], origins: [] }, null, 2);
+
+if (!fs.existsSync(authDir)) {
+  fs.mkdirSync(authDir, { recursive: true });
+}
+if (!fs.existsSync(userAuthFile)) {
+  fs.writeFileSync(userAuthFile, emptyAuthState);
+}
+if (!fs.existsSync(adminAuthFile)) {
+  fs.writeFileSync(adminAuthFile, emptyAuthState);
+}
 
 /**
  * Playwright configuration for Fishing Tracker Pro E2E Testing
