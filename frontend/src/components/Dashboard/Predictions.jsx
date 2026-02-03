@@ -91,7 +91,7 @@ const Predictions = () => {
                 <div className="flex-1">
                   <p className="text-sm text-gray-600">Moon Phase</p>
                   <p className="font-bold text-gray-800">
-                    {todayConditions.moon.emoji} {todayConditions.moon.phase}
+                    {getMoonPhaseEmoji(todayConditions.moon.phase)} {todayConditions.moon.phase}
                   </p>
                 </div>
                 {compareWithToday(predictions.predictions.bestMoonPhase, todayConditions.moon.phase) === 'match' && (

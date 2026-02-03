@@ -55,6 +55,13 @@ const Admin = () => {
 
   // User management state
   const [userManagementSearch, setUserManagementSearch] = useState('');
+  const [editingUser, setEditingUser] = useState(null);
+  const [editFormData, setEditFormData] = useState({});
+  
+  // Entry editing state
+  const [editingEntry, setEditingEntry] = useState(null);
+  const [editEntryData, setEditEntryData] = useState({});
+  const [entryDropdownData, setEntryDropdownData] = useState({});
 
   const tabs = [
     { id: 'overview', name: 'Overview', icon: TrendingUp },
@@ -262,6 +269,90 @@ const Admin = () => {
     }
   };
 
+  const handleEditUser = (user) => {
+    setEditingUser(user.id);
+    setEditFormData({
+      username: user.username,
+      email: user.email
+    });
+  };
+
+  const handleSaveUserEdit = async () => {
+    try {
+      await axios.patch(`${API_URL}/admin/users/${editingUser}`, editFormData, getAuthHeaders());
+      toast.success('User updated successfully');
+      setEditingUser(null);
+      setEditFormData({});
+      fetchUsers();
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to update user');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingUser(null);
+    setEditFormData({});
+  };
+
+  const handleEditEntry = (entry) => {
+    setEditingEntry(entry.id);
+    setEditEntryData({ ...entry });
+    if (!entryDropdownData.fishingTypes) {
+      loadEntryDropdownData();
+    }
+  };
+
+  const loadEntryDropdownData = async () => {
+    try {
+      const [typesRes, methodsRes, baitsRes, speciesRes] = await Promise.all([
+        axios.get(`${API_URL}/admin/fishing-types`, getAuthHeaders()).catch(() => ({ data: [] })),
+        axios.get(`${API_URL}/admin/fishing-methods`, getAuthHeaders()).catch(() => ({ data: [] })),
+        axios.get(`${API_URL}/admin/fishing-baits`, getAuthHeaders()).catch(() => ({ data: [] })),
+        axios.get(`${API_URL}/admin/fish-species`, getAuthHeaders()).catch(() => ({ data: [] }))
+      ]);
+      setEntryDropdownData({
+        fishingTypes: Array.isArray(typesRes.data) ? typesRes.data : (typesRes.data?.fishingTypes || []),
+        fishingMethods: Array.isArray(methodsRes.data) ? methodsRes.data : (methodsRes.data?.fishingMethods || []),
+        fishingBaits: Array.isArray(baitsRes.data) ? baitsRes.data : (baitsRes.data?.fishingBaits || []),
+        fishSpecies: Array.isArray(speciesRes.data) ? speciesRes.data : (speciesRes.data?.fishSpecies || [])
+      });
+    } catch (error) {
+      console.error('Failed to load dropdown data:', error);
+    }
+  };
+
+  const handleSaveEntryEdit = async () => {
+    try {
+      await axios.patch(`${API_URL}/admin/fishing-logs/${editingEntry}`, editEntryData, getAuthHeaders());
+      toast.success('Entry updated successfully');
+      setEditingEntry(null);
+      setEditEntryData({});
+      if (selectedUserId) {
+        fetchUserEntries(selectedUserId);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to update entry');
+    }
+  };
+
+  const handleDeleteEntry = async (entryId) => {
+    if (!window.confirm('Delete this entry? This cannot be undone.')) return;
+    try {
+      await axios.delete(`${API_URL}/admin/fishing-logs/${entryId}`, getAuthHeaders());
+      toast.success('Entry deleted');
+      if (selectedUserId) {
+        fetchUserEntries(selectedUserId);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to delete entry');
+    }
+  };
+
+  const handleCancelEntryEdit = () => {
+    setEditingEntry(null);
+    setEditEntryData({});
+  };
+
   const handleAddItem = async () => {
     if (!newItem.name && !newItem.local_name) {
       toast.error('Name is required');
@@ -413,7 +504,9 @@ const Admin = () => {
             )}
           </div>
           {loadingEntries && <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div></div>}
-          {userEntries && userEntries.length > 0 && (
+          {editingEntry ? (
+            <EditEntryModal entry={editEntryData} onSave={handleSaveEntryEdit} onCancel={handleCancelEntryEdit} onChange={setEditEntryData} dropdownData={entryDropdownData} />
+          ) : userEntries && userEntries.length > 0 ? (
             <div className="mt-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Entries ({userEntries.length})</h3>
               <div className="overflow-x-auto">
@@ -422,26 +515,37 @@ const Admin = () => {
                     <tr className="border-b-2 border-gray-200">
                       <th className="text-left py-2 px-4 font-semibold text-gray-700">Date</th>
                       <th className="text-left py-2 px-4 font-semibold text-gray-700">Location</th>
+                      <th className="text-left py-2 px-4 font-semibold text-gray-700">Type</th>
+                      <th className="text-left py-2 px-4 font-semibold text-gray-700">Bait</th>
                       <th className="text-center py-2 px-4 font-semibold text-gray-700">Caught</th>
                       <th className="text-center py-2 px-4 font-semibold text-gray-700">Count</th>
-                      <th className="text-left py-2 px-4 font-semibold text-gray-700">Bait</th>
+                      <th className="text-left py-2 px-4 font-semibold text-gray-700">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {userEntries.map(entry => (
                       <tr key={entry.id} className="border-b border-gray-100 hover:bg-gray-50">
-                        <td className="py-3 px-4">{new Date(entry.log_date).toLocaleDateString()}</td>
-                        <td className="py-3 px-4">{entry.location_name}</td>
+                        <td className="py-3 px-4">
+                          {new Date(entry.log_date + 'T00:00:00Z').toLocaleDateString(undefined, { timeZone: 'UTC' })}
+                        </td>
+                        <td className="py-3 px-4">{entry.location_name || entry.location}</td>
+                        <td className="py-3 px-4">{entry.fishing_type || '-'}</td>
+                        <td className="py-3 px-4">{entry.bait || '-'}</td>
                         <td className="py-3 px-4 text-center">{entry.caught_fish ? '✓' : '✗'}</td>
                         <td className="py-3 px-4 text-center">{entry.fish_count || '-'}</td>
-                        <td className="py-3 px-4">{entry.bait || '-'}</td>
+                        <td className="py-3 px-4">
+                          <div className="flex gap-2 text-sm">
+                            <button onClick={() => handleEditEntry(entry)} className="text-blue-600 hover:text-blue-800 font-semibold">Edit</button>
+                            <button onClick={() => handleDeleteEntry(entry.id)} className="text-red-600 hover:text-red-800">Delete</button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             </div>
-          )}
+          ) : null}
         </div>
 
         {/* Tab Content */}
@@ -450,7 +554,7 @@ const Admin = () => {
         {activeTab === 'logs' && <SystemLogsTab logs={systemLogs} filter={logFilter} setFilter={setLogFilter} onRefresh={fetchSystemLogs} />}
         {activeTab === 'contact' && <ContactMessagesTab messages={contactMessages} stats={contactStats} filter={contactFilter} setFilter={setContactFilter} selectedMessage={selectedMessage} setSelectedMessage={setSelectedMessage} onUpdateStatus={handleUpdateMessageStatus} onDelete={handleDeleteMessage} onRefresh={fetchContactMessages} />}
         {activeTab === 'dropdowns' && <DropdownsTab activeDropdownTab={dropdownTab} setActiveDropdownTab={setDropdownTab} items={getDropdownItems()} fishingTypes={fishingTypes} newItem={newItem} setNewItem={setNewItem} editingItem={editingItem} setEditingItem={setEditingItem} onAdd={handleAddItem} onUpdate={handleUpdateItem} onDelete={handleDeleteItem} />}
-        {activeTab === 'users' && <UserManagementTab users={users} search={userManagementSearch} setSearch={setUserManagementSearch} onToggleAdmin={handleToggleAdmin} onDelete={handleDeleteUser} onViewLogs={handleUserSelect} onRefresh={fetchUsers} />}
+        {activeTab === 'users' && <UserManagementTab users={users} search={userManagementSearch} setSearch={setUserManagementSearch} onToggleAdmin={handleToggleAdmin} onDelete={handleDeleteUser} onViewLogs={handleUserSelect} onEdit={handleEditUser} onSaveEdit={handleSaveUserEdit} onCancelEdit={handleCancelEdit} editingUser={editingUser} editFormData={editFormData} setEditFormData={setEditFormData} onRefresh={fetchUsers} />}
       </div>
     </div>
   );
@@ -861,7 +965,7 @@ const DropdownsTab = ({ activeDropdownTab, setActiveDropdownTab, items, fishingT
   );
 };
 
-const UserManagementTab = ({ users, search, setSearch, onToggleAdmin, onDelete, onViewLogs, onRefresh }) => {
+const UserManagementTab = ({ users, search, setSearch, onToggleAdmin, onDelete, onViewLogs, onEdit, onSaveEdit, onCancelEdit, editingUser, editFormData, setEditFormData, onRefresh }) => {
   const filteredUsers = users.filter(u => u.username.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase()));
   return (
     <div className="bg-white rounded-xl shadow-md p-6">
@@ -876,21 +980,366 @@ const UserManagementTab = ({ users, search, setSearch, onToggleAdmin, onDelete, 
           <tbody>
             {filteredUsers.map((user) => (
               <tr key={user.id} className="border-b border-gray-100 hover:bg-gray-50">
-                <td className="py-3 px-4 font-semibold">{user.username}</td>
-                <td className="py-3 px-4 text-gray-600">{user.email}</td>
+                <td className="py-3 px-4 font-semibold">
+                  {editingUser === user.id ? (
+                    <input
+                      type="text"
+                      value={editFormData.username}
+                      onChange={(e) => setEditFormData({...editFormData, username: e.target.value})}
+                      className="w-full px-2 py-1 border rounded"
+                    />
+                  ) : (
+                    user.username
+                  )}
+                </td>
+                <td className="py-3 px-4 text-gray-600">
+                  {editingUser === user.id ? (
+                    <input
+                      type="email"
+                      value={editFormData.email}
+                      onChange={(e) => setEditFormData({...editFormData, email: e.target.value})}
+                      className="w-full px-2 py-1 border rounded"
+                    />
+                  ) : (
+                    user.email
+                  )}
+                </td>
                 <td className="py-3 px-4 text-center">{user.log_count}</td>
                 <td className="py-3 px-4 text-center"><span className={`px-2 py-1 rounded-full text-xs font-semibold ${user.is_admin ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>{user.is_admin ? 'Yes' : 'No'}</span></td>
                 <td className="py-3 px-4">
-                  <div className="flex gap-2 text-sm">
-                    <button onClick={() => onViewLogs(user)} className="text-blue-600 hover:text-blue-800">View Logs</button>
-                    <button onClick={() => onToggleAdmin(user.id, !user.is_admin)} className={user.is_admin ? 'text-orange-600 hover:text-orange-800' : 'text-green-600 hover:text-green-800'}>{user.is_admin ? 'Remove Admin' : 'Make Admin'}</button>
-                    <button onClick={() => onDelete(user.id)} className="text-red-600 hover:text-red-800">Delete</button>
+                  <div className="flex gap-2 text-sm flex-wrap">
+                    {editingUser === user.id ? (
+                      <>
+                        <button onClick={onSaveEdit} className="text-green-600 hover:text-green-800 font-semibold">Save</button>
+                        <button onClick={onCancelEdit} className="text-gray-600 hover:text-gray-800">Cancel</button>
+                      </>
+                    ) : (
+                      <>
+                        <button onClick={() => onViewLogs(user)} className="text-blue-600 hover:text-blue-800">Logs</button>
+                        <button onClick={() => onEdit(user)} className="text-purple-600 hover:text-purple-800">Edit</button>
+                        <button onClick={() => onToggleAdmin(user.id, !user.is_admin)} className={user.is_admin ? 'text-orange-600 hover:text-orange-800' : 'text-green-600 hover:text-green-800'}>{user.is_admin ? 'Remove Admin' : 'Make Admin'}</button>
+                        <button onClick={() => onDelete(user.id)} className="text-red-600 hover:text-red-800">Delete</button>
+                      </>
+                    )}
                   </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+      </div>
+    </div>
+  );
+};
+
+const EditEntryModal = ({ entry, onSave, onCancel, onChange, dropdownData }) => {
+  const [fishSearch, setFishSearch] = useState('');
+  const [showFishDropdown, setShowFishDropdown] = useState(false);
+  const [filteredBaits, setFilteredBaits] = useState([]);
+  const [activeFishIndex, setActiveFishIndex] = useState(-1);
+
+  // Filter baits when fishing type changes
+  React.useEffect(() => {
+    if (entry.fishing_type && dropdownData.fishingBaits) {
+      const selectedType = dropdownData.fishingTypes?.find(t => t.name === entry.fishing_type);
+      if (selectedType) {
+        const baits = dropdownData.fishingBaits.filter(b => b.fishing_type_id === selectedType.id);
+        setFilteredBaits(baits);
+      }
+    } else {
+      setFilteredBaits(dropdownData.fishingBaits || []);
+    }
+  }, [entry.fishing_type, dropdownData]);
+
+  const handleChange = (field, value) => {
+    onChange({ ...entry, [field]: value });
+  };
+
+  // Filter fish species based on search
+  const filteredFish = React.useMemo(() => {
+    if (!fishSearch) return [];
+    return (dropdownData.fishSpecies || []).filter(fish =>
+      (fish.local_name?.toLowerCase().includes(fishSearch.toLowerCase())) ||
+      (fish.english_name?.toLowerCase().includes(fishSearch.toLowerCase())) ||
+      (fish.scientific_name?.toLowerCase().includes(fishSearch.toLowerCase()))
+    );
+  }, [fishSearch, dropdownData.fishSpecies]);
+
+  // Parse fish_types array for display
+  const currentFish = React.useMemo(() => {
+    if (entry.fish_types && Array.isArray(entry.fish_types)) {
+      return entry.fish_types;
+    }
+    return [];
+  }, [entry.fish_types]);
+
+  const handleAddFish = (fishName) => {
+    const newFish = Array.isArray(entry.fish_types) ? [...entry.fish_types] : [];
+    if (!newFish.includes(fishName)) {
+      newFish.push(fishName);
+      onChange({ ...entry, fish_types: newFish });
+    }
+    setFishSearch('');
+    setShowFishDropdown(false);
+  };
+
+  const handleRemoveFish = (index) => {
+    const newFish = Array.isArray(entry.fish_types) ? [...entry.fish_types] : [];
+    newFish.splice(index, 1);
+    onChange({ ...entry, fish_types: newFish });
+  };
+
+  const handleFishKeyDown = (e) => {
+    if (!showFishDropdown || filteredFish.length === 0) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setActiveFishIndex(prev => 
+          prev < filteredFish.length - 1 ? prev + 1 : prev
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setActiveFishIndex(prev => prev > 0 ? prev - 1 : 0);
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (activeFishIndex >= 0 && activeFishIndex < filteredFish.length) {
+          const selectedFish = filteredFish[activeFishIndex];
+          handleAddFish(selectedFish.local_name || selectedFish.english_name);
+          setActiveFishIndex(-1);
+        }
+        break;
+      case 'Escape':
+        e.preventDefault();
+        setShowFishDropdown(false);
+        setActiveFishIndex(-1);
+        break;
+      default:
+        break;
+    }
+  };
+
+  // Reset active index when filtered fish changes
+  React.useEffect(() => {
+    setActiveFishIndex(-1);
+  }, [fishSearch]);
+
+  return (
+    <div className="bg-white rounded-xl shadow-lg p-8 mt-6 border-2 border-blue-500">
+      <h3 className="text-2xl font-bold mb-6">Edit Fishing Entry</h3>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Date */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Date</label>
+          <input
+            type="date"
+            value={entry.log_date || ''}
+            onChange={(e) => handleChange('log_date', e.target.value)}
+            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        {/* Location */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Location</label>
+          <input
+            type="text"
+            value={entry.location_name || ''}
+            onChange={(e) => handleChange('location_name', e.target.value)}
+            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        {/* Fishing Type */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Fishing Type</label>
+          <select
+            value={entry.fishing_type || ''}
+            onChange={(e) => handleChange('fishing_type', e.target.value)}
+            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Select...</option>
+            {dropdownData.fishingTypes?.map(type => (
+              <option key={type.id} value={type.name}>{type.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Fishing Method */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Fishing Method</label>
+          <select
+            value={entry.fishing_method || ''}
+            onChange={(e) => handleChange('fishing_method', e.target.value)}
+            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Select...</option>
+            {dropdownData.fishingMethods?.map(method => (
+              <option key={method.id} value={method.name}>{method.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Bait - Filtered by Fishing Type */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Bait</label>
+          <select
+            value={entry.bait || ''}
+            onChange={(e) => handleChange('bait', e.target.value)}
+            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Select...</option>
+            {filteredBaits.map(bait => (
+              <option key={bait.id} value={bait.name}>{bait.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Caught Fish */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Caught Fish</label>
+          <select
+            value={entry.caught_fish ? 'yes' : 'no'}
+            onChange={(e) => handleChange('caught_fish', e.target.value === 'yes')}
+            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+          </select>
+        </div>
+
+        {/* Fish Count */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Fish Count</label>
+          <input
+            type="number"
+            value={entry.fish_count || ''}
+            onChange={(e) => handleChange('fish_count', parseInt(e.target.value, 10) || 0)}
+            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            min="0"
+          />
+        </div>
+
+        {/* Time Start */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Start Time</label>
+          <input
+            type="time"
+            value={entry.time_start || ''}
+            onChange={(e) => handleChange('time_start', e.target.value)}
+            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        {/* Time End */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">End Time</label>
+          <input
+            type="time"
+            value={entry.time_end || ''}
+            onChange={(e) => handleChange('time_end', e.target.value)}
+            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        {/* Hook Setup */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Hook Setup</label>
+          <input
+            type="text"
+            value={entry.hook_setup || ''}
+            onChange={(e) => handleChange('hook_setup', e.target.value)}
+            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+      </div>
+
+      {/* Fish Species Selection */}
+      <div className="mt-6">
+        <label id="fish-caught-label" className="block text-sm font-semibold text-gray-700 mb-2">Fish Caught</label>
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Search fish species by local, english or scientific name..."
+            value={fishSearch}
+            onChange={(e) => {
+              setFishSearch(e.target.value);
+              setShowFishDropdown(true);
+            }}
+            onFocus={() => setShowFishDropdown(true)}
+            onKeyDown={handleFishKeyDown}
+            aria-labelledby="fish-caught-label"
+            aria-expanded={showFishDropdown && filteredFish.length > 0}
+            aria-controls="fish-dropdown-list"
+            aria-activedescendant={activeFishIndex >= 0 ? `fish-option-${activeFishIndex}` : undefined}
+            role="combobox"
+            aria-autocomplete="list"
+            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          
+          {showFishDropdown && filteredFish.length > 0 && (
+            <div 
+              id="fish-dropdown-list"
+              role="listbox"
+              className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+            >
+              {filteredFish.map((fish, index) => (
+                <div
+                  key={fish.id}
+                  id={`fish-option-${index}`}
+                  role="option"
+                  aria-selected={index === activeFishIndex}
+                  onClick={() => handleAddFish(fish.local_name || fish.english_name)}
+                  className={`px-4 py-3 cursor-pointer border-b border-gray-100 last:border-b-0 ${
+                    index === activeFishIndex ? 'bg-blue-100' : 'hover:bg-blue-50'
+                  }`}
+                >
+                  <div className="font-semibold text-gray-800">{fish.local_name}</div>
+                  {fish.english_name && <div className="text-xs text-gray-600">{fish.english_name}</div>}
+                  {fish.scientific_name && <div className="text-xs text-gray-500">{fish.scientific_name}</div>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Selected Fish Display */}
+        {currentFish.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {currentFish.map((fish, index) => (
+              <div key={index} className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full flex items-center gap-2">
+                <span>{fish}</span>
+                <button
+                  onClick={() => handleRemoveFish(index)}
+                  className="text-blue-600 hover:text-blue-800 font-bold"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Notes */}
+      <div className="mt-6">
+        <label className="block text-sm font-semibold text-gray-700 mb-2">Notes</label>
+        <textarea
+          value={entry.notes || ''}
+          onChange={(e) => handleChange('notes', e.target.value)}
+          className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          rows="4"
+          placeholder="Additional notes..."
+        />
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex gap-3 justify-end mt-8">
+        <button onClick={onCancel} className="px-6 py-3 border rounded-lg hover:bg-gray-50 font-semibold">Cancel</button>
+        <button onClick={onSave} className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">Save Changes</button>
       </div>
     </div>
   );

@@ -48,8 +48,17 @@ app.use('/api/fishing', fishingRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/logs', logsRoutes);
 
-app.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+const pool = require('./config/database');
+
+app.get('/health', async (req, res) => {
+  try {
+    // Verify database connectivity
+    await pool.query('SELECT 1');
+    res.json({ status: 'OK', timestamp: new Date().toISOString(), database: 'connected' });
+  } catch (error) {
+    logger.error('Health check failed:', error.message);
+    res.status(503).json({ status: 'ERROR', timestamp: new Date().toISOString(), database: 'disconnected', error: error.message });
+  }
 });
 
 app.use((err, req, res, next) => {
@@ -62,7 +71,31 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Something went wrong!' });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
+// Start server
+const server = app.listen(PORT, '0.0.0.0', () => {
   logger.info(`🚀 Server running on port ${PORT}`);
   logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`\n✅ Server started successfully on port ${PORT}\n`);
+});
+
+// Handle server errors
+server.on('error', (err) => {
+  console.error(`\n❌ Server error: ${err.message}\n`);
+  logger.error(`Server error: ${err.message}`);
+  process.exit(1);
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.error(`\n❌ Uncaught Exception: ${err.message}\n`);
+  console.error(err);
+  logger.error(`Uncaught Exception: ${err.message}`, { stack: err.stack });
+  process.exit(1);
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error(`\n❌ Unhandled Rejection at:`, promise, `reason:`, reason);
+  logger.error(`Unhandled Rejection: ${reason}`);
+  process.exit(1);
 });

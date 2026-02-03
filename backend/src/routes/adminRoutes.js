@@ -4,6 +4,12 @@ const authMiddleware = require('../middleware/authMiddleware');
 const pool = require('../config/database');
 const logger = require('../config/logger');
 const { allLocations } = require('../data/mauritiusLocations');
+const rateLimit = require('express-rate-limit');
+
+const adminLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 admin requests per windowMs
+});
 
 // Middleware to check if user is admin
 const isAdmin = async (req, res, next) => {
@@ -23,6 +29,9 @@ const isAdmin = async (req, res, next) => {
     res.status(500).json({ error: 'Server error during admin verification' });
   }
 };
+
+// Combined middleware to rate-limit admin checks before accessing the database
+const adminProtected = [adminLimiter, isAdmin];
 
 // Get admin statistics
 router.get('/stats', authMiddleware, isAdmin, async (req, res) => {
@@ -118,7 +127,7 @@ router.get('/stats', authMiddleware, isAdmin, async (req, res) => {
 });
 
 // Get all users (for admin management)
-router.get('/users', authMiddleware, isAdmin, async (req, res) => {
+router.get('/users', adminLimiter, authMiddleware, isAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT 
@@ -142,7 +151,7 @@ router.get('/users', authMiddleware, isAdmin, async (req, res) => {
 });
 
 // Get user fishing entries
-router.get('/user-entries/:userId', authMiddleware, isAdmin, async (req, res) => {
+router.get('/user-entries/:userId', adminLimiter, authMiddleware, isAdmin, async (req, res) => {
   try {
     const userId = req.params.userId;
     const result = await pool.query(`
@@ -161,7 +170,7 @@ router.get('/user-entries/:userId', authMiddleware, isAdmin, async (req, res) =>
 // ==================== USER MANAGEMENT ====================
 
 // Update user admin status
-router.patch('/users/:userId/admin', authMiddleware, isAdmin, async (req, res) => {
+router.patch('/users/:userId/admin', adminLimiter, authMiddleware, isAdmin, async (req, res) => {
   try {
     const { userId } = req.params;
     const { isAdmin: makeAdmin } = req.body;
@@ -189,7 +198,7 @@ router.patch('/users/:userId/admin', authMiddleware, isAdmin, async (req, res) =
 });
 
 // Delete user
-router.delete('/users/:userId', authMiddleware, isAdmin, async (req, res) => {
+router.delete('/users/:userId', authMiddleware, adminLimiter, adminProtected, async (req, res) => {
   try {
     const { userId } = req.params;
 
@@ -212,6 +221,153 @@ router.delete('/users/:userId', authMiddleware, isAdmin, async (req, res) => {
   } catch (error) {
     console.error('Error deleting user:', error);
     res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
+// Update user information (username, email)
+router.patch('/users/:userId', authMiddleware, adminLimiter, adminProtected, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { username, email } = req.body;
+
+    if (!username || !email) {
+      return res.status(400).json({ error: 'Username and email are required' });
+    }
+
+    // Validate username format and length
+    if (username.length > 50 || !/^[a-zA-Z0-9_-]+$/.test(username)) {
+      return res.status(400).json({ error: 'Username must be alphanumeric with hyphens/underscores and no more than 50 characters' });
+    }
+
+    // Validate email format and length
+    if (email.length > 100 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: 'Email must be a valid email address and no more than 100 characters' });
+    }
+
+    // Check if email is already taken by another user
+    const emailCheck = await pool.query(
+      'SELECT id FROM users WHERE email = $1 AND id != $2',
+      [email, userId]
+    );
+    if (emailCheck.rows.length > 0) {
+      return res.status(400).json({ error: 'Email is already in use' });
+    }
+
+    // Check if username is already taken by another user
+    const usernameCheck = await pool.query(
+      'SELECT id FROM users WHERE username = $1 AND id != $2',
+      [username, userId]
+    );
+    if (usernameCheck.rows.length > 0) {
+      return res.status(400).json({ error: 'Username is already in use' });
+    }
+
+    const result = await pool.query(
+      'UPDATE users SET username = $1, email = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 RETURNING id, username, email, is_admin',
+      [username, email, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    logger.info(`User ${userId} information updated by admin ${req.user.id}`);
+    res.json({ user: result.rows[0], message: 'User updated successfully' });
+  } catch (error) {
+    console.error('Error updating user:', error);
+    res.status(500).json({ error: 'Failed to update user' });
+  }
+});
+
+// ==================== FISHING LOG MANAGEMENT (ADMIN) ====================
+
+// Update fishing log (admin)
+router.patch('/fishing-logs/:logId', authMiddleware, adminLimiter, isAdmin, async (req, res) => {
+  try {
+    const { logId } = req.params;
+
+    // Define which fields are allowed to be updated
+    const updatableFields = [
+      'log_date',
+      'time_start',
+      'time_end',
+      'location_name',
+      'location',
+      'caught_fish',
+      'fish_count',
+      'fish_types',
+      'fishing_type',
+      'fishing_method',
+      'bait',
+      'moon_phase',
+      'tide_phase',
+      'tide_height',
+      'sea_level',
+      'fish_activity',
+      'hook_setup',
+      'notes'
+    ];
+
+    const updates = [];
+    const values = [];
+    let paramCount = 1;
+
+    // Only update fields that are explicitly present in the request body.
+    // This allows setting a field to NULL by sending `"field": null`.
+    for (const field of updatableFields) {
+      if (Object.prototype.hasOwnProperty.call(req.body, field)) {
+        updates.push(`${field} = $${paramCount++}`);
+        values.push(req.body[field]);
+      }
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No valid fields provided to update' });
+    }
+
+    // Always update the timestamp
+    updates.push('updated_at = CURRENT_TIMESTAMP');
+
+    const query = `
+      UPDATE fishing_logs
+      SET ${updates.join(', ')}
+      WHERE id = $${paramCount}
+      RETURNING *`;
+
+    values.push(logId);
+
+    const result = await pool.query(query, values);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Fishing log not found' });
+    }
+
+    logger.info(`Fishing log ${logId} updated by admin ${req.user.id}`);
+    res.json({ log: result.rows[0], message: 'Fishing log updated successfully' });
+  } catch (error) {
+    console.error('Error updating fishing log:', error);
+    res.status(500).json({ error: 'Failed to update fishing log' });
+  }
+});
+
+// Delete fishing log (admin)
+router.delete('/fishing-logs/:logId', authMiddleware, adminLimiter, isAdmin, async (req, res) => {
+  try {
+    const { logId } = req.params;
+
+    const result = await pool.query(
+      'DELETE FROM fishing_logs WHERE id = $1 RETURNING id, user_id, log_date',
+      [logId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Fishing log not found' });
+    }
+
+    logger.info(`Fishing log ${logId} deleted by admin ${req.user.id}`);
+    res.json({ message: 'Fishing log deleted successfully', log: result.rows[0] });
+  } catch (error) {
+    console.error('Error deleting fishing log:', error);
+    res.status(500).json({ error: 'Failed to delete fishing log' });
   }
 });
 
