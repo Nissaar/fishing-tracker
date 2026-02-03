@@ -111,32 +111,26 @@ jobs:
         if: github.event_name == 'pull_request' && always()
         uses: actions/github-script@v7
         with:
-          script: |
+          script: >
             const fs = require('fs');
             let results = { stats: { expected: 0, failed: 0, skipped: 0 } };
-            
             try {
               const content = fs.readFileSync('e2e/test-results/results.json', 'utf8');
               results = JSON.parse(content);
             } catch (e) {
               console.log('Could not parse results file');
             }
-            
             const passed = results.stats.expected - results.stats.failed;
             const status = results.stats.failed === 0 ? '✅' : '⚠️';
             const reportUrl = `https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}`;
-            
-            const comment = `${status} **E2E Test Results**
-
-| Result | Count |
-|--------|-------|
-| ✅ Passed | ${passed} |
-| ❌ Failed | ${results.stats.failed} |
-| ⏭️ Skipped | ${results.stats.skipped} |
-| **Total** | **${results.stats.expected}** |
-
-[📊 View Full Report](${reportUrl})`;
-            
+            const comment = status + ' **E2E Test Results**\n\n' +
+              '| Result | Count |\n' +
+              '|--------|-------|\n' +
+              '| ✅ Passed | ' + passed + ' |\n' +
+              '| ❌ Failed | ' + results.stats.failed + ' |\n' +
+              '| ⏭️ Skipped | ' + results.stats.skipped + ' |\n' +
+              '| **Total** | **' + results.stats.expected + '** |\n\n' +
+              '[📊 View Full Report](' + reportUrl + ')';
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
