@@ -125,6 +125,7 @@ CREATE TABLE IF NOT EXISTS fishing_logs (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     log_date DATE NOT NULL,
+    end_date DATE,
     time_start TIME,
     time_end TIME,
     location VARCHAR(100) NOT NULL,
@@ -151,7 +152,9 @@ CREATE TABLE IF NOT EXISTS fishing_logs (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT valid_time_range CHECK (
-        time_start IS NULL OR time_end IS NULL OR time_end > time_start
+        time_start IS NULL OR time_end IS NULL OR 
+        (end_date IS NOT NULL AND end_date >= log_date) OR
+        (end_date IS NULL AND time_end > time_start)
     )
 );
 

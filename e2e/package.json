@@ -10,8 +10,8 @@
     "install-browsers": "playwright install chromium --with-deps"
   },
   "devDependencies": {
-    "@faker-js/faker": "^8.4.0",
-    "@playwright/test": "^1.42.0",
-    "@types/node": "^20.12.12"
+    "@faker-js/faker": "^9.4.0",
+    "@playwright/test": "^1.49.1",
+    "@types/node": "^22.10.5"
   }
 }
