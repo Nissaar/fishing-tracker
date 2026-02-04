@@ -2,6 +2,7 @@ const express = require('express');
 const fishingController = require('../controllers/fishingController');
 const authMiddleware = require('../middleware/authMiddleware');
 const pool = require('../config/database');
+const logger = require('../config/logger');
 
 const router = express.Router();
 
@@ -237,8 +238,8 @@ router.post('/trip-recommendations', async (req, res) => {
     }
 
     if (fishingMethod) {
-      params.push(fishingMethod);
-      query += ` AND fl.fishing_method = $${params.length}`;
+      params.push(fishingMethod.toLowerCase());
+      query += ` AND LOWER(fl.fishing_method) = $${params.length}`;
     }
 
     query += ' ORDER BY fl.log_date DESC LIMIT 100';
@@ -303,6 +304,9 @@ router.post('/trip-recommendations', async (req, res) => {
       bestTimes.push({ period: 'Dusk', time: '17:00 - 19:00', reason: 'Active feeding period' });
     }
 
+    // Calculate top species from successful trips
+    const topSpecies = calculateTopSpecies(successfulTrips);
+
     res.json({
       hasData: true,
       successRate,
@@ -321,7 +325,7 @@ router.post('/trip-recommendations', async (req, res) => {
         totalTrips: historicalTrips.length,
         successfulTrips: successfulTrips.length,
         avgCatch: conditions.avgFishPerTrip,
-        topSpecies: 'Various'
+        topSpecies: topSpecies
       }
     });
   } catch (error) {
@@ -329,6 +333,26 @@ router.post('/trip-recommendations', async (req, res) => {
     res.status(500).json({ error: 'Failed to get trip recommendations' });
   }
 });
+
+// Helper function to calculate the most caught fish species
+function calculateTopSpecies(trips) {
+  if (trips.length === 0) return 'Unknown';
+  
+  const speciesCount = {};
+  
+  trips.forEach(trip => {
+    if (trip.fish_types && Array.isArray(trip.fish_types)) {
+      trip.fish_types.forEach(fish => {
+        if (fish && fish.trim()) {
+          speciesCount[fish] = (speciesCount[fish] || 0) + 1;
+        }
+      });
+    }
+  });
+  
+  if (Object.keys(speciesCount).length === 0) return 'Unknown';
+  return Object.keys(speciesCount).reduce((a, b) => speciesCount[a] > speciesCount[b] ? a : b);
+}
 
 // Helper function to analyze conditions from successful trips
 function analyzeConditions(trips) {
@@ -339,8 +363,8 @@ function analyzeConditions(trips) {
   const fishActivityCount = {};
 
   trips.forEach(trip => {
-    // Moon phase
-    const moonPhase = trip.moon_phase?.split(' ').pop() || 'Unknown';
+    // Moon phase - remove numeric prefix (e.g., "1 Full Moon" -> "Full Moon")
+    const moonPhase = trip.moon_phase?.replace(/^\d+\s+/, '').trim() || 'Unknown';
     moonPhaseCount[moonPhase] = (moonPhaseCount[moonPhase] || 0) + 1;
 
     // Tide level
