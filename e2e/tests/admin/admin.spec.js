@@ -226,8 +226,7 @@ test.describe('Admin - Review Submissions Tab', () => {
       }
     });
   });
-    }
-  });
+
   
   test('should have approve button for pending submissions', async ({ page }) => {
     const submissionsTab = page.locator('button:has-text("Review Submissions")');
