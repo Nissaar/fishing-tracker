@@ -9,19 +9,14 @@ const pool = new Pool({
   password: process.env.DB_PASSWORD,
   max: 20,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 15000, // give pool longer to hand out a client during OAuth callbacks
+  connectionTimeoutMillis: 15000,
   statement_timeout: 12000,
   query_timeout: 12000,
   keepAlive: true,
 });
 
-pool.on('connect', () => {
-  console.log('✅ Connected to PostgreSQL database');
-});
-
 pool.on('error', (err) => {
-  console.error('❌ Unexpected database error:', err);
-  process.exit(-1);
+  // Pool errors are logged but don't crash the app to allow reconnection
 });
 
 module.exports = pool;

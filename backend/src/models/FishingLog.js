@@ -4,28 +4,39 @@ class FishingLog {
   static async create(userId, logData) {
     const query = `
       INSERT INTO fishing_logs (
-        user_id, log_date, location, location_name, caught_fish, fish_count, 
-        fish_types, moon_phase, sea_level, tide_data, weather_data, fish_activity, solunar_data, hook_setup, bait, notes
+        user_id, log_date, time_start, time_end, location, location_name, caught_fish, fish_count, 
+        fish_types, moon_phase, tide_phase, tide_height, sea_level, tide_data, weather_data, fish_activity, 
+        solunar_data, hook_setup, bait, bait_other, fishing_type, fishing_type_other, fishing_method, 
+        fishing_method_other, notes
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
       RETURNING *
     `;
     const values = [
       userId,
       logData.date,
+      logData.timeStart || null,
+      logData.timeEnd || null,
       logData.location,
       logData.locationName,
       logData.caughtFish,
       logData.fishCount || 0,
       JSON.stringify(logData.fishTypes || []),
-      logData.moonPhase,
-      logData.seaLevel,
+      logData.moon?.phase || null,
+      logData.tide?.level || null,
+      logData.tide?.height || null,
+      logData.tide?.level || null,
       JSON.stringify(logData.tideData || {}),
       JSON.stringify(logData.weatherData || {}),
       logData.fishActivity || null,
       JSON.stringify(logData.solunarData || {}),
-      logData.hookSetup,
-      logData.bait,
+      logData.hookSetup || null,
+      logData.bait || null,
+      logData.baitOther || null,
+      logData.fishingType || null,
+      logData.fishingTypeOther || null,
+      logData.fishingMethod || null,
+      logData.fishingMethodOther || null,
       logData.notes || ''
     ];
     const result = await pool.query(query, values);
@@ -101,40 +112,8 @@ class FishingLog {
     return result.rows[0];
   }
 
-  static async create(userId, logData) {
-  const query = `
-    INSERT INTO fishing_logs (
-      user_id, log_date, location, location_name, caught_fish, fish_count, 
-      fish_types, fishing_type, fishing_method, moon_phase, sea_level, 
-      sea_temperature, wave_height, tide_data, weather_data, hook_setup, bait, notes
-    )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
-    RETURNING *
-  `;
-  const values = [
-    userId,
-    logData.date,
-    logData.location,
-    logData.locationName,
-    logData.caughtFish,
-    logData.fishCount || 0,
-    JSON.stringify(logData.fishTypes || []),
-    logData.fishingType || null,
-    logData.fishingMethod || null,
-    logData.moonPhase,
-    logData.seaLevel,
-    logData.seaTemperature || null,
-    logData.waveHeight || null,
-    JSON.stringify(logData.tideData || {}),
-    JSON.stringify(logData.weatherData || {}),
-    logData.hookSetup,
-    logData.bait,
-    logData.notes || ''
-  ];
-  const result = await pool.query(query, values);
-  return result.rows[0];
 }
-}
+
 
 
 

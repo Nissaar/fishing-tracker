@@ -101,6 +101,7 @@ const DataTable = () => {
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Date</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Time</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Location</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Caught</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Fish</th>
@@ -115,7 +116,7 @@ const DataTable = () => {
             <tbody className="divide-y divide-gray-200">
               {filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan="11" className="px-4 py-8 text-center text-gray-500">
                     No fishing logs found. Start logging your trips!
                   </td>
                 </tr>
@@ -124,6 +125,11 @@ const DataTable = () => {
                   <tr key={log.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm text-gray-900">
                       {new Date(log.log_date).toLocaleDateString()}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      {log.time_start && log.time_end 
+                        ? `${log.time_start.substring(0, 5)} - ${log.time_end.substring(0, 5)}` 
+                        : '-'}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900">{log.location_name}</td>
                     <td className="px-4 py-3">
@@ -138,16 +144,32 @@ const DataTable = () => {
                       )}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900">
-                      {log.fish_types && log.fish_types.length > 0
-                        ? log.fish_types.join(', ')
-                        : '-'}
+                      {log.fish_types && Array.isArray(log.fish_types) && log.fish_types.length > 0
+                        ? log.fish_types.slice(0, 2).join(', ') + (log.fish_types.length > 2 ? `... +${log.fish_types.length - 2}` : '')
+                        : log.fish_count > 0 ? `${log.fish_count} fish` : '-'}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{log.moon_phase}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{log.sea_level?.split(' ')[0] || '-'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{log.bait || '-'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{log.fishing_type || '-'}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">
-                      {log.fishing_method === 'boat' ? '🚤 Boat' : '🏖️ Land'}
+                      {log.moon_phase ? (
+                        <span>
+                          {log.moon_phase.toLowerCase().includes('full') ? '🌕 ' : 
+                           log.moon_phase.toLowerCase().includes('new') ? '🌑 ' :
+                           log.moon_phase.toLowerCase().includes('first') ? '🌓 ' :
+                           log.moon_phase.toLowerCase().includes('last') || log.moon_phase.toLowerCase().includes('third') ? '🌗 ' :
+                           log.moon_phase.toLowerCase().includes('waxing gibbous') ? '🌔 ' :
+                           log.moon_phase.toLowerCase().includes('waning gibbous') ? '🌖 ' :
+                           log.moon_phase.toLowerCase().includes('waxing crescent') ? '🌒 ' :
+                           log.moon_phase.toLowerCase().includes('waning crescent') ? '🌘 ' : '🌙 '}
+                          {log.moon_phase}
+                        </span>
+                      ) : log.tide_phase || '-'}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      {log.tide_height ? `${log.tide_height}m` : log.sea_level?.split(' ')[0] || '-'}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{log.bait || log.bait_other || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{log.fishing_type || log.fishing_type_other || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      {log.fishing_method === 'boat' ? '🚤 Boat' : log.fishing_method_other || '🏖️ Land'}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <button

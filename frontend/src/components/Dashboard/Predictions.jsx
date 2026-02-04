@@ -49,6 +49,19 @@ const Predictions = () => {
     return 'different';
   };
 
+  const getMoonPhaseEmoji = (phase) => {
+    const value = (phase || '').toLowerCase();
+    if (value.includes('full')) return '🌕';
+    if (value.includes('new')) return '🌑';
+    if (value.includes('first')) return '🌓';
+    if (value.includes('last') || value.includes('third')) return '🌗';
+    if (value.includes('waxing gibbous')) return '🌔';
+    if (value.includes('waning gibbous')) return '🌖';
+    if (value.includes('waxing crescent')) return '🌒';
+    if (value.includes('waning crescent')) return '🌘';
+    return '🌙';
+  };
+
   return (
     <div className="space-y-6">
       <div className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white p-6 rounded-xl">
@@ -78,7 +91,7 @@ const Predictions = () => {
                 <div className="flex-1">
                   <p className="text-sm text-gray-600">Moon Phase</p>
                   <p className="font-bold text-gray-800">
-                    {todayConditions.moon.emoji} {todayConditions.moon.phase}
+                    {getMoonPhaseEmoji(todayConditions.moon.phase)} {todayConditions.moon.phase}
                   </p>
                 </div>
                 {compareWithToday(predictions.predictions.bestMoonPhase, todayConditions.moon.phase) === 'match' && (
@@ -121,7 +134,7 @@ const Predictions = () => {
                 <div>
                   <p className="text-sm text-gray-600">Best Moon Phase</p>
                   <p className="font-bold text-gray-800">
-                    {predictions.predictions.bestMoonPhase}
+                    {getMoonPhaseEmoji(predictions.predictions.bestMoonPhase)} {predictions.predictions.bestMoonPhase}
                   </p>
                 </div>
               </div>
@@ -157,7 +170,7 @@ const Predictions = () => {
               <Moon className="w-10 h-10 text-purple-600 mb-3" />
               <h3 className="font-semibold text-gray-800 mb-2">Best Moon Phase</h3>
               <p className="text-3xl font-bold text-purple-700 mb-2">
-                {predictions.predictions.bestMoonPhase}
+                {getMoonPhaseEmoji(predictions.predictions.bestMoonPhase)} {predictions.predictions.bestMoonPhase}
               </p>
               <p className="text-sm text-purple-600">Most productive fishing during this phase</p>
             </div>

@@ -96,6 +96,93 @@ const LandingPage = () => {
         </div>
       </div>
 
+      {/* Features Section */}
+      <div className="max-w-7xl mx-auto px-4 py-16 bg-white rounded-3xl shadow-xl mb-12">
+        <div className="text-center mb-12">
+          <h2 className="text-4xl font-bold text-gray-900 mb-4">Why Choose Fishing Tracker Pro?</h2>
+          <p className="text-xl text-gray-600">Everything you need for successful fishing in Mauritius</p>
+        </div>
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {/* Feature 1 */}
+          <div className="text-center p-6 rounded-xl hover:bg-blue-50 transition-colors">
+            <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Activity className="w-8 h-8 text-blue-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Real-Time Conditions</h3>
+            <p className="text-gray-600">
+              Get live updates on tide levels, weather, moon phase, and fish activity based on scientific solunar theory
+            </p>
+          </div>
+
+          {/* Feature 2 */}
+          <div className="text-center p-6 rounded-xl hover:bg-blue-50 transition-colors">
+            <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Fish className="w-8 h-8 text-green-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Track Your Catches</h3>
+            <p className="text-gray-600">
+              Log every fishing trip with details like species caught, bait used, location, and environmental conditions
+            </p>
+          </div>
+
+          {/* Feature 3 */}
+          <div className="text-center p-6 rounded-xl hover:bg-blue-50 transition-colors">
+            <div className="bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Moon className="w-8 h-8 text-purple-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Solunar Predictions</h3>
+            <p className="text-gray-600">
+              Advanced fish activity predictions using moon phases, tides, and astronomical data for optimal fishing times
+            </p>
+          </div>
+
+          {/* Feature 4 */}
+          <div className="text-center p-6 rounded-xl hover:bg-blue-50 transition-colors">
+            <div className="bg-cyan-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Waves className="w-8 h-8 text-cyan-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Tide Timeline</h3>
+            <p className="text-gray-600">
+              24-hour tide predictions with visual charts showing high/low tides and optimal fishing periods throughout the day
+            </p>
+          </div>
+
+          {/* Feature 5 */}
+          <div className="text-center p-6 rounded-xl hover:bg-blue-50 transition-colors">
+            <div className="bg-orange-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Sun className="w-8 h-8 text-orange-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Weather Intelligence</h3>
+            <p className="text-gray-600">
+              Accurate weather forecasts including temperature, wind speed, wave height, and sea surface temperature
+            </p>
+          </div>
+
+          {/* Feature 6 */}
+          <div className="text-center p-6 rounded-xl hover:bg-blue-50 transition-colors">
+            <div className="bg-red-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Eye className="w-8 h-8 text-red-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Analytics & Insights</h3>
+            <p className="text-gray-600">
+              View detailed reports, analyze your fishing patterns, and discover the best times and locations for different species
+            </p>
+          </div>
+        </div>
+
+        {/* CTA Section */}
+        <div className="mt-12 text-center">
+          <Link
+            to="/register"
+            className="inline-block bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-8 py-4 rounded-xl font-bold text-lg hover:from-blue-700 hover:to-cyan-700 transform hover:scale-105 transition-all shadow-lg"
+          >
+            Start Tracking Your Catches - It's Free! 🎣
+          </Link>
+          <p className="mt-4 text-gray-600">Join fishermen across Mauritius using our platform</p>
+        </div>
+      </div>
+
       {/* Current Conditions */}
       <div className="max-w-7xl mx-auto px-4 py-12">
         <h2 className="text-3xl font-bold text-center text-gray-800 mb-4">
@@ -167,6 +254,13 @@ const LandingPage = () => {
               <Activity className="w-12 h-12 text-green-600 mb-4" />
               <h3 className="text-lg font-semibold text-gray-800 mb-2">Fish Activity</h3>
               <div className="flex items-center gap-2 mb-3">
+                {conditions.solunar?.currentActivity?.level === 'high' && (
+                  <>
+                    <Fish className="w-8 h-8 text-green-600 fill-current" />
+                    <Fish className="w-8 h-8 text-green-600 fill-current" />
+                    <Fish className="w-8 h-8 text-green-600 fill-current" />
+                  </>
+                )}
                 {conditions.solunar?.currentActivity?.level === 'average' && (
                   <>
                     <Fish className="w-8 h-8 text-yellow-600 fill-current" />
@@ -176,12 +270,12 @@ const LandingPage = () => {
                 )}
                 {conditions.solunar?.currentActivity?.level === 'low' && (
                   <>
-                    <Fish className="w-8 h-8 text-gray-400 fill-current" />
+                    <Fish className="w-8 h-8 text-orange-500 fill-current" />
                     <Fish className="w-8 h-8 text-gray-300 fill-current" />
                     <Fish className="w-8 h-8 text-gray-300 fill-current" />
                   </>
                 )}
-                {(!conditions.solunar?.currentActivity?.level || conditions.solunar?.currentActivity?.level === 'none') && (
+                {(!conditions.solunar?.currentActivity?.level || conditions.solunar?.currentActivity?.level === 'very low' || conditions.solunar?.currentActivity?.level === 'none') && (
                   <>
                     <Fish className="w-8 h-8 text-gray-300 fill-current" />
                     <Fish className="w-8 h-8 text-gray-300 fill-current" />
@@ -190,7 +284,7 @@ const LandingPage = () => {
                 )}
               </div>
               <p className="text-sm font-semibold text-gray-700 capitalize">
-                {conditions.solunar?.currentActivity?.level || 'Low'} Activity
+                {conditions.solunar?.currentActivity?.level || 'Very Low'} Activity
               </p>
               <p className="text-xs text-gray-500 mt-1">
                 {conditions.solunar?.currentActivity?.description || 'Based on solunar theory'}
@@ -278,19 +372,29 @@ const LandingPage = () => {
               <div>
                 <h4 className="text-xl font-bold text-gray-900 mb-4">MAJOR PERIODS</h4>
                 <div className="space-y-6">
-                  {conditions.solunar.majorPeriods.map((period, index) => (
-                    <div key={index} className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-6">
+                  {conditions.solunar.majorPeriods.map((period, index) => {
+                    const isHigh = period.activity === 'high';
+                    const isAverage = period.activity === 'average';
+                    const isLow = period.activity === 'low';
+                    const bgColor = isHigh ? 'bg-green-50 border-2 border-green-300' : isAverage ? 'bg-yellow-50 border-2 border-yellow-300' : 'bg-orange-50 border-2 border-orange-300';
+                    const activityLabel = isHigh ? 'HIGH ACTIVITY' : isAverage ? 'AVERAGE ACTIVITY' : 'LOW ACTIVITY';
+                    const activityColor = isHigh ? 'text-green-900' : isAverage ? 'text-yellow-900' : 'text-orange-900';
+                    const fishColor = isHigh ? 'text-green-600' : isAverage ? 'text-yellow-600' : 'text-orange-600';
+                    return (
+                    <div key={index} className={`${bgColor} rounded-xl p-6`}>
                       <div className="flex items-center gap-4 mb-3">
-                        <div className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center">
-                          <Moon className="w-8 h-8 text-yellow-900" />
+                        <div className={`w-16 h-16 ${isHigh ? 'bg-green-400' : isAverage ? 'bg-yellow-400' : 'bg-orange-400'} rounded-full flex items-center justify-center`}>
+                          <Moon className={`w-8 h-8 ${activityColor}`} />
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <p className="text-lg font-bold text-yellow-900">AVERAGE ACTIVITY</p>
+                            <p className={`text-lg font-bold ${activityColor}`}>{activityLabel}</p>
                             <div className="flex gap-1">
-                              <Fish className="w-5 h-5 text-yellow-600 fill-current" />
-                              <Fish className="w-5 h-5 text-yellow-600 fill-current" />
-                              <Fish className="w-5 h-5 text-gray-300 fill-current" />
+                              <Fish className={`w-5 h-5 ${fishColor} fill-current`} />
+                              {(isHigh || isAverage) && <Fish className={`w-5 h-5 ${fishColor} fill-current`} />}
+                              {isHigh && <Fish className={`w-5 h-5 ${fishColor} fill-current`} />}
+                              {!isHigh && <Fish className="w-5 h-5 text-gray-300 fill-current" />}
+                              {isLow && <Fish className="w-5 h-5 text-gray-300 fill-current" />}
                             </div>
                           </div>
                           <p className="text-sm text-gray-700">from <span className="font-bold">{period.start}h</span> to <span className="font-bold">{period.end}h</span></p>
@@ -298,7 +402,8 @@ const LandingPage = () => {
                       </div>
                       <p className="text-sm font-semibold text-gray-700">{period.description}</p>
                     </div>
-                  ))}
+                  );
+                  })}
                 </div>
               </div>
 
@@ -306,19 +411,29 @@ const LandingPage = () => {
               <div>
                 <h4 className="text-xl font-bold text-gray-900 mb-4">MINOR PERIODS</h4>
                 <div className="space-y-6">
-                  {conditions.solunar.minorPeriods.map((period, index) => (
-                    <div key={index} className="bg-gray-50 border-2 border-gray-300 rounded-xl p-6">
+                  {conditions.solunar.minorPeriods.map((period, index) => {
+                    const isHigh = period.activity === 'high';
+                    const isAverage = period.activity === 'average';
+                    const isLow = period.activity === 'low';
+                    const bgColor = isHigh ? 'bg-green-50 border-2 border-green-300' : isAverage ? 'bg-yellow-50 border-2 border-yellow-300' : 'bg-orange-50 border-2 border-orange-300';
+                    const activityLabel = isHigh ? 'HIGH ACTIVITY' : isAverage ? 'AVERAGE ACTIVITY' : 'LOW ACTIVITY';
+                    const activityColor = isHigh ? 'text-green-900' : isAverage ? 'text-yellow-900' : 'text-orange-900';
+                    const fishColor = isHigh ? 'text-green-600' : isAverage ? 'text-yellow-600' : 'text-orange-600';
+                    return (
+                    <div key={index} className={`${bgColor} rounded-xl p-6`}>
                       <div className="flex items-center gap-4 mb-3">
-                        <div className="w-16 h-16 bg-yellow-200 rounded-full flex items-center justify-center">
-                          <Moon className="w-8 h-8 text-gray-700" />
+                        <div className={`w-16 h-16 ${isHigh ? 'bg-green-400' : isAverage ? 'bg-yellow-400' : 'bg-orange-400'} rounded-full flex items-center justify-center`}>
+                          <Moon className={`w-8 h-8 ${activityColor}`} />
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <p className="text-lg font-bold text-gray-700">LOW ACTIVITY</p>
+                            <p className={`text-lg font-bold ${activityColor}`}>{activityLabel}</p>
                             <div className="flex gap-1">
-                              <Fish className="w-5 h-5 text-gray-400 fill-current" />
-                              <Fish className="w-5 h-5 text-gray-300 fill-current" />
-                              <Fish className="w-5 h-5 text-gray-300 fill-current" />
+                              <Fish className={`w-5 h-5 ${fishColor} fill-current`} />
+                              {(isHigh || isAverage) && <Fish className={`w-5 h-5 ${fishColor} fill-current`} />}
+                              {isHigh && <Fish className={`w-5 h-5 ${fishColor} fill-current`} />}
+                              {!isHigh && <Fish className="w-5 h-5 text-gray-300 fill-current" />}
+                              {isLow && <Fish className="w-5 h-5 text-gray-300 fill-current" />}
                             </div>
                           </div>
                           <p className="text-sm text-gray-700">from <span className="font-bold">{period.start}h</span> to <span className="font-bold">{period.end}h</span></p>
@@ -326,7 +441,8 @@ const LandingPage = () => {
                       </div>
                       <p className="text-sm font-semibold text-gray-700">{period.description}</p>
                     </div>
-                  ))}
+                  );
+                  })}
                 </div>
               </div>
             </div>

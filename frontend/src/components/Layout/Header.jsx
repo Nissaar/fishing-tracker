@@ -23,8 +23,10 @@ const Header = () => {
               {user?.avatar_url ? (
                 <img src={user.avatar_url} alt={user.username} className="w-10 h-10 rounded-full border-2 border-white" />
               ) : (
-                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                  <User className="w-6 h-6" />
+                <div className="w-10 h-10 bg-white/30 rounded-full flex items-center justify-center border-2 border-white">
+                  <span className="text-sm font-bold">
+                    {user?.username?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
+                  </span>
                 </div>
               )}
               <div className="hidden md:block">

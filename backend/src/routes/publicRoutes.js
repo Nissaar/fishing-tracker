@@ -81,7 +81,6 @@ router.get('/conditions', async (req, res) => {
       location: { name: 'Port Louis', lat, lon }
     });
   } catch (error) {
-    console.error('Public conditions error:', error);
     res.status(500).json({ error: 'Failed to get conditions' });
   }
 });

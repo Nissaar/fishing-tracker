@@ -70,7 +70,6 @@ async function getCurrentWeather(lat, lon) {
     
     return getFallbackWeather();
   } catch (error) {
-    console.log('Weather API error:', error.message);
     return getFallbackWeather();
   }
 }
