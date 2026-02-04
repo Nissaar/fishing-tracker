@@ -286,6 +286,31 @@ const PlanTrip = () => {
       {/* Recommendations Display */}
       {recommendation && (
         <div className="space-y-4">
+          {/* Filters Used */}
+          {recommendation.filters && (
+            <div className="bg-blue-50 rounded-xl border-2 border-blue-200 p-4">
+              <h3 className="text-sm font-semibold text-blue-900 mb-3">📊 Filters Applied</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div>
+                  <p className="text-xs text-blue-600 font-medium">Location</p>
+                  <p className="text-sm text-gray-800">{recommendation.filters.location}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-blue-600 font-medium">Fishing Type</p>
+                  <p className="text-sm text-gray-800">{recommendation.filters.fishingType}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-blue-600 font-medium">Bait Type</p>
+                  <p className="text-sm text-gray-800">{recommendation.filters.baitType}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-blue-600 font-medium">Fishing Method</p>
+                  <p className="text-sm text-gray-800">{recommendation.filters.fishingMethod}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Success Rate Card */}
           <div className="bg-white rounded-xl shadow-lg p-6">
             <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
@@ -418,12 +443,27 @@ const PlanTrip = () => {
               
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {recommendation.bestTimes.map((time, index) => (
-                  <div key={index} className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg p-4 text-center">
-                    <Sun className="w-6 h-6 text-yellow-500 mx-auto mb-2" />
+                  <div 
+                    key={index} 
+                    className={`rounded-lg p-4 text-center ${
+                      time.activity === 'high' 
+                        ? 'bg-gradient-to-br from-green-100 to-emerald-100 border-2 border-green-300' 
+                        : time.activity === 'moderate'
+                        ? 'bg-gradient-to-br from-yellow-50 to-amber-50 border-2 border-yellow-300'
+                        : 'bg-gradient-to-br from-blue-50 to-cyan-50'
+                    }`}
+                  >
+                    <Fish className={`w-6 h-6 mx-auto mb-2 ${
+                      time.activity === 'high' ? 'text-green-600' : 
+                      time.activity === 'moderate' ? 'text-yellow-600' : 'text-blue-500'
+                    }`} />
                     <p className="font-semibold text-gray-800">{time.period}</p>
                     <p className="text-sm text-gray-600">{time.time}</p>
                     {time.reason && (
-                      <p className="text-xs text-blue-600 mt-1">{time.reason}</p>
+                      <p className={`text-xs mt-1 ${
+                        time.activity === 'high' ? 'text-green-700 font-semibold' : 
+                        time.activity === 'moderate' ? 'text-yellow-700' : 'text-blue-600'
+                      }`}>{time.reason}</p>
                     )}
                   </div>
                 ))}
