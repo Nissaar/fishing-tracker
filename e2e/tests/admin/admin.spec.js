@@ -30,40 +30,51 @@ test.describe('Admin - Access Control', () => {
   
   // This test needs to run as a non-admin user
   test('should redirect non-admin users to dashboard', async ({ browser }) => {
-    // Create a new context with user (non-admin) auth state
+    await test.step('1. Create new browser context with non-admin user auth state', async () => {
+      // Create a new context with user (non-admin) auth state
+    });
+    
     const context = await browser.newContext({ storageState: USER_AUTH });
     const page = await context.newPage();
     
-    await page.goto('/admin');
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000);
+    await test.step('2. Navigate to /admin as non-admin user', async () => {
+      await page.goto('/admin');
+      await page.waitForLoadState('networkidle');
+      await page.waitForTimeout(2000);
+    });
     
-    // Non-admin should be redirected or shown access denied
-    const url = page.url();
-    const hasAccessDenied = await page.locator('text=/access denied|not authorized|admin.*required/i').isVisible();
-    
-    // Either redirected away from admin or shown access denied
-    expect(url.includes('/dashboard') || url.includes('/admin') || hasAccessDenied).toBeTruthy();
+    await test.step('3. Verify redirect to dashboard or access denied message', async () => {
+      const url = page.url();
+      const hasAccessDenied = await page.locator('text=/access denied|not authorized|admin.*required/i').isVisible();
+      expect(url.includes('/dashboard') || url.includes('/admin') || hasAccessDenied).toBeTruthy();
+    });
     
     await context.close();
   });
   
   test('should show admin tabs for admin users', async ({ page }) => {
-    await page.goto('/admin');
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000);
+    await test.step('1. Navigate to /admin as admin user', async () => {
+      await page.goto('/admin');
+      await page.waitForLoadState('networkidle');
+      await page.waitForTimeout(2000);
+    });
     
-    // If user is admin, tabs should be visible
-    const overviewTab = page.locator('button:has-text("Overview")');
-    const hasAdminAccess = await overviewTab.isVisible();
+    await test.step('2. Check if admin has access (Overview tab visible)', async () => {
+      const overviewTab = page.locator('button:has-text("Overview")');
+      const hasAdminAccess = await overviewTab.isVisible();
+      if (!hasAdminAccess) return;
+    });
     
-    if (hasAdminAccess) {
-      await expect(page.locator('button:has-text("Review Submissions")')).toBeVisible();
-      await expect(page.locator('button:has-text("System Logs")')).toBeVisible();
-      await expect(page.locator('button:has-text("Contact Messages")')).toBeVisible();
-      await expect(page.locator('button:has-text("Manage Dropdowns")')).toBeVisible();
-      await expect(page.locator('button:has-text("User Management")')).toBeVisible();
-    }
+    await test.step('3. Verify all admin tabs are visible', async () => {
+      const overviewTab = page.locator('button:has-text("Overview")');
+      if (await overviewTab.isVisible()) {
+        await expect(page.locator('button:has-text("Review Submissions")')).toBeVisible();
+        await expect(page.locator('button:has-text("System Logs")')).toBeVisible();
+        await expect(page.locator('button:has-text("Contact Messages")')).toBeVisible();
+        await expect(page.locator('button:has-text("Manage Dropdowns")')).toBeVisible();
+        await expect(page.locator('button:has-text("User Management")')).toBeVisible();
+      }
+    });
   });
 });
 
@@ -76,76 +87,87 @@ test.describe('Admin - Overview Tab', () => {
   });
   
   test('should display statistics dashboard', async ({ page }) => {
-    const overviewTab = page.locator('button:has-text("Overview")');
+    await test.step('1. Click "Overview" tab', async () => {
+      const overviewTab = page.locator('button:has-text("Overview")');
+      if (await overviewTab.isVisible()) {
+        await overviewTab.click();
+        await page.waitForTimeout(1000);
+      }
+    });
     
-    if (await overviewTab.isVisible()) {
-      await overviewTab.click();
-      await page.waitForTimeout(1000);
-      
-      // Should display stats cards
-      const statsSection = page.locator('[class*="grid"], [class*="flex"]').first();
-      await expect(statsSection).toBeVisible();
-    }
+    await test.step('2. Verify statistics section is visible', async () => {
+      const overviewTab = page.locator('button:has-text("Overview")');
+      if (await overviewTab.isVisible()) {
+        const statsSection = page.locator('[class*="grid"], [class*="flex"]').first();
+        await expect(statsSection).toBeVisible();
+      }
+    });
   });
   
   test('should show total users count', async ({ page }) => {
-    const overviewTab = page.locator('button:has-text("Overview")');
+    await test.step('1. Click "Overview" tab', async () => {
+      const overviewTab = page.locator('button:has-text("Overview")');
+      if (await overviewTab.isVisible()) {
+        await overviewTab.click();
+        await page.waitForTimeout(1000);
+      }
+    });
     
-    if (await overviewTab.isVisible()) {
-      await overviewTab.click();
-      await page.waitForTimeout(1000);
-      
+    await test.step('2. Verify total users count is displayed', async () => {
       const usersCount = page.locator('text=/users|total.*users/i');
       // Users count should be displayed
-    }
+    });
   });
   
   test('should show total fishing logs count', async ({ page }) => {
-    const overviewTab = page.locator('button:has-text("Overview")');
+    await test.step('1. Click "Overview" tab', async () => {
+      const overviewTab = page.locator('button:has-text("Overview")');
+      if (await overviewTab.isVisible()) {
+        await overviewTab.click();
+        await page.waitForTimeout(1000);
+      }
+    });
     
-    if (await overviewTab.isVisible()) {
-      await overviewTab.click();
-      await page.waitForTimeout(1000);
-      
+    await test.step('2. Verify fishing logs/trips count is displayed', async () => {
       const logsCount = page.locator('text=/logs|trips|entries/i');
       // Logs count should be displayed
-    }
+    });
   });
   
   test('should display most active users', async ({ page }) => {
-    const overviewTab = page.locator('button:has-text("Overview")');
-    
-    if (await overviewTab.isVisible()) {
-      await overviewTab.click();
-      await page.waitForTimeout(1000);
-      
-      const activeUsers = page.locator('text=/active.*users|top.*users/i');
-      // Active users list might be displayed
-    }
+    await test.step('1. Click "Overview" tab and look for active users list', async () => {
+      const overviewTab = page.locator('button:has-text("Overview")');
+      if (await overviewTab.isVisible()) {
+        await overviewTab.click();
+        await page.waitForTimeout(1000);
+        const activeUsers = page.locator('text=/active.*users|top.*users/i');
+        // Active users list might be displayed
+      }
+    });
   });
   
   test('should display popular locations', async ({ page }) => {
-    const overviewTab = page.locator('button:has-text("Overview")');
-    
-    if (await overviewTab.isVisible()) {
-      await overviewTab.click();
-      await page.waitForTimeout(1000);
-      
-      const locations = page.locator('text=/popular.*locations|top.*locations/i');
-      // Popular locations might be displayed
-    }
+    await test.step('1. Click "Overview" tab and look for popular locations', async () => {
+      const overviewTab = page.locator('button:has-text("Overview")');
+      if (await overviewTab.isVisible()) {
+        await overviewTab.click();
+        await page.waitForTimeout(1000);
+        const locations = page.locator('text=/popular.*locations|top.*locations/i');
+        // Popular locations might be displayed
+      }
+    });
   });
   
   test('should display success rate', async ({ page }) => {
-    const overviewTab = page.locator('button:has-text("Overview")');
-    
-    if (await overviewTab.isVisible()) {
-      await overviewTab.click();
-      await page.waitForTimeout(1000);
-      
-      const successRate = page.locator('text=/success.*rate|%/i');
-      // Success rate should be displayed
-    }
+    await test.step('1. Click "Overview" tab and look for success rate', async () => {
+      const overviewTab = page.locator('button:has-text("Overview")');
+      if (await overviewTab.isVisible()) {
+        await overviewTab.click();
+        await page.waitForTimeout(1000);
+        const successRate = page.locator('text=/success.*rate|%/i');
+        // Success rate should be displayed
+      }
+    });
   });
 });
 
@@ -158,48 +180,53 @@ test.describe('Admin - Review Submissions Tab', () => {
   });
   
   test('should display submissions list', async ({ page }) => {
-    const submissionsTab = page.locator('button').filter({ hasText: /review|submissions/i }).first();
+    await test.step('1. Click "Review Submissions" tab', async () => {
+      const submissionsTab = page.locator('button').filter({ hasText: /review|submissions/i }).first();
+      if (await submissionsTab.isVisible()) {
+        await submissionsTab.click();
+        await page.waitForTimeout(1500);
+      }
+    });
     
-    if (await submissionsTab.isVisible()) {
-      await submissionsTab.click();
-      await page.waitForTimeout(1500);
-      
-      // Page should have content - either submissions or empty state
+    await test.step('2. Verify page content is loaded (submissions or empty state)', async () => {
       const pageContent = await page.content();
       expect(pageContent.length).toBeGreaterThan(0);
-    }
+    });
   });
   
   test('should have filter options for submissions', async ({ page }) => {
-    const submissionsTab = page.locator('button').filter({ hasText: /review|submissions/i }).first();
+    await test.step('1. Click "Review Submissions" tab', async () => {
+      const submissionsTab = page.locator('button').filter({ hasText: /review|submissions/i }).first();
+      if (await submissionsTab.isVisible()) {
+        await submissionsTab.click();
+        await page.waitForTimeout(1000);
+      }
+    });
     
-    if (await submissionsTab.isVisible()) {
-      await submissionsTab.click();
-      await page.waitForTimeout(1000);
-      
-      // Check page loaded
+    await test.step('2. Verify filter options are available', async () => {
       const pageContent = await page.content();
       expect(pageContent.length).toBeGreaterThan(0);
-    }
+    });
   });
   
   test('should display submission details', async ({ page }) => {
-    const submissionsTab = page.locator('button').filter({ hasText: /review|submissions/i }).first();
+    await test.step('1. Click "Review Submissions" tab', async () => {
+      const submissionsTab = page.locator('button').filter({ hasText: /review|submissions/i }).first();
+      if (await submissionsTab.isVisible()) {
+        await submissionsTab.click();
+        await page.waitForTimeout(1500);
+      }
+    });
     
-    if (await submissionsTab.isVisible()) {
-      await submissionsTab.click();
-      await page.waitForTimeout(1500);
-      
-      // If there are submissions, check for details
+    await test.step('2. Check for submission items (table rows or cards)', async () => {
       const submissionItem = page.locator('table tbody tr, [class*="card"]').first();
-      
       if (await submissionItem.isVisible()) {
-        // Should show type, value, status
         const hasTypeInfo = await page.locator('text=/type|category/i').isVisible();
         const hasValueInfo = await page.locator('text=/value|name/i').isVisible();
       }
-    }
+    });
   });
+
   
   test('should have approve button for pending submissions', async ({ page }) => {
     const submissionsTab = page.locator('button:has-text("Review Submissions")');

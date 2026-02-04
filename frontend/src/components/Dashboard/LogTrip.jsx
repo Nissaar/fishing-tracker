@@ -36,7 +36,11 @@ const LogTrip = () => {
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     timeStart: new Date().toTimeString().split(' ')[0].substring(0, 5),
-    timeEnd: new Date().toTimeString().split(' ')[0].substring(0, 5),
+    timeEnd: (() => {
+      const endTime = new Date();
+      endTime.setHours(endTime.getHours() + 1);
+      return endTime.toTimeString().split(' ')[0].substring(0, 5);
+    })(),
     location: '',
     locationName: '',
     fishingType: '',
@@ -224,13 +228,14 @@ const LogTrip = () => {
         e.preventDefault();
         if (currentActiveIndex >= 0 && currentActiveIndex < filteredFishForIndex.length) {
           const selectedFish = filteredFishForIndex[currentActiveIndex];
-          updateFishType(index, selectedFish.display);
+          const newFishTypes = [...formData.fishTypes];
+          newFishTypes[index] = selectedFish.display;
+          const newFishTypeOther = formData.fishTypeOther || [];
+          newFishTypeOther[index] = '';
+          setFormData({ ...formData, fishTypes: newFishTypes, fishTypeOther: newFishTypeOther });
           setFishSearch({ ...fishSearch, [index]: selectedFish.display });
           setShowFishDropdown({ ...showFishDropdown, [index]: false });
           setActiveFishIndex({ ...activeFishIndex, [index]: -1 });
-          const newFishTypeOther = formData.fishTypeOther || [];
-          newFishTypeOther[index] = '';
-          setFormData({ ...formData, fishTypeOther: newFishTypeOther });
         }
         break;
       case 'Escape':
@@ -314,7 +319,11 @@ const LogTrip = () => {
       setFormData({
         date: new Date().toISOString().split('T')[0],
         timeStart: new Date().toTimeString().split(' ')[0].substring(0, 5),
-        timeEnd: new Date().toTimeString().split(' ')[0].substring(0, 5),
+        timeEnd: (() => {
+          const endTime = new Date();
+          endTime.setHours(endTime.getHours() + 1);
+          return endTime.toTimeString().split(' ')[0].substring(0, 5);
+        })(),
         location: '',
         locationName: '',
         fishingType: '',
@@ -829,12 +838,9 @@ const LogTrip = () => {
                       }}
                       onFocus={() => setShowFishDropdown({ ...showFishDropdown, [index]: true })}
                       onBlur={() => {
-                        // Save the fish name to formData when user leaves the field
-                        const fishValue = fishSearch[index];
-                        if (fishValue && fishValue.trim()) {
-                          updateFishType(index, fishValue);
-                        }
-                        setShowFishDropdown({ ...showFishDropdown, [index]: false });
+                        setTimeout(() => {
+                          setShowFishDropdown({ ...showFishDropdown, [index]: false });
+                        }, 200);
                       }}
                       onKeyDown={handleFishKeyDown(index, filteredFishForIndex)}
                       aria-label={`Fish ${index + 1}`}
@@ -858,13 +864,15 @@ const LogTrip = () => {
                             id={`fish-option-${index}-${fishIdx}`}
                             role="option"
                             aria-selected={fishIdx === currentActiveIndex}
-                            onClick={() => {
-                              updateFishType(index, fish.display);
-                              setFishSearch({ ...fishSearch, [index]: fish.display });
-                              setShowFishDropdown({ ...showFishDropdown, [index]: false });
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              const newFishTypes = [...formData.fishTypes];
+                              newFishTypes[index] = fish.display;
                               const newFishTypeOther = formData.fishTypeOther || [];
                               newFishTypeOther[index] = '';
-                              setFormData({ ...formData, fishTypeOther: newFishTypeOther });
+                              setFormData({ ...formData, fishTypes: newFishTypes, fishTypeOther: newFishTypeOther });
+                              setFishSearch({ ...fishSearch, [index]: fish.display });
+                              setShowFishDropdown({ ...showFishDropdown, [index]: false });
                             }}
                             className={`px-4 py-3 cursor-pointer border-b border-gray-100 last:border-b-0 ${
                               fishIdx === currentActiveIndex ? 'bg-green-100' : 'hover:bg-green-50'
@@ -879,13 +887,15 @@ const LogTrip = () => {
                           <div
                             role="option"
                             aria-selected={false}
-                            onClick={() => {
-                              updateFishType(index, fishSearchValue);
-                              setFishSearch({ ...fishSearch, [index]: fishSearchValue });
-                              setShowFishDropdown({ ...showFishDropdown, [index]: false });
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              const newFishTypes = [...formData.fishTypes];
+                              newFishTypes[index] = fishSearchValue;
                               const newFishTypeOther = formData.fishTypeOther || [];
                               newFishTypeOther[index] = fishSearchValue;
-                              setFormData({ ...formData, fishTypeOther: newFishTypeOther });
+                              setFormData({ ...formData, fishTypes: newFishTypes, fishTypeOther: newFishTypeOther });
+                              setFishSearch({ ...fishSearch, [index]: fishSearchValue });
+                              setShowFishDropdown({ ...showFishDropdown, [index]: false });
                             }}
                             className="px-4 py-3 hover:bg-yellow-50 cursor-pointer border-b border-gray-100 font-semibold text-yellow-700"
                           >

@@ -2,6 +2,10 @@ const express = require('express');
 const fishingController = require('../controllers/fishingController');
 const authMiddleware = require('../middleware/authMiddleware');
 const pool = require('../config/database');
+const logger = require('../config/logger');
+const { getWeatherForReference, getTideHeight } = require('../services/openMeteoService');
+const { allLocations } = require('../data/mauritiusLocations');
+const { calculateSolunarPeriods, getCurrentActivity } = require('../utils/solunarTheory');
 
 const router = express.Router();
 
@@ -237,8 +241,8 @@ router.post('/trip-recommendations', async (req, res) => {
     }
 
     if (fishingMethod) {
-      params.push(fishingMethod);
-      query += ` AND fl.fishing_method = $${params.length}`;
+      params.push(fishingMethod.toLowerCase());
+      query += ` AND LOWER(fl.fishing_method) = $${params.length}`;
     }
 
     query += ' ORDER BY fl.log_date DESC LIMIT 100';
@@ -303,15 +307,118 @@ router.post('/trip-recommendations', async (req, res) => {
       bestTimes.push({ period: 'Dusk', time: '17:00 - 19:00', reason: 'Active feeding period' });
     }
 
+    // Calculate top species from successful trips
+    const topSpecies = calculateTopSpecies(successfulTrips);
+
+    // Find location by name OR id
+    const locationObj = allLocations.find(loc => 
+      loc.name === location || loc.id === location
+    );
+
+    // Initialize real-time environmental data
+    let weatherData = { display: 'Weather unavailable' };
+    let tideData = { display: 'Tide data unavailable' };
+    let solunarData = null;
+
+    if (locationObj && date && startTime && endTime) {
+      try {
+        // Create datetime strings for start and end of fishing window
+        const startDateTime = `${date}T${startTime}:00`;
+        const endDateTime = `${date}T${endTime}:00`;
+        
+        // Get weather, tide, and solunar data in parallel
+        const [startWeather, endWeather, startTide, endTide, solunar] = await Promise.all([
+          getWeatherForReference(locationObj.lat, locationObj.lon, startDateTime).catch(() => null),
+          getWeatherForReference(locationObj.lat, locationObj.lon, endDateTime).catch(() => null),
+          getTideHeight(locationObj.lat, locationObj.lon, date, startDateTime).catch(() => null),
+          getTideHeight(locationObj.lat, locationObj.lon, date, endDateTime).catch(() => null),
+          calculateSolunarPeriods(date, locationObj.lat, locationObj.lon).catch(() => null)
+        ]);
+        
+        // Weather forecast for time range
+        if (startWeather && endWeather) {
+          const description = startWeather.description === endWeather.description 
+            ? startWeather.description 
+            : `${startWeather.description} → ${endWeather.description}`;
+          weatherData = {
+            display: `${startWeather.icon || '⛅'} ${description}`
+          };
+        }
+        
+        // Tide data for time range
+        if (startTide && endTide) {
+          const avgHeight = ((parseFloat(startTide.height) || 0) + (parseFloat(endTide.height) || 0)) / 2;
+          const tideTransition = startTide.level === endTide.level 
+            ? startTide.level 
+            : `${startTide.level} → ${endTide.level}`;
+          tideData = {
+            display: `${tideTransition} (${avgHeight.toFixed(1)}m avg)`
+          };
+        }
+        
+        // Solunar data - add fish activity to best times
+        if (solunar) {
+          solunarData = solunar;
+          // Clear default times and add solunar-based times with activity levels
+          bestTimes.length = 0;
+          
+          if (solunar.majorPeriods && solunar.majorPeriods.length > 0) {
+            solunar.majorPeriods.forEach(period => {
+              bestTimes.push({
+                period: 'Major',
+                time: `${period.start} - ${period.end}`,
+                reason: '🐟🐟🐟 High fish activity',
+                activity: 'high'
+              });
+            });
+          }
+          if (solunar.minorPeriods && solunar.minorPeriods.length > 0) {
+            solunar.minorPeriods.forEach(period => {
+              bestTimes.push({
+                period: 'Minor',
+                time: `${period.start} - ${period.end}`,
+                reason: '🐟🐟 Moderate fish activity',
+                activity: 'moderate'
+              });
+            });
+          }
+          
+          // If no solunar periods found, add default times
+          if (bestTimes.length === 0) {
+            bestTimes.push({ period: 'Dawn', time: '05:00 - 07:00', reason: '🐟 General feeding time', activity: 'low' });
+            bestTimes.push({ period: 'Dusk', time: '17:00 - 19:00', reason: '🐟 General feeding time', activity: 'low' });
+          }
+        }
+      } catch (error) {
+        logger.error('Environmental data error:', error.message);
+      }
+    }
+
+    // Calculate best practices from historical data (when filters not selected)
+    const bestPractices = {
+      bestFishingType: fishingType || calculateBestFromTrips(successfulTrips, 'fishing_type'),
+      bestBait: baitType || calculateBestFromTrips(successfulTrips, 'bait'),
+      bestMethod: fishingMethod || calculateBestFromTrips(successfulTrips, 'fishing_method')
+    };
+
+    // Build filter summary with recommendations when not specified
+    const filtersUsed = {
+      location: location || 'All locations',
+      fishingType: fishingType || `Recommended: ${bestPractices.bestFishingType}`,
+      baitType: baitType || `Recommended: ${bestPractices.bestBait}`,
+      fishingMethod: fishingMethod || `Recommended: ${bestPractices.bestMethod}`
+    };
+
     res.json({
       hasData: true,
       successRate,
       confidence,
       historicalTrips: historicalTrips.length,
       rating,
+      filters: filtersUsed,
       conditions: {
-        weather: 'Check forecast',
-        tide: conditions.bestTide || 'Varies',
+        weather: weatherData.display,
+        tide: tideData.display,
         moonPhase: conditions.bestMoonPhase || 'Any',
         wind: 'Light winds preferred'
       },
@@ -321,7 +428,7 @@ router.post('/trip-recommendations', async (req, res) => {
         totalTrips: historicalTrips.length,
         successfulTrips: successfulTrips.length,
         avgCatch: conditions.avgFishPerTrip,
-        topSpecies: 'Various'
+        topSpecies: topSpecies
       }
     });
   } catch (error) {
@@ -329,6 +436,45 @@ router.post('/trip-recommendations', async (req, res) => {
     res.status(500).json({ error: 'Failed to get trip recommendations' });
   }
 });
+
+// Helper function to calculate the most caught fish species
+function calculateTopSpecies(trips) {
+  if (trips.length === 0) return 'Unknown';
+  
+  const speciesCount = {};
+  
+  trips.forEach(trip => {
+    if (trip.fish_types && Array.isArray(trip.fish_types)) {
+      trip.fish_types.forEach(fish => {
+        if (fish && fish.trim()) {
+          speciesCount[fish] = (speciesCount[fish] || 0) + 1;
+        }
+      });
+    }
+  });
+  
+  if (Object.keys(speciesCount).length === 0) return 'Unknown';
+  return Object.keys(speciesCount).reduce((a, b) => speciesCount[a] > speciesCount[b] ? a : b);
+}
+
+// Helper function to calculate best value from trips for a given field
+function calculateBestFromTrips(trips, field) {
+  if (trips.length === 0) return 'Not enough data';
+  
+  const countMap = {};
+  
+  trips.forEach(trip => {
+    const value = trip[field];
+    if (value && value.trim && value.trim()) {
+      countMap[value] = (countMap[value] || 0) + 1;
+    } else if (value) {
+      countMap[value] = (countMap[value] || 0) + 1;
+    }
+  });
+  
+  if (Object.keys(countMap).length === 0) return 'Not enough data';
+  return Object.keys(countMap).reduce((a, b) => countMap[a] > countMap[b] ? a : b);
+}
 
 // Helper function to analyze conditions from successful trips
 function analyzeConditions(trips) {
@@ -339,8 +485,8 @@ function analyzeConditions(trips) {
   const fishActivityCount = {};
 
   trips.forEach(trip => {
-    // Moon phase
-    const moonPhase = trip.moon_phase?.split(' ').pop() || 'Unknown';
+    // Moon phase - remove numeric prefix (e.g., "1 Full Moon" -> "Full Moon")
+    const moonPhase = trip.moon_phase?.replace(/^\d+\s+/, '').trim() || 'Unknown';
     moonPhaseCount[moonPhase] = (moonPhaseCount[moonPhase] || 0) + 1;
 
     // Tide level
