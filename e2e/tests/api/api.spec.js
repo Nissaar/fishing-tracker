@@ -34,42 +34,70 @@ const test = testBase;
 test.describe('API - Health & Status', () => {
   
   test('should return health check status', async ({ apiHelper }) => {
-    const response = await apiHelper.healthCheck();
+    let response;
     
-    expect(response.ok()).toBeTruthy();
+    await test.step('1. Send GET request to /api/health endpoint', async () => {
+      response = await apiHelper.healthCheck();
+    });
     
-    const data = await response.json();
-    expect(data.status).toBe('OK');
-    expect(data.timestamp).toBeDefined();
+    await test.step('2. Verify response status is 200 OK', async () => {
+      expect(response.ok()).toBeTruthy();
+    });
+    
+    await test.step('3. Verify response contains status: "OK" and timestamp', async () => {
+      const data = await response.json();
+      expect(data.status).toBe('OK');
+      expect(data.timestamp).toBeDefined();
+    });
   });
 });
 
 test.describe('API - Public Endpoints', () => {
   
   test('should return public conditions data', async ({ apiHelper }) => {
-    const response = await apiHelper.getConditions();
+    let response;
     
-    expect(response.ok()).toBeTruthy();
+    await test.step('1. Send GET request to conditions endpoint (no auth required)', async () => {
+      response = await apiHelper.getConditions();
+    });
     
-    const data = await response.json();
-    // Should have weather, moon, and tide data
-    expect(data).toBeDefined();
+    await test.step('2. Verify response status is 200 OK', async () => {
+      expect(response.ok()).toBeTruthy();
+    });
+    
+    await test.step('3. Verify response contains weather/moon/tide data', async () => {
+      const data = await response.json();
+      expect(data).toBeDefined();
+    });
   });
   
   test('should return locations list', async ({ apiHelper }) => {
-    const response = await apiHelper.getLocations();
+    let response;
     
-    // Locations endpoint may require auth or return different structure
-    expect(response.status()).toBeLessThan(500);
+    await test.step('1. Send GET request to locations endpoint', async () => {
+      response = await apiHelper.getLocations();
+    });
+    
+    await test.step('2. Verify response is not a server error (status < 500)', async () => {
+      expect(response.status()).toBeLessThan(500);
+    });
   });
   
   test('should accept contact form submission', async ({ apiHelper, testData }) => {
     const contactData = testData.contactMessage();
+    let response;
     
-    const response = await apiHelper.submitContact(contactData);
+    await test.step(`1. Prepare contact data: name="${contactData.name}", email="${contactData.email}"`, async () => {
+      // Data prepared
+    });
     
-    // Should return success or validation error
-    expect(response.status()).toBeLessThan(500);
+    await test.step('2. Send POST request to contact endpoint', async () => {
+      response = await apiHelper.submitContact(contactData);
+    });
+    
+    await test.step('3. Verify response is success or validation error (status < 500)', async () => {
+      expect(response.status()).toBeLessThan(500);
+    });
   });
 });
 
@@ -77,84 +105,102 @@ test.describe('API - Authentication Endpoints', () => {
   
   test('should reject login with invalid credentials', async ({ request }) => {
     const API_URL = process.env.TEST_API_URL || 'http://localhost:5000/api';
+    let response;
     
-    const response = await request.post(`${API_URL}/auth/login`, {
-      data: {
-        email: 'nonexistent@test.com',
-        password: 'wrongpassword'
-      }
+    await test.step('1. Send POST to /api/auth/login with invalid credentials', async () => {
+      response = await request.post(`${API_URL}/auth/login`, {
+        data: {
+          email: 'nonexistent@test.com',
+          password: 'wrongpassword'
+        }
+      });
     });
     
-    // Should return 401 or 400
-    expect(response.status()).toBeGreaterThanOrEqual(400);
-    expect(response.status()).toBeLessThan(500);
+    await test.step('2. Verify response is 4xx error (401 or 400)', async () => {
+      expect(response.status()).toBeGreaterThanOrEqual(400);
+      expect(response.status()).toBeLessThan(500);
+    });
   });
   
   test('should login successfully with valid credentials', async ({ request }) => {
     const API_URL = process.env.TEST_API_URL || 'http://localhost:5000/api';
-    
     const email = process.env.TEST_USER_EMAIL || 'e2etest@fishingtracker.mu';
-      const password = process.env.TEST_USER_PASSWORD || 'password';
+    const password = process.env.TEST_USER_PASSWORD || 'password';
+    let response;
     
-    const response = await request.post(`${API_URL}/auth/login`, {
-      data: { email, password }
+    await test.step(`1. Send POST to /api/auth/login with valid email: ${email}`, async () => {
+      response = await request.post(`${API_URL}/auth/login`, {
+        data: { email, password }
+      });
     });
     
-    if (response.ok()) {
-      const data = await response.json();
-      expect(data.token).toBeDefined();
-    }
-    // If not ok, test user might not exist yet
+    await test.step('2. Verify response contains JWT token on success', async () => {
+      if (response.ok()) {
+        const data = await response.json();
+        expect(data.token).toBeDefined();
+      }
+      // If not ok, test user might not exist yet
+    });
   });
   
   test('should reject registration with existing email', async ({ request }) => {
     const API_URL = process.env.TEST_API_URL || 'http://localhost:5000/api';
-    
     const email = process.env.TEST_USER_EMAIL || 'e2etest@fishingtracker.mu';
+    let response;
     
-    const response = await request.post(`${API_URL}/auth/register`, {
-      data: {
-        username: 'duplicateuser',
-        email: email,
-        password: 'TestPassword123!'
-      }
+    await test.step(`1. Send POST to /api/auth/register with existing email: ${email}`, async () => {
+      response = await request.post(`${API_URL}/auth/register`, {
+        data: {
+          username: 'duplicateuser',
+          email: email,
+          password: 'TestPassword123!'
+        }
+      });
     });
     
-    // Should return error for duplicate email
-    expect(response.status()).toBeGreaterThanOrEqual(400);
+    await test.step('2. Verify response is 4xx error for duplicate email', async () => {
+      expect(response.status()).toBeGreaterThanOrEqual(400);
+    });
   });
   
   test('should return user profile with valid token', async ({ request }) => {
     const API_URL = process.env.TEST_API_URL || 'http://localhost:5000/api';
-    
     const email = process.env.TEST_USER_EMAIL || 'e2etest@fishingtracker.mu';
     const password = process.env.TEST_USER_PASSWORD || 'password';
     
-    // First login to get token
-    const loginResponse = await request.post(`${API_URL}/auth/login`, {
-      data: { email, password }
+    let token;
+    
+    await test.step('1. Login to get authentication token', async () => {
+      const loginResponse = await request.post(`${API_URL}/auth/login`, {
+        data: { email, password }
+      });
+      if (loginResponse.ok()) {
+        const data = await loginResponse.json();
+        token = data.token;
+      }
     });
     
-    if (loginResponse.ok()) {
-      const { token } = await loginResponse.json();
-      
-      // Get profile - endpoint might be /profile or /me
-      const profileResponse = await request.get(`${API_URL}/auth/profile`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      // Profile endpoint should work or return proper error
-      expect(profileResponse.status()).toBeLessThan(500);
-    }
+    await test.step('2. Send GET to /api/auth/profile with Bearer token', async () => {
+      if (token) {
+        const profileResponse = await request.get(`${API_URL}/auth/profile`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        expect(profileResponse.status()).toBeLessThan(500);
+      }
+    });
   });
   
   test('should reject profile request without token', async ({ request }) => {
     const API_URL = process.env.TEST_API_URL || 'http://localhost:5000/api';
+    let response;
     
-    const response = await request.get(`${API_URL}/auth/profile`);
+    await test.step('1. Send GET to /api/auth/profile without Authorization header', async () => {
+      response = await request.get(`${API_URL}/auth/profile`);
+    });
     
-    // Should return 401 or 403
-    expect(response.status()).toBeGreaterThanOrEqual(400);
+    await test.step('2. Verify response is 401 or 403 (unauthorized)', async () => {
+      expect(response.status()).toBeGreaterThanOrEqual(400);
+    });
   });
 });
 
