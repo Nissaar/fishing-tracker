@@ -800,6 +800,32 @@ router.get('/submissions', async (req, res) => {
       LEFT JOIN users u ON fl.user_id = u.id
       WHERE fl.bait_other IS NOT NULL AND fl.bait_other != ''
       
+      UNION ALL
+      
+      -- Custom fish species from fish_types JSONB that don't exist in fish_species table
+      SELECT 
+        CONCAT('fl_fish_', fl.id, '_', ROW_NUMBER() OVER (PARTITION BY fl.id ORDER BY fish_name))::text as id,
+        fl.user_id,
+        u.username,
+        u.email,
+        fish_name as submitted_value,
+        'fish_species' as submission_type,
+        'pending' as status,
+        NULL::INTEGER as reviewed_by,
+        NULL as reviewer_username,
+        NULL as reviewed_at,
+        fl.created_at
+      FROM fishing_logs fl
+      CROSS JOIN LATERAL jsonb_array_elements_text(fl.fish_types) as fish_name
+      LEFT JOIN users u ON fl.user_id = u.id
+      LEFT JOIN fish_species fs ON LOWER(fish_name) = LOWER(fs.local_name) 
+                                OR LOWER(fish_name) = LOWER(fs.english_name)
+      WHERE fl.fish_types IS NOT NULL 
+        AND fl.fish_types != '[]'::jsonb
+        AND fs.id IS NULL
+        AND fish_name IS NOT NULL 
+        AND fish_name != ''
+      
       ORDER BY created_at DESC
     `);
 
@@ -820,6 +846,25 @@ router.get('/submissions', async (req, res) => {
         COUNT(CASE WHEN fishing_method_other IS NOT NULL AND fishing_method_other != '' THEN 1 END) +
         COUNT(CASE WHEN bait_other IS NOT NULL AND bait_other != '' THEN 1 END) as total
       FROM fishing_logs
+      
+      UNION ALL
+      
+      -- Count custom fish species not in fish_species table
+      SELECT
+        COUNT(*) as pending,
+        COUNT(*) as total
+      FROM (
+        SELECT DISTINCT fish_name
+        FROM fishing_logs fl
+        CROSS JOIN LATERAL jsonb_array_elements_text(fl.fish_types) as fish_name
+        LEFT JOIN fish_species fs ON LOWER(fish_name) = LOWER(fs.local_name) 
+                                  OR LOWER(fish_name) = LOWER(fs.english_name)
+        WHERE fl.fish_types IS NOT NULL 
+          AND fl.fish_types != '[]'::jsonb
+          AND fs.id IS NULL
+          AND fish_name IS NOT NULL 
+          AND fish_name != ''
+      ) as custom_fish
     `);
 
     const counts = countResult.rows.reduce((acc, row) => ({

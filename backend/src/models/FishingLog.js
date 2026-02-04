@@ -1,20 +1,45 @@
 const pool = require('../config/database');
 
 class FishingLog {
+  // Calculate end_date for overnight trips (when end time is earlier than start time)
+  static calculateEndDate(startDate, timeStart, timeEnd) {
+    if (!timeStart || !timeEnd || !startDate) return null;
+    
+    // Parse times to compare (format: "HH:MM" or "HH:MM:SS")
+    const startParts = timeStart.split(':').map(Number);
+    const endParts = timeEnd.split(':').map(Number);
+    
+    const startMinutes = startParts[0] * 60 + startParts[1];
+    const endMinutes = endParts[0] * 60 + endParts[1];
+    
+    // If end time is before start time, the trip spans midnight (overnight trip)
+    if (endMinutes < startMinutes) {
+      const date = new Date(startDate);
+      date.setDate(date.getDate() + 1);
+      return date.toISOString().split('T')[0];
+    }
+    
+    return null; // Same day trip, no end_date needed
+  }
+
   static async create(userId, logData) {
+    // Calculate end_date for overnight trips
+    const endDate = FishingLog.calculateEndDate(logData.date, logData.timeStart, logData.timeEnd);
+    
     const query = `
       INSERT INTO fishing_logs (
-        user_id, log_date, time_start, time_end, location, location_name, caught_fish, fish_count, 
+        user_id, log_date, end_date, time_start, time_end, location, location_name, caught_fish, fish_count, 
         fish_types, moon_phase, tide_phase, tide_height, sea_level, tide_data, weather_data, fish_activity, 
         solunar_data, hook_setup, bait, bait_other, fishing_type, fishing_type_other, fishing_method, 
         fishing_method_other, notes
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)
       RETURNING *
     `;
     const values = [
       userId,
       logData.date,
+      endDate,
       logData.timeStart || null,
       logData.timeEnd || null,
       logData.location,
