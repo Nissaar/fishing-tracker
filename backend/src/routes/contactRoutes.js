@@ -3,7 +3,8 @@ const { body, validationResult } = require('express-validator');
 const pool = require('../config/database');
 const authMiddleware = require('../middleware/authMiddleware');
 const { isAdmin } = require('../middleware/adminMiddleware');
-const mailgun = require('mailgun-js');
+const Mailgun = require('mailgun.js');
+const formData = require('form-data');
 const logger = require('../config/logger');
 
 const router = express.Router();
@@ -11,9 +12,10 @@ const router = express.Router();
 // Initialize Mailgun (optional - only if credentials provided)
 let mg;
 if (process.env.MAILGUN_API_KEY && process.env.MAILGUN_DOMAIN) {
-  mg = mailgun({
-    apiKey: process.env.MAILGUN_API_KEY,
-    domain: process.env.MAILGUN_DOMAIN
+  const mailgun = new Mailgun(formData);
+  mg = mailgun.client({
+    username: 'api',
+    key: process.env.MAILGUN_API_KEY
   });
 }
 
@@ -65,13 +67,13 @@ router.post(
           `
         };
 
-        mg.messages().send(emailData, (error, body) => {
-          if (error) {
+        mg.messages.create(process.env.MAILGUN_DOMAIN, emailData)
+          .then(msg => {
+            logger.info('Contact email sent successfully', { messageId: msg.id });
+          })
+          .catch(error => {
             logger.error('Failed to send contact email', { error: error.message });
-          } else {
-            logger.info('Contact email sent successfully', { messageId: body.id });
-          }
-        });
+          });
       }
 
       res.status(201).json({
