@@ -42,6 +42,7 @@ yarn-error.log*
 *.backup
 backups/
 !init.sql
+!backend/migrations/*.sql
 
 # Docker volumes
 postgres_data/

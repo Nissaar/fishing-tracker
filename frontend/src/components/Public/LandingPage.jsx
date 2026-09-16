@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Fish, Moon, Waves, Sun, Wind, Eye, Menu, X, Thermometer, ChevronLeft, ChevronRight, Activity, Sunrise, Sunset } from 'lucide-react';
+import { Fish, Moon, Waves, Sun, Wind, Eye, Menu, X, Thermometer, ChevronLeft, ChevronRight, Activity, Sunrise, Sunset, Users, Trophy, Layers } from 'lucide-react';
 import axios from 'axios';
 import PublicNav from './PublicNav';
+import CommunityEvents from './CommunityEvents';
+import Leaderboard from '../Common/Leaderboard';
 
 const LandingPage = () => {
   const [conditions, setConditions] = useState(null);
@@ -169,6 +171,48 @@ const LandingPage = () => {
               View detailed reports, analyze your fishing patterns, and discover the best times and locations for different species
             </p>
           </div>
+
+          {/* Feature 7 - NEW */}
+          <div className="text-center p-6 rounded-xl hover:bg-blue-50 transition-colors border-2 border-blue-100">
+            <div className="bg-indigo-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Layers className="w-8 h-8 text-indigo-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">
+              Several Fishing Types, One Trip
+              <span className="ml-2 align-middle text-xs bg-blue-600 text-white px-2 py-0.5 rounded-full">NEW</span>
+            </h3>
+            <p className="text-gray-600">
+              Casting in the morning, couler in the evening? Log every technique you used in a single trip instead of picking just one
+            </p>
+          </div>
+
+          {/* Feature 8 - NEW */}
+          <div className="text-center p-6 rounded-xl hover:bg-blue-50 transition-colors border-2 border-blue-100">
+            <div className="bg-teal-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Users className="w-8 h-8 text-teal-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">
+              Fishing Events
+              <span className="ml-2 align-middle text-xs bg-blue-600 text-white px-2 py-0.5 rounded-full">NEW</span>
+            </h3>
+            <p className="text-gray-600">
+              Announce when and where you are going fishing. Other anglers see your trip and can join you — never fish alone again
+            </p>
+          </div>
+
+          {/* Feature 9 - NEW */}
+          <div className="text-center p-6 rounded-xl hover:bg-blue-50 transition-colors border-2 border-blue-100">
+            <div className="bg-amber-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trophy className="w-8 h-8 text-amber-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">
+              Weekly & Monthly Top 5
+              <span className="ml-2 align-middle text-xs bg-blue-600 text-white px-2 py-0.5 rounded-full">NEW</span>
+            </h3>
+            <p className="text-gray-600">
+              Top contributors ranked every week and every month by trips logged, fish caught, fishing types and baits used
+            </p>
+          </div>
         </div>
 
         {/* CTA Section */}
@@ -180,6 +224,27 @@ const LandingPage = () => {
             Start Tracking Your Catches - It's Free! 🎣
           </Link>
           <p className="mt-4 text-gray-600">Join fishermen across Mauritius using our platform</p>
+        </div>
+      </div>
+
+      {/* Community Events */}
+      <div className="max-w-7xl mx-auto px-4 py-12">
+        <div className="text-center mb-8">
+          <h2 className="text-4xl font-bold text-gray-900 mb-3">
+            🎣 Who's Going Fishing?
+          </h2>
+          <p className="text-xl text-gray-600">
+            Members post their trips here — pick one and join them
+          </p>
+        </div>
+
+        <CommunityEvents />
+      </div>
+
+      {/* Top Contributors */}
+      <div className="bg-white py-16">
+        <div className="max-w-7xl mx-auto px-4">
+          <Leaderboard showShare title="🏆 Top 5 Contributors" />
         </div>
       </div>
 
@@ -560,6 +625,17 @@ const LandingPage = () => {
             <Link to="/about" className="text-gray-400 hover:text-white">
               About
             </Link>
+            {/* Only shown once REACT_APP_FACEBOOK_PAGE_URL is set at build time */}
+            {process.env.REACT_APP_FACEBOOK_PAGE_URL && (
+              <a
+                href={process.env.REACT_APP_FACEBOOK_PAGE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-white"
+              >
+                Facebook
+              </a>
+            )}
           </div>
         </div>
       </footer>

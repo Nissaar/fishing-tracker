@@ -231,8 +231,10 @@ router.post('/trip-recommendations', async (req, res) => {
     }
 
     if (fishingType) {
+      // A trip can list several fishing types, so match the array as well as
+      // the legacy single-value column
       params.push(fishingType);
-      query += ` AND fl.fishing_type = $${params.length}`;
+      query += ` AND (fl.fishing_type = $${params.length} OR fl.fishing_types @> to_jsonb(ARRAY[$${params.length}::text]))`;
     }
 
     if (baitType && baitType !== 'other') {
@@ -464,6 +466,14 @@ function calculateBestFromTrips(trips, field) {
   const countMap = {};
   
   trips.forEach(trip => {
+    // Trips can carry several fishing types; count each of them
+    if (field === 'fishing_type' && Array.isArray(trip.fishing_types) && trip.fishing_types.length > 0) {
+      trip.fishing_types.forEach(type => {
+        if (type) countMap[type] = (countMap[type] || 0) + 1;
+      });
+      return;
+    }
+
     const value = trip[field];
     if (value && value.trim && value.trim()) {
       countMap[value] = (countMap[value] || 0) + 1;

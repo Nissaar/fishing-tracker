@@ -43,4 +43,21 @@ export const fishingAPI = {
   getStatistics: () => api.get('/fishing/statistics')
 };
 
+export const eventsAPI = {
+  list: (scope) => api.get('/events', { params: scope ? { scope } : {} }),
+  get: (id) => api.get(`/events/${id}`),
+  create: (eventData) => api.post('/events', eventData),
+  update: (id, eventData) => api.put(`/events/${id}`, eventData),
+  remove: (id) => api.delete(`/events/${id}`),
+  join: (id, note) => api.post(`/events/${id}/join`, { note }),
+  leave: (id) => api.delete(`/events/${id}/join`)
+};
+
+// Public endpoints work without a token, so they are called through the same
+// axios instance (the interceptor simply adds no Authorization header)
+export const publicAPI = {
+  getLeaderboard: (period = 'week') => api.get('/public/leaderboard', { params: { period } }),
+  getUpcomingEvents: (limit = 5) => api.get('/public/events/upcoming', { params: { limit } })
+};
+
 export default api;

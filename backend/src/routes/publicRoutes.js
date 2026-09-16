@@ -4,6 +4,9 @@ const { calculateSolunarPeriods, getCurrentActivity } = require('../utils/soluna
 const { getWorldTidesData } = require('../services/tideService');
 const { getCurrentWeather } = require('../services/weatherService');
 const { getOpenMeteoMarineData, getSeaSurfaceTemperature, getWeatherForReference } = require('../services/openMeteoService');
+const { getLeaderboard } = require('../services/leaderboardService');
+const pool = require('../config/database');
+const logger = require('../config/logger');
 
 const router = express.Router();
 
@@ -82,6 +85,76 @@ router.get('/conditions', async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to get conditions' });
+  }
+});
+
+// ==================== COMMUNITY LEADERBOARD (public) ====================
+
+// Top contributors for the current week or month, ranked by trips logged,
+// fish caught, variety of fishing types and variety of baits.
+router.get('/leaderboard', async (req, res) => {
+  try {
+    const data = await getLeaderboard(req.query.period || 'week', req.query.limit);
+    res.json(data);
+  } catch (error) {
+    logger.error(`Leaderboard error: ${error.message}`);
+    res.status(500).json({ error: 'Failed to get leaderboard' });
+  }
+});
+
+// ==================== UPCOMING EVENTS TEASER (public) ====================
+
+// Public visitors get a deliberately partial view: date, region and fishing
+// types only. Exact spot, organiser and joining require an account.
+router.get('/events/upcoming', async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit, 10) || 5, 20);
+
+    const { rows } = await pool.query(
+      `SELECT
+         e.id,
+         to_char(e.event_date, 'YYYY-MM-DD') AS event_date,
+         e.time_start,
+         e.region,
+         e.fishing_types,
+         e.fishing_method,
+         COALESCE(p.participant_count, 0) AS participant_count
+       FROM fishing_events e
+       LEFT JOIN (
+         SELECT event_id, COUNT(*)::int AS participant_count
+         FROM fishing_event_participants
+         GROUP BY event_id
+       ) p ON p.event_id = e.id
+       WHERE e.status = 'open' AND e.event_date >= CURRENT_DATE
+       ORDER BY e.event_date ASC, e.time_start ASC NULLS LAST
+       LIMIT $1`,
+      [limit]
+    );
+
+    const totals = await pool.query(
+      `SELECT
+         COUNT(*)::int AS upcoming_total,
+         COUNT(*) FILTER (WHERE event_date <= CURRENT_DATE + 7)::int AS next_seven_days
+       FROM fishing_events
+       WHERE status = 'open' AND event_date >= CURRENT_DATE`
+    );
+
+    res.json({
+      upcomingTotal: totals.rows[0].upcoming_total,
+      nextSevenDays: totals.rows[0].next_seven_days,
+      events: rows.map(row => ({
+        id: row.id,
+        eventDate: row.event_date,
+        timeStart: row.time_start,
+        region: row.region || 'Mauritius',
+        fishingTypes: Array.isArray(row.fishing_types) ? row.fishing_types : [],
+        fishingMethod: row.fishing_method,
+        participantCount: Number(row.participant_count) || 0
+      }))
+    });
+  } catch (error) {
+    logger.error(`Public events teaser error: ${error.message}`);
+    res.status(500).json({ error: 'Failed to get upcoming events' });
   }
 });
 

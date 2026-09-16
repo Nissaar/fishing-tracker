@@ -304,10 +304,13 @@ exports.getLocationStats = async (req, res) => {
         baitCount[log.bait] = (baitCount[log.bait] || 0) + log.fish_count;
       }
 
-      // Count fishing types
-      if (log.fishing_type) {
-        fishingTypeCount[log.fishing_type] = (fishingTypeCount[log.fishing_type] || 0) + log.fish_count;
-      }
+      // Count fishing types (a trip can combine several)
+      const logFishingTypes = Array.isArray(log.fishing_types) && log.fishing_types.length > 0
+        ? log.fishing_types
+        : (log.fishing_type ? [log.fishing_type] : []);
+      logFishingTypes.forEach(type => {
+        fishingTypeCount[type] = (fishingTypeCount[type] || 0) + log.fish_count;
+      });
 
       // Count fish species
       if (log.fish_types) {
@@ -371,8 +374,9 @@ exports.getBestConditions = async (req, res) => {
     const params = [];
     
     if (fishingType) {
+      // Match trips that list this type among several, not only single-type trips
       params.push(fishingType);
-      query += ` AND fishing_type = $${params.length}`;
+      query += ` AND (fishing_type = $${params.length} OR fishing_types @> to_jsonb(ARRAY[$${params.length}::text]))`;
     }
     
     if (bait) {

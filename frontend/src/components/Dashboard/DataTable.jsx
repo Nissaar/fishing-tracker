@@ -167,7 +167,11 @@ const DataTable = () => {
                       {log.tide_height ? `${log.tide_height}m` : log.sea_level?.split(' ')[0] || '-'}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900">{log.bait || log.bait_other || '-'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{log.fishing_type || log.fishing_type_other || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      {Array.isArray(log.fishing_types) && log.fishing_types.length > 0
+                        ? log.fishing_types.join(', ')
+                        : log.fishing_type || log.fishing_type_other || '-'}
+                    </td>
                     <td className="px-4 py-3 text-sm text-gray-900">
                       {log.fishing_method === 'boat' ? '🚤 Boat' : log.fishing_method_other || '🏖️ Land'}
                     </td>

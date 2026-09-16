@@ -275,6 +275,7 @@ router.patch('/fishing-logs/:logId', async (req, res) => {
       'fish_count',
       'fish_types',
       'fishing_type',
+      'fishing_types',
       'fishing_method',
       'bait',
       'moon_phase',
@@ -292,10 +293,15 @@ router.patch('/fishing-logs/:logId', async (req, res) => {
 
     // Only update fields that are explicitly present in the request body.
     // This allows setting a field to NULL by sending `"field": null`.
+    // JSONB columns must be sent as JSON text, otherwise node-pg turns a JS
+    // array into a Postgres array literal
+    const jsonbFields = ['fish_types', 'fishing_types'];
+
     for (const field of updatableFields) {
       if (Object.prototype.hasOwnProperty.call(req.body, field)) {
+        const value = req.body[field];
         updates.push(`${field} = $${paramCount++}`);
-        values.push(req.body[field]);
+        values.push(jsonbFields.includes(field) && value !== null ? JSON.stringify(value) : value);
       }
     }
 

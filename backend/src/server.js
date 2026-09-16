@@ -24,6 +24,8 @@ const publicRoutes = require('./routes/publicRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const logsRoutes = require('./routes/logsRoutes');
 const contactRoutes = require('./routes/contactRoutes');
+const eventsRoutes = require('./routes/eventsRoutes');
+const { runMigrations } = require('./config/migrate');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -63,6 +65,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/fishing', fishingRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/logs', logsRoutes);
+app.use('/api/events', eventsRoutes);
 
 const pool = require('./config/database');
 
@@ -86,6 +89,11 @@ app.use((err, req, res, next) => {
   });
   res.status(500).json({ error: 'Something went wrong!' });
 });
+
+// Apply pending database migrations, then start the server.
+// A migration failure is logged but does not stop the API from serving.
+runMigrations()
+  .catch((err) => logger.error(`Database migration failed: ${err.message}`, { stack: err.stack }));
 
 // Start server
 const server = app.listen(PORT, '0.0.0.0', () => {

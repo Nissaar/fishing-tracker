@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Calendar, Activity, TrendingUp, Table, MapPin, Compass } from 'lucide-react';
+import { Calendar, Activity, TrendingUp, Table, MapPin, Compass, Users, Trophy } from 'lucide-react';
 import Header from '../Layout/Header';
 import LogTrip from './LogTrip';
 import Reports from './Reports';
@@ -9,6 +9,8 @@ import DataTable from './DataTable';
 import BrowseLocation from './BrowseLocation';
 import BestConditions from './BestConditions';
 import PlanTrip from './PlanTrip';
+import Events from './Events';
+import Leaderboard from '../Common/Leaderboard';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -18,6 +20,8 @@ const Dashboard = () => {
     { id: 'log', name: 'Log Trip', icon: Calendar },
     { id: 'table', name: 'View Data', icon: Table },
     { id: 'plan', name: 'Plan Trip', icon: Compass },
+    { id: 'events', name: 'Events', icon: Users },
+    { id: 'community', name: 'Top Anglers', icon: Trophy },
     { id: 'reports', name: 'Reports', icon: Activity },
     { id: 'predictions', name: 'Predictions', icon: TrendingUp },
     { id: 'browse', name: 'Browse Locations', icon: MapPin },
@@ -53,6 +57,8 @@ const Dashboard = () => {
             {activeTab === 'log' && <LogTrip />}
             {activeTab === 'table' && <DataTable />}
             {activeTab === 'plan' && <PlanTrip />}
+            {activeTab === 'events' && <Events />}
+            {activeTab === 'community' && <Leaderboard showShare title="🏆 Top Contributors" />}
             {activeTab === 'reports' && <Reports />}
             {activeTab === 'predictions' && <Predictions />}
             {activeTab === 'browse' && <BrowseLocation />}

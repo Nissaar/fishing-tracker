@@ -1,5 +1,19 @@
 const pool = require('../config/database');
 
+// A trip can mix several fishing types. `fishing_types` holds the full list and
+// `fishing_type` keeps the first one so existing reports and filters keep working.
+const normalizeFishingTypes = (logData) => {
+  const raw = Array.isArray(logData.fishingTypes)
+    ? logData.fishingTypes
+    : [logData.fishingTypes || logData.fishingType];
+
+  return [...new Set(
+    raw
+      .filter(type => typeof type === 'string' && type.trim() !== '')
+      .map(type => type.trim())
+  )];
+};
+
 class FishingLog {
   // Calculate end_date for overnight trips (when end time is earlier than start time)
   static calculateEndDate(startDate, timeStart, timeEnd) {
@@ -25,15 +39,16 @@ class FishingLog {
   static async create(userId, logData) {
     // Calculate end_date for overnight trips
     const endDate = FishingLog.calculateEndDate(logData.date, logData.timeStart, logData.timeEnd);
+    const fishingTypes = normalizeFishingTypes(logData);
     
     const query = `
       INSERT INTO fishing_logs (
         user_id, log_date, end_date, time_start, time_end, location, location_name, caught_fish, fish_count, 
         fish_types, moon_phase, tide_phase, tide_height, sea_level, tide_data, weather_data, fish_activity, 
-        solunar_data, hook_setup, bait, bait_other, fishing_type, fishing_type_other, fishing_method, 
+        solunar_data, hook_setup, bait, bait_other, fishing_type, fishing_types, fishing_type_other, fishing_method, 
         fishing_method_other, notes
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)
       RETURNING *
     `;
     const values = [
@@ -58,7 +73,8 @@ class FishingLog {
       logData.hookSetup || null,
       logData.bait || null,
       logData.baitOther || null,
-      logData.fishingType || null,
+      fishingTypes[0] || null,
+      JSON.stringify(fishingTypes),
       logData.fishingTypeOther || null,
       logData.fishingMethod || null,
       logData.fishingMethodOther || null,
@@ -79,6 +95,7 @@ class FishingLog {
     return result.rows.map(row => ({
       ...row,
       fish_types: row.fish_types || [],
+      fishing_types: row.fishing_types || (row.fishing_type ? [row.fishing_type] : []),
       tide_data: row.tide_data || {},
       weather_data: row.weather_data || {}
     }));
@@ -91,6 +108,7 @@ class FishingLog {
       return {
         ...result.rows[0],
         fish_types: result.rows[0].fish_types || [],
+        fishing_types: result.rows[0].fishing_types || (result.rows[0].fishing_type ? [result.rows[0].fishing_type] : []),
         tide_data: result.rows[0].tide_data || {},
         weather_data: result.rows[0].weather_data || {}
       };
@@ -99,11 +117,13 @@ class FishingLog {
   }
 
   static async update(id, userId, logData) {
+    const fishingTypes = normalizeFishingTypes(logData);
     const query = `
       UPDATE fishing_logs 
       SET log_date = $3, location = $4, location_name = $5, caught_fish = $6, fish_count = $7,
           fish_types = $8, moon_phase = $9, sea_level = $10, tide_data = $11, 
-          weather_data = $12, hook_setup = $13, bait = $14, notes = $15
+          weather_data = $12, hook_setup = $13, bait = $14, notes = $15,
+          fishing_type = $16, fishing_types = $17
       WHERE id = $1 AND user_id = $2
       RETURNING *
     `;
@@ -112,7 +132,8 @@ class FishingLog {
       logData.fishCount || 0, JSON.stringify(logData.fishTypes || []),
       logData.moonPhase, logData.seaLevel, JSON.stringify(logData.tideData || {}),
       JSON.stringify(logData.weatherData || {}), logData.hookSetup, 
-      logData.bait, logData.notes || ''
+      logData.bait, logData.notes || '',
+      fishingTypes[0] || null, JSON.stringify(fishingTypes)
     ];
     const result = await pool.query(query, values);
     return result.rows[0];
