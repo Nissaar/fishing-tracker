@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Trophy, Fish, Target, Bug, Loader } from 'lucide-react';
 import { publicAPI } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import FacebookShare from './FacebookShare';
 
 const CATEGORIES = [
@@ -78,11 +80,27 @@ const CategoryCard = ({ category, entries }) => {
   );
 };
 
-const Leaderboard = ({ showShare = false, defaultPeriod = 'week', title = '🏆 Top Contributors' }) => {
+/**
+ * @param showShare        offer the Facebook copy-text tool (admins only)
+ * @param minParticipants  below this many ranked anglers the rankings are
+ *                         replaced by a "be the first" prompt, so a thin
+ *                         leaderboard never goes out to visitors. Admins always
+ *                         see the real numbers.
+ */
+const Leaderboard = ({
+  showShare = false,
+  defaultPeriod = 'week',
+  title = '🏆 Top Contributors',
+  minParticipants = 0
+}) => {
+  const { user } = useAuth();
   const [period, setPeriod] = useState(defaultPeriod);
   const [leaderboard, setLeaderboard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+
+  const isAdmin = user?.is_admin === true;
+  const tooThin = !isAdmin && (leaderboard?.participants ?? 0) < minParticipants;
 
   const load = useCallback(async (selectedPeriod) => {
     try {
@@ -134,25 +152,47 @@ const Leaderboard = ({ showShare = false, defaultPeriod = 'week', title = '🏆 
         <p className="text-center text-gray-600 py-8">Leaderboard is unavailable right now.</p>
       ) : (
         <>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {CATEGORIES.map((category) => (
-              <CategoryCard
-                key={category.key}
-                category={category}
-                entries={leaderboard?.categories?.[category.key]}
-              />
-            ))}
-          </div>
+          {tooThin ? (
+            <div className="max-w-2xl mx-auto text-center bg-white rounded-2xl shadow-xl p-10">
+              <Trophy className="w-12 h-12 text-amber-500 mx-auto mb-4" />
+              <h4 className="text-xl font-bold text-gray-900 mb-2">
+                The {period}'s ranking is still open
+              </h4>
+              <p className="text-gray-600 mb-6">
+                {leaderboard?.participants === 0
+                  ? 'Nobody has logged a trip yet this ' + period + '. Log the first one and you take the top spot.'
+                  : `${leaderboard.participants} angler${leaderboard.participants === 1 ? '' : 's'} logging so far — there is still room in the top 5.`}
+              </p>
+              <Link
+                to="/register"
+                className="inline-block bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-8 py-3 rounded-xl font-bold hover:from-blue-700 hover:to-cyan-700 transition-all shadow-lg"
+              >
+                Join and claim a place 🎣
+              </Link>
+            </div>
+          ) : (
+            <>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {CATEGORIES.map((category) => (
+                  <CategoryCard
+                    key={category.key}
+                    category={category}
+                    entries={leaderboard?.categories?.[category.key]}
+                  />
+                ))}
+              </div>
 
-          {leaderboard && (
-            <p className="text-center text-sm text-gray-500">
-              {leaderboard.participants} angler{leaderboard.participants === 1 ? '' : 's'} ·{' '}
-              {leaderboard.totals.trips} trip{leaderboard.totals.trips === 1 ? '' : 's'} ·{' '}
-              {leaderboard.totals.fish} fish logged this {leaderboard.period}
-            </p>
+              {leaderboard && (
+                <p className="text-center text-sm text-gray-500">
+                  {leaderboard.participants} angler{leaderboard.participants === 1 ? '' : 's'} ·{' '}
+                  {leaderboard.totals.trips} trip{leaderboard.totals.trips === 1 ? '' : 's'} ·{' '}
+                  {leaderboard.totals.fish} fish logged this {leaderboard.period}
+                </p>
+              )}
+            </>
           )}
 
-          {showShare && <FacebookShare leaderboard={leaderboard} compact />}
+          {showShare && isAdmin && <FacebookShare leaderboard={leaderboard} compact />}
         </>
       )}
     </div>
