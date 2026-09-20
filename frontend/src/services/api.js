@@ -40,7 +40,8 @@ export const fishingAPI = {
   getLog: (id) => api.get(`/fishing/logs/${id}`),
   updateLog: (id, logData) => api.put(`/fishing/logs/${id}`, logData),
   deleteLog: (id) => api.delete(`/fishing/logs/${id}`),
-  getStatistics: () => api.get('/fishing/statistics')
+  getStatistics: () => api.get('/fishing/statistics'),
+  getLeaderboard: (period = 'week') => api.get('/fishing/leaderboard', { params: { period } })
 };
 
 export const eventsAPI = {
@@ -56,7 +57,9 @@ export const eventsAPI = {
 // Public endpoints work without a token, so they are called through the same
 // axios instance (the interceptor simply adds no Authorization header)
 export const publicAPI = {
-  getLeaderboard: (period = 'week') => api.get('/public/leaderboard', { params: { period } }),
+  // Counts only — the ranked names require a session (fishingAPI.getLeaderboard)
+  getLeaderboardSummary: (period = 'week') =>
+    api.get('/public/leaderboard/summary', { params: { period } }),
   getUpcomingEvents: (limit = 5) => api.get('/public/events/upcoming', { params: { limit } })
 };
 

@@ -5,6 +5,7 @@ import axios from 'axios';
 import PublicNav from './PublicNav';
 import CommunityEvents from './CommunityEvents';
 import Leaderboard from '../Common/Leaderboard';
+import { FACEBOOK_PAGE_URL } from '../../utils/shareText';
 
 const LandingPage = () => {
   const [conditions, setConditions] = useState(null);
@@ -625,17 +626,14 @@ const LandingPage = () => {
             <Link to="/about" className="text-gray-400 hover:text-white">
               About
             </Link>
-            {/* Only shown once REACT_APP_FACEBOOK_PAGE_URL is set at build time */}
-            {process.env.REACT_APP_FACEBOOK_PAGE_URL && (
-              <a
-                href={process.env.REACT_APP_FACEBOOK_PAGE_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gray-400 hover:text-white"
-              >
-                Facebook
-              </a>
-            )}
+            <a
+              href={FACEBOOK_PAGE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-400 hover:text-white"
+            >
+              Facebook
+            </a>
           </div>
         </div>
       </footer>

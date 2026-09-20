@@ -31,7 +31,8 @@ exports.register = async (req, res) => {
       user: {
         id: user.id,
         username: user.username,
-        email: user.email
+        email: user.email,
+        is_admin: false
       }
     });
   } catch (error) {
@@ -73,7 +74,10 @@ exports.login = async (req, res) => {
         id: user.id,
         username: user.username,
         email: user.email,
-        avatar_url: user.avatar_url
+        avatar_url: user.avatar_url,
+        // Included so admin-only UI appears immediately after login instead of
+        // only after the next profile refresh
+        is_admin: user.is_admin === true
       }
     });
   } catch (error) {

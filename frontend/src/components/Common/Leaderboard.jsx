@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Trophy, Fish, Target, Bug, Loader } from 'lucide-react';
-import { publicAPI } from '../../services/api';
+import { fishingAPI, publicAPI } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import FacebookShare from './FacebookShare';
 
 const CATEGORIES = [
@@ -78,28 +80,43 @@ const CategoryCard = ({ category, entries }) => {
   );
 };
 
-const Leaderboard = ({ showShare = false, defaultPeriod = 'week', title = '🏆 Top Contributors' }) => {
+/**
+ * Ranked names are members-only. Signed-out visitors get a counts-only teaser,
+ * which is all the public API will hand over anyway.
+ *
+ * @param showShare  offer the Facebook copy-text tool (admins only)
+ */
+const Leaderboard = ({
+  showShare = false,
+  defaultPeriod = 'week',
+  title = '🏆 Top Contributors'
+}) => {
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const [period, setPeriod] = useState(defaultPeriod);
   const [leaderboard, setLeaderboard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
+  const isAdmin = user?.is_admin === true;
+
   const load = useCallback(async (selectedPeriod) => {
     try {
       setLoading(true);
       setError(false);
-      const response = await publicAPI.getLeaderboard(selectedPeriod);
+      const response = isAuthenticated
+        ? await fishingAPI.getLeaderboard(selectedPeriod)
+        : await publicAPI.getLeaderboardSummary(selectedPeriod);
       setLeaderboard(response.data);
     } catch (err) {
       setError(true);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
-    load(period);
-  }, [period, load]);
+    if (!authLoading) load(period);
+  }, [period, authLoading, load]);
 
   return (
     <div className="space-y-6">
@@ -107,23 +124,27 @@ const Leaderboard = ({ showShare = false, defaultPeriod = 'week', title = '🏆 
         <h3 className="text-3xl font-bold text-gray-900 mb-2">{title}</h3>
         <p className="text-gray-600 mb-4">
           The anglers giving the most back to the community
-          {leaderboard && <span className="block text-sm text-gray-500 mt-1">{formatRange(leaderboard)}</span>}
+          {isAuthenticated && leaderboard && (
+            <span className="block text-sm text-gray-500 mt-1">{formatRange(leaderboard)}</span>
+          )}
         </p>
 
-        <div className="inline-flex rounded-xl bg-gray-100 p-1">
-          {['week', 'month'].map((option) => (
-            <button
-              key={option}
-              type="button"
-              onClick={() => setPeriod(option)}
-              className={`px-6 py-2 rounded-lg font-semibold capitalize transition-colors ${
-                period === option ? 'bg-white text-blue-600 shadow' : 'text-gray-600 hover:text-gray-800'
-              }`}
-            >
-              This {option}
-            </button>
-          ))}
-        </div>
+        {isAuthenticated && (
+          <div className="inline-flex rounded-xl bg-gray-100 p-1">
+            {['week', 'month'].map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => setPeriod(option)}
+                className={`px-6 py-2 rounded-lg font-semibold capitalize transition-colors ${
+                  period === option ? 'bg-white text-blue-600 shadow' : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                This {option}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {loading ? (
@@ -134,25 +155,49 @@ const Leaderboard = ({ showShare = false, defaultPeriod = 'week', title = '🏆 
         <p className="text-center text-gray-600 py-8">Leaderboard is unavailable right now.</p>
       ) : (
         <>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {CATEGORIES.map((category) => (
-              <CategoryCard
-                key={category.key}
-                category={category}
-                entries={leaderboard?.categories?.[category.key]}
-              />
-            ))}
-          </div>
+          {!isAuthenticated ? (
+            <div className="max-w-2xl mx-auto text-center bg-white rounded-2xl shadow-xl p-10">
+              <Trophy className="w-12 h-12 text-amber-500 mx-auto mb-4" />
+              <h4 className="text-xl font-bold text-gray-900 mb-2">
+                {leaderboard?.participants > 0
+                  ? `${leaderboard.participants} angler${leaderboard.participants === 1 ? '' : 's'} competing this ${leaderboard.period}`
+                  : `The ranking for this ${leaderboard?.period || 'week'} is still open`}
+              </h4>
+              <p className="text-gray-600 mb-6">
+                {leaderboard?.participants > 0
+                  ? 'Members see who is leading on trips logged, fish caught, fishing types and baits used.'
+                  : 'Nobody has logged a trip yet. Sign up and the first one takes the top spot.'}
+              </p>
+              <Link
+                to="/register"
+                className="inline-block bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-8 py-3 rounded-xl font-bold hover:from-blue-700 hover:to-cyan-700 transition-all shadow-lg"
+              >
+                Sign up free to see the Top 5 🎣
+              </Link>
+            </div>
+          ) : (
+            <>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {CATEGORIES.map((category) => (
+                  <CategoryCard
+                    key={category.key}
+                    category={category}
+                    entries={leaderboard?.categories?.[category.key]}
+                  />
+                ))}
+              </div>
 
-          {leaderboard && (
-            <p className="text-center text-sm text-gray-500">
-              {leaderboard.participants} angler{leaderboard.participants === 1 ? '' : 's'} ·{' '}
-              {leaderboard.totals.trips} trip{leaderboard.totals.trips === 1 ? '' : 's'} ·{' '}
-              {leaderboard.totals.fish} fish logged this {leaderboard.period}
-            </p>
+              {leaderboard && (
+                <p className="text-center text-sm text-gray-500">
+                  {leaderboard.participants} angler{leaderboard.participants === 1 ? '' : 's'} ·{' '}
+                  {leaderboard.totals.trips} trip{leaderboard.totals.trips === 1 ? '' : 's'} ·{' '}
+                  {leaderboard.totals.fish} fish logged this {leaderboard.period}
+                </p>
+              )}
+            </>
           )}
 
-          {showShare && <FacebookShare leaderboard={leaderboard} compact />}
+          {showShare && isAdmin && <FacebookShare leaderboard={leaderboard} compact />}
         </>
       )}
     </div>

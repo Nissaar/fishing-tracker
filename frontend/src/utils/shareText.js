@@ -3,6 +3,11 @@
 
 const SITE_URL = process.env.REACT_APP_SITE_URL || (typeof window !== 'undefined' ? window.location.origin : '');
 
+// The Nu Lapes App Facebook page. Overridable at build time without a code change.
+export const FACEBOOK_PAGE_URL =
+  process.env.REACT_APP_FACEBOOK_PAGE_URL ||
+  'https://www.facebook.com/people/nulapessapp/61577446590617/';
+
 const LABELS = {
   kreol: {
     headingWeek: '🎣 TOP 5 PESKER SA SEMENN-LA',
@@ -61,10 +66,13 @@ const formatCategory = (title, entries, unit) => {
 };
 
 /**
- * @param {object} leaderboard  payload from GET /api/public/leaderboard
+ * @param {object} leaderboard        payload from GET /api/public/leaderboard
  * @param {'kreol'|'english'} language
+ * @param {boolean} includeFeatures   include the launch announcement block.
+ *                                    Worth dropping once the features are no
+ *                                    longer news, so the weekly post stays fresh.
  */
-export const buildLeaderboardPost = (leaderboard, language = 'kreol') => {
+export const buildLeaderboardPost = (leaderboard, language = 'kreol', includeFeatures = true) => {
   const t = LABELS[language] || LABELS.kreol;
   const period = leaderboard?.period === 'month' ? 'month' : 'week';
   const categories = leaderboard?.categories || {};
@@ -80,7 +88,7 @@ export const buildLeaderboardPost = (leaderboard, language = 'kreol') => {
   // Nothing ranked yet: still worth posting the feature announcement
   if (blocks.length === 1) blocks.push(t.empty);
 
-  blocks.push(`${t.newsTitle}\n${t.news.join('\n')}`);
+  if (includeFeatures) blocks.push(`${t.newsTitle}\n${t.news.join('\n')}`);
   blocks.push(`${t.cta}\n${SITE_URL}`);
   blocks.push(t.tags);
 
