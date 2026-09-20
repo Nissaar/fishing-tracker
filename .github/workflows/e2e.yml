@@ -5,6 +5,12 @@ on:
     branches: ['*']
   pull_request:
     branches: ['*']
+  workflow_dispatch:
+
+# Needed so the run can leave its report as a comment on the pull request
+permissions:
+  contents: read
+  pull-requests: write
 
 env:
   TEST_USER_EMAIL: e2etest@fishingtracker.mu
@@ -86,26 +92,61 @@ jobs:
 
       - name: Wait for services
         run: |
-          timeout 60 bash -c 'until curl -s http://localhost:5000/health; do sleep 2; done'
-          timeout 30 bash -c 'until curl -s http://localhost:3000; do sleep 2; done'
+          timeout 60 bash -c 'until curl -sf http://localhost:5000/health; do sleep 2; done'
+          timeout 30 bash -c 'until curl -sf http://localhost:3000 >/dev/null; do sleep 2; done'
+
+      # The backend applies pending migrations on boot. This endpoint only
+      # answers once the events tables exist, so it doubles as the gate that
+      # migrations finished before the suite starts.
+      - name: Wait for database migrations
+        run: |
+          timeout 90 bash -c 'until curl -sf http://localhost:5000/api/public/events/upcoming >/dev/null; do sleep 2; done'
+          echo "Migrations applied - events tables are live"
 
       - name: Run E2E tests
+        id: tests
+        continue-on-error: true
+        # No --reporter flag: that would override playwright.config.js, whose
+        # reporters write the HTML report and test-results/results.json that
+        # the steps below depend on
         run: |
           cd e2e
-          npx playwright test --reporter=list,html,json
+          npx playwright test
         env:
           TEST_BASE_URL: http://localhost:3000
           TEST_API_URL: http://localhost:5000/api
           CI: true
 
-      - name: Parse test results
+      - name: Build feature report
+        id: report
         if: always()
-        run: |
-          cd e2e
-          if [ -f test-results/results.json ]; then
-            echo "PLAYWRIGHT_SUMMARY=$(cat test-results/results.json | jq -r '.stats | "✅ Passed: \(.expected) | ❌ Failed: \(.failed)"')" >> $GITHUB_ENV
-            echo "TEST_PASSED=$(cat test-results/results.json | jq '.stats.failed == 0')" >> $GITHUB_ENV
-          fi
+        continue-on-error: true
+        run: node .github/scripts/e2e-report.js e2e/test-results/results.json e2e-report.md
+
+      - name: Comment report on the pull request
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- e2e-feature-report -->';
+            const body = marker + '\n' + (fs.existsSync('e2e-report.md')
+              ? fs.readFileSync('e2e-report.md', 'utf8')
+              : '## 🎣 Fishing Tracker — feature test report\n\n> ❌ The report could not be generated. Check the job log.');
+
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+
+            // Replace the previous report rather than stacking a new comment
+            // on every push to the branch
+            const comments = await github.rest.issues.listComments({ owner, repo, issue_number, per_page: 100 });
+            const existing = comments.data.find(c => c.body && c.body.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }
 
       - name: Upload HTML report
         uses: actions/upload-artifact@v4
@@ -122,3 +163,19 @@ jobs:
           name: test-results-${{ github.run_id }}
           path: e2e/test-results/
           retention-days: 30
+
+      - name: Upload feature report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: feature-report-${{ github.run_id }}
+          path: e2e-report.md
+          retention-days: 30
+
+      # The report publishes first, so a failure here still leaves a readable
+      # summary on the run and on the PR
+      - name: Fail if any feature check failed
+        if: always() && (steps.tests.outcome == 'failure' || steps.report.outcome == 'failure')
+        run: |
+          echo "One or more feature checks failed - see the job summary above."
+          exit 1

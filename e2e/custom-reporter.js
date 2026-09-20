@@ -7,11 +7,33 @@ const fs = require('fs');
 const path = require('path');
 
 class TestDocumentationReporter {
+  onBegin(config, suite) {
+    // Playwright's onEnd result carries only {status, startTime, duration},
+    // so the counts are taken from the suite tree instead. outcome() is
+    // retry-aware, which a per-attempt tally in onTestEnd would not be.
+    this.rootSuite = suite;
+  }
+
   onTestEnd(test, result) {
     // Tests will be collected and report generated at end
   }
 
+  tally() {
+    const counts = { total: 0, passed: 0, failed: 0, skipped: 0 };
+    const tests = this.rootSuite ? this.rootSuite.allTests() : [];
+
+    for (const test of tests) {
+      counts.total++;
+      const outcome = test.outcome();
+      if (outcome === 'skipped') counts.skipped++;
+      else if (outcome === 'unexpected') counts.failed++;
+      else counts.passed++;
+    }
+    return counts;
+  }
+
   onEnd(result) {
+    const stats = this.tally();
     const htmlContent = `
 <!DOCTYPE html>
 <html lang="en">
@@ -213,19 +235,19 @@ class TestDocumentationReporter {
       
       <div class="stats">
         <div class="stat-box">
-          <div class="number">${result.stats.expected}</div>
+          <div class="number">${stats.total}</div>
           <div class="label">Total Tests</div>
         </div>
         <div class="stat-box">
-          <div class="number">${result.stats.expected - result.stats.failed}</div>
+          <div class="number">${stats.passed}</div>
           <div class="label">Passed</div>
         </div>
         <div class="stat-box">
-          <div class="number">${result.stats.failed}</div>
+          <div class="number">${stats.failed}</div>
           <div class="label">Failed</div>
         </div>
         <div class="stat-box">
-          <div class="number">${result.stats.skipped}</div>
+          <div class="number">${stats.skipped}</div>
           <div class="label">Skipped</div>
         </div>
       </div>
