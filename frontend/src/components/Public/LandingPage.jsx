@@ -245,7 +245,7 @@ const LandingPage = () => {
       {/* Top Contributors */}
       <div className="bg-white py-16">
         <div className="max-w-7xl mx-auto px-4">
-          <Leaderboard showShare minParticipants={3} title="🏆 Top 5 Contributors" />
+          <Leaderboard showShare title="🏆 Top 5 Contributors" />
         </div>
       </div>
 

@@ -6,6 +6,7 @@ const logger = require('../config/logger');
 const { getWeatherForReference, getTideHeight } = require('../services/openMeteoService');
 const { allLocations } = require('../data/mauritiusLocations');
 const { calculateSolunarPeriods, getCurrentActivity } = require('../utils/solunarTheory');
+const { getLeaderboard } = require('../services/leaderboardService');
 
 const router = express.Router();
 
@@ -23,6 +24,18 @@ router.get('/fish-species', fishingController.getFishSpecies);
 router.get('/location-stats/:locationId', fishingController.getLocationStats);
 router.get('/best-conditions', fishingController.getBestConditions);
 router.get('/global-predictions', fishingController.getGlobalPredictions);
+
+// Top contributors with names — members only. Signed-out visitors get the
+// counts-only teaser at GET /api/public/leaderboard/summary instead.
+router.get('/leaderboard', async (req, res) => {
+  try {
+    const data = await getLeaderboard(req.query.period || 'week', req.query.limit);
+    res.json(data);
+  } catch (error) {
+    logger.error(`Leaderboard error: ${error.message}`);
+    res.status(500).json({ error: 'Failed to get leaderboard' });
+  }
+});
 
 // ==================== DYNAMIC DROPDOWN DATA ====================
 

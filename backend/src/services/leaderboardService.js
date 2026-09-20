@@ -121,4 +121,31 @@ const getLeaderboard = async (period = 'week', limit = 5) => {
   };
 };
 
-module.exports = { getLeaderboard, PERIODS };
+/**
+ * Counts only — no usernames. This is the one leaderboard figure that is safe
+ * to serve without a session, so it can drive the signup teaser.
+ */
+const getLeaderboardSummary = async (period = 'week') => {
+  const safePeriod = PERIODS.includes(period) ? period : 'week';
+  const { start_date: startDate, end_date: endDate } = await getPeriodRange(safePeriod);
+
+  const { rows } = await pool.query(
+    `SELECT
+       COUNT(DISTINCT user_id)::int AS participants,
+       COUNT(*)::int AS trips,
+       COALESCE(SUM(fish_count), 0)::int AS fish
+     FROM fishing_logs
+     WHERE log_date BETWEEN $1 AND $2`,
+    [startDate, endDate]
+  );
+
+  return {
+    period: safePeriod,
+    startDate,
+    endDate,
+    participants: rows[0].participants,
+    totals: { trips: rows[0].trips, fish: rows[0].fish }
+  };
+};
+
+module.exports = { getLeaderboard, getLeaderboardSummary, PERIODS };

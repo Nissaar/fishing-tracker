@@ -4,7 +4,7 @@ const { calculateSolunarPeriods, getCurrentActivity } = require('../utils/soluna
 const { getWorldTidesData } = require('../services/tideService');
 const { getCurrentWeather } = require('../services/weatherService');
 const { getOpenMeteoMarineData, getSeaSurfaceTemperature, getWeatherForReference } = require('../services/openMeteoService');
-const { getLeaderboard } = require('../services/leaderboardService');
+const { getLeaderboardSummary } = require('../services/leaderboardService');
 const pool = require('../config/database');
 const logger = require('../config/logger');
 
@@ -88,17 +88,18 @@ router.get('/conditions', async (req, res) => {
   }
 });
 
-// ==================== COMMUNITY LEADERBOARD (public) ====================
+// ==================== COMMUNITY LEADERBOARD TEASER (public) ====================
 
-// Top contributors for the current week or month, ranked by trips logged,
-// fish caught, variety of fishing types and variety of baits.
-router.get('/leaderboard', async (req, res) => {
+// Counts only. The ranked names live behind auth at GET /api/fishing/leaderboard,
+// so signed-out visitors can see that the community is active without the
+// standings being readable from a URL.
+router.get('/leaderboard/summary', async (req, res) => {
   try {
-    const data = await getLeaderboard(req.query.period || 'week', req.query.limit);
+    const data = await getLeaderboardSummary(req.query.period || 'week');
     res.json(data);
   } catch (error) {
-    logger.error(`Leaderboard error: ${error.message}`);
-    res.status(500).json({ error: 'Failed to get leaderboard' });
+    logger.error(`Leaderboard summary error: ${error.message}`);
+    res.status(500).json({ error: 'Failed to get leaderboard summary' });
   }
 });
 
