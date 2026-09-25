@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { fishingAPI } from '../../services/api';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { TrendingUp, Fish, MapPin, Calendar } from 'lucide-react';
+import ErrorState from '../Common/ErrorState';
 
 const Reports = () => {
   const [logs, setLogs] = useState([]);
   const [statistics, setStatistics] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -13,14 +15,15 @@ const Reports = () => {
 
   const loadData = async () => {
     try {
+      setError(null);
       const [logsRes, statsRes] = await Promise.all([
         fishingAPI.getLogs(100),
         fishingAPI.getStatistics()
       ]);
       setLogs(logsRes.data.logs);
       setStatistics(statsRes.data.statistics);
-    } catch (error) {
-      console.error('Failed to load reports');
+    } catch (err) {
+      setError(err);
     }
   };
 
@@ -51,6 +54,7 @@ const Reports = () => {
 
   return (
     <div className="space-y-8">
+      {error && <ErrorState message="Your reports couldn't be loaded." onRetry={loadData} />}
       {statistics && (
         <div className="grid md:grid-cols-4 gap-4">
           <div className="bg-blue-50 p-6 rounded-xl border border-blue-200">

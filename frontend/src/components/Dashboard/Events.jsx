@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import { CalendarPlus, Loader, X, Calendar } from 'lucide-react';
-import api, { eventsAPI, fishingAPI } from '../../services/api';
+import { eventsAPI } from '../../services/api';
+import useDropdownOptions from '../../hooks/useDropdownOptions';
 import FishingTypeSelector from '../Common/FishingTypeSelector';
 import EventCard from '../Common/EventCard';
 import { localDateString } from '../../utils/dates';
@@ -29,29 +30,15 @@ const Events = () => {
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState(makeEmptyForm);
-  const [locations, setLocations] = useState([]);
-  const [fishingTypes, setFishingTypes] = useState([]);
+  const { options: { locations, fishingTypes }, error: referenceError } = useDropdownOptions(['locations', 'fishingTypes']);
 
   useEffect(() => {
-    loadReferenceData();
-  }, []);
+    if (referenceError) toast.error('Failed to load locations');
+  }, [referenceError]);
 
   useEffect(() => {
     loadEvents(scope);
   }, [scope]);
-
-  const loadReferenceData = async () => {
-    try {
-      const [locationsRes, typesRes] = await Promise.all([
-        fishingAPI.getLocations(),
-        api.get('/fishing/dropdown/fishing-types')
-      ]);
-      setLocations(locationsRes.data.locations || []);
-      setFishingTypes(Array.isArray(typesRes.data) ? typesRes.data : []);
-    } catch (error) {
-      toast.error('Failed to load locations');
-    }
-  };
 
   const loadEvents = async (selectedScope) => {
     try {

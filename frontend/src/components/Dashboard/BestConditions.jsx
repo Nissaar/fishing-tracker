@@ -1,39 +1,40 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { fishingAPI, isCancelled } from '../../services/api';
+import ErrorState from '../Common/ErrorState';
 import { Moon, Waves, MapPin, Calendar, TrendingUp, Filter } from 'lucide-react';
 
 const BestConditions = () => {
-  const [fishingTypes, setFishingTypes] = useState(['Casting', 'Jigging', 'Lapess Couler/Couler', 'Dropshot']);
+  const fishingTypes = ['Casting', 'Jigging', 'Lapess Couler/Couler', 'Dropshot'];
   const [selectedType, setSelectedType] = useState('');
   const [selectedBait, setSelectedBait] = useState('');
   const [conditions, setConditions] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [reloadToken, setReloadToken] = useState(0);
 
-  const loadConditions = async () => {
-    setLoading(true);
-    try {
-      const params = {};
-      if (selectedType) params.fishingType = selectedType;
-      if (selectedBait) params.bait = selectedBait;
-
-      const response = await axios.get(
-        `${process.env.REACT_APP_API_URL}/fishing/best-conditions`,
-        {
-          params,
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        }
-      );
-      setConditions(response.data);
-    } catch (error) {
-      console.error('Failed to load conditions');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Changing a filter cancels the previous request so its late answer can't
+  // replace the one for the current filters
   useEffect(() => {
-    loadConditions();
-  }, [selectedType, selectedBait]);
+    const controller = new AbortController();
+    const params = {};
+    if (selectedType) params.fishingType = selectedType;
+    if (selectedBait) params.bait = selectedBait;
+
+    setLoading(true);
+    setError(null);
+    fishingAPI.getBestConditions(params, { signal: controller.signal })
+      .then((response) => {
+        setConditions(response.data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (isCancelled(err)) return;
+        setError(err);
+        setLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [selectedType, selectedBait, reloadToken]);
 
   return (
     <div className="space-y-6">
@@ -81,6 +82,8 @@ const BestConditions = () => {
           </div>
         </div>
       </div>
+
+      {error && <ErrorState message="Best conditions couldn't be loaded." onRetry={() => setReloadToken(token => token + 1)} />}
 
       {loading && (
         <div className="flex justify-center py-12">

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { fishingAPI } from '../../services/api';
+import ErrorState from '../Common/ErrorState';
 import { MapPin, Fish, TrendingUp, Calendar, Loader } from 'lucide-react';
 
 const BrowseLocation = () => {
@@ -8,6 +9,7 @@ const BrowseLocation = () => {
   const [locationStats, setLocationStats] = useState(null);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     loadLocations();
@@ -15,27 +17,23 @@ const BrowseLocation = () => {
 
   const loadLocations = async () => {
     try {
-      const response = await axios.get(
-        `${process.env.REACT_APP_API_URL}/fishing/locations`,
-        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
-      );
+      setError(null);
+      const response = await fishingAPI.getLocations();
       setLocations(response.data.locations);
-    } catch (error) {
-      console.error('Failed to load locations');
+    } catch (err) {
+      setError({ message: "Locations couldn't be loaded.", retry: loadLocations });
     }
   };
 
   const loadLocationStats = async (locationId) => {
     setLoading(true);
     try {
-      const response = await axios.get(
-        `${process.env.REACT_APP_API_URL}/fishing/location-stats/${locationId}`,
-        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
-      );
+      setError(null);
+      const response = await fishingAPI.getLocationStats(locationId);
       setSelectedLocation(response.data.location);
       setLocationStats(response.data.stats);
-    } catch (error) {
-      console.error('Failed to load location stats');
+    } catch (err) {
+      setError({ message: "Stats for this location couldn't be loaded.", retry: () => loadLocationStats(locationId) });
     } finally {
       setLoading(false);
     }
@@ -58,12 +56,15 @@ const BrowseLocation = () => {
       <div>
         <input
           type="text"
+          aria-label="Search locations"
           placeholder="Search locations..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
         />
       </div>
+
+      {error && <ErrorState message={error.message} onRetry={error.retry} />}
 
       <div className="grid md:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
         {filteredLocations.map(location => (
