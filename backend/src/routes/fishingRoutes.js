@@ -339,9 +339,10 @@ router.post('/trip-recommendations', conditionsLimiter, async (req, res) => {
 
     if (locationObj && date && startTime && endTime) {
       try {
-        // Create datetime strings for start and end of fishing window
-        const startDateTime = `${date}T${startTime}:00`;
-        const endDateTime = `${date}T${endTime}:00`;
+        // The window is Mauritius wall-clock time. Without an offset the string
+        // was read in the server's timezone (UTC), shifting everything by 4h.
+        const startDateTime = fromMauritiusLocal(date, startTime).toISOString();
+        const endDateTime = fromMauritiusLocal(date, endTime).toISOString();
         
         // Get weather, tide, and solunar data in parallel
         const [startWeather, endWeather, startTide, endTide, solunar] = await Promise.all([

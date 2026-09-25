@@ -7,11 +7,19 @@ const { allLocations } = require('../data/mauritiusLocations');
 const { fishSpecies } = require('../data/fishSpecies');
 const { getOpenMeteoMarineData, getSeaSurfaceTemperature, getWeatherForReference } = require('../services/openMeteoService');
 const pool = require('../config/database');
+const { toMauritiusParts, isValidDateStr } = require('../utils/mauritiusTime');
 
 exports.getEnvironmentalData = async (req, res) => {
   try {
     const { date, locationId } = req.query;
     let referenceTime = req.query.referenceTime ? decodeURIComponent(req.query.referenceTime) : null;
+
+    if (!isValidDateStr(date)) {
+      return res.status(400).json({ error: 'date must be a valid YYYY-MM-DD date' });
+    }
+    if (referenceTime && Number.isNaN(new Date(referenceTime).getTime())) {
+      return res.status(400).json({ error: 'referenceTime must be a valid date and time' });
+    }
     
     const location = allLocations.find(loc => loc.id === locationId);
     if (!location) {
@@ -34,12 +42,9 @@ exports.getEnvironmentalData = async (req, res) => {
 
     // Calculate solunar periods
     const solunarData = await calculateSolunarPeriods(date, location.lat, location.lon);
-    // Get current time in Mauritius timezone (UTC+4)
-    const refDate = new Date(referenceTime || date);
-    const mauritiusOffset = 4 * 60; // UTC+4 in minutes
-    const localOffset = refDate.getTimezoneOffset();
-    const mauritiusTime = new Date(refDate.getTime() + (mauritiusOffset + localOffset) * 60000);
-    const currentTime = mauritiusTime.toTimeString().substring(0, 5);
+    // Activity at the trip's reference time, or right now; the bare date used
+    // to resolve to midnight UTC, i.e. always 04:00
+    const currentTime = toMauritiusParts(referenceTime || new Date()).timeStr;
     const currentActivity = getCurrentActivity(solunarData, currentTime);
 
     res.json({
