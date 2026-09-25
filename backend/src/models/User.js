@@ -1,5 +1,6 @@
 const pool = require('../config/database');
 const bcrypt = require('bcryptjs');
+const { normalizeEmail, emailLookupCandidates } = require('../utils/email');
 
 class User {
   static async create(username, email, password) {
@@ -9,13 +10,20 @@ class User {
       VALUES ($1, $2, $3)
       RETURNING id, username, email, created_at
     `;
-    const result = await pool.query(query, [username, email, hashedPassword]);
+    const result = await pool.query(query, [username, normalizeEmail(email), hashedPassword]);
     return result.rows[0];
   }
 
+  // Exact (case-insensitive) match wins over the legacy dotless Gmail spelling
   static async findByEmail(email) {
-    const query = 'SELECT * FROM users WHERE email = $1';
-    const result = await pool.query(query, [email]);
+    const candidates = emailLookupCandidates(email);
+    const query = `
+      SELECT * FROM users
+      WHERE lower(email) = ANY($1::text[])
+      ORDER BY array_position($1::text[], lower(email::text))
+      LIMIT 1
+    `;
+    const result = await pool.query(query, [candidates]);
     return result.rows[0];
   }
 
