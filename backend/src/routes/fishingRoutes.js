@@ -105,17 +105,14 @@ router.get('/dropdown/baits', async (req, res) => {
     `;
     const params = [];
     
+    // Baits for the chosen type plus universal baits (no type). Parenthesised
+    // so the OR can't bypass "is_active = true" and show deactivated baits.
     if (fishingTypeId) {
-      query += ` AND fb.fishing_type_id = $${params.length + 1}`;
+      query += ` AND (fb.fishing_type_id = $${params.length + 1} OR fb.fishing_type_id IS NULL)`;
       params.push(fishingTypeId);
     } else if (fishingTypeName) {
-      query += ` AND ft.name = $${params.length + 1}`;
+      query += ` AND (ft.name = $${params.length + 1} OR fb.fishing_type_id IS NULL)`;
       params.push(fishingTypeName);
-    }
-    
-    // Also include baits that are not linked to any fishing type (universal baits)
-    if (fishingTypeId || fishingTypeName) {
-      query += ' OR fb.fishing_type_id IS NULL';
     }
     
     query += ' ORDER BY fb.name';
