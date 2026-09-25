@@ -728,12 +728,13 @@ const SystemLogsTab = ({ logs, filter, setFilter, onRefresh }) => {
   React.useEffect(() => {
     const fetchLogFiles = async () => {
       try {
-        const response = await axios.get(`${API_URL}/admin/log-files`, {
+        const response = await axios.get(`${API_URL}/logs/files`, {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         });
-        setLogFiles(response.data.files || []);
-        if (response.data.files?.length > 0 && !selectedFile) {
-          setSelectedFile(response.data.files[0]);
+        const names = (response.data.files || []).map((file) => file.name);
+        setLogFiles(names);
+        if (names.length > 0 && !selectedFile) {
+          setSelectedFile(names[0]);
         }
       } catch (error) {
         console.error('Error fetching log files:', error);
@@ -749,10 +750,16 @@ const SystemLogsTab = ({ logs, filter, setFilter, onRefresh }) => {
     const fetchFileContent = async () => {
       setLoadingContent(true);
       try {
-        const response = await axios.get(`${API_URL}/admin/log-files/${encodeURIComponent(selectedFile)}`, {
+        const response = await axios.get(`${API_URL}/logs/content/${encodeURIComponent(selectedFile)}`, {
+          params: { lines: 1000 },
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         });
-        setFileContent(response.data.content || '');
+        // Entries come back parsed and newest first
+        const lines = (response.data.logs || []).map(({ timestamp, level, message, ...rest }) => {
+          const extra = Object.keys(rest).length > 0 ? ` ${JSON.stringify(rest)}` : '';
+          return `${timestamp || ''} [${level || 'info'}] ${message ?? ''}${extra}`.trim();
+        });
+        setFileContent(lines.join('\n'));
       } catch (error) {
         console.error('Error fetching file content:', error);
         setFileContent('Error loading file content');

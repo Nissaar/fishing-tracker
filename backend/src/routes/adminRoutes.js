@@ -884,7 +884,7 @@ router.get('/submissions', async (req, res) => {
     });
   } catch (error) {
     logger.error('Error fetching submissions:', error);
-    res.status(500).json({ error: 'Failed to fetch submissions', details: error.message });
+    res.status(500).json({ error: 'Failed to fetch submissions' });
   }
 });
 
@@ -959,92 +959,7 @@ router.get('/system-logs', async (req, res) => {
   }
 });
 
-// ==================== LOG FILES VIEWER ====================
-const fs = require('fs');
-const path = require('path');
-
-// Get list of log files
-router.get('/log-files', async (req, res) => {
-  try {
-    const logsDir = path.join(__dirname, '../../logs');
-    
-    // Also check the project root logs folder
-    const projectLogsDir = path.join(__dirname, '../../../logs');
-    
-    let files = [];
-    
-    // Try to read from both locations
-    if (fs.existsSync(logsDir)) {
-      const dirFiles = fs.readdirSync(logsDir).filter(f => f.endsWith('.log'));
-      files = [...files, ...dirFiles];
-    }
-    
-    if (fs.existsSync(projectLogsDir)) {
-      const projectFiles = fs.readdirSync(projectLogsDir).filter(f => f.endsWith('.log'));
-      files = [...files, ...projectFiles.map(f => `../logs/${f}`)];
-    }
-
-    // Add common log file names if they exist
-    const commonLogs = ['combined.log', 'error.log', 'app.log', 'access.log'];
-    
-    // If no log files found, return sample list
-    if (files.length === 0) {
-      files = ['No log files found'];
-    }
-
-    res.json({ files: [...new Set(files)] });
-  } catch (error) {
-    logger.error('Error listing log files:', error);
-    res.status(500).json({ error: 'Failed to list log files', files: [] });
-  }
-});
-
-// Get content of a specific log file
-router.get('/log-files/:filename', async (req, res) => {
-  try {
-    const { filename } = req.params;
-    const decodedFilename = decodeURIComponent(filename);
-    
-    // Security check - prevent directory traversal
-    if (decodedFilename.includes('..') && !decodedFilename.startsWith('../logs/')) {
-      return res.status(400).json({ error: 'Invalid filename' });
-    }
-
-    let logsDir = path.join(__dirname, '../../logs');
-    let filePath = path.join(logsDir, decodedFilename);
-    
-    // Check project root logs folder if file not found
-    if (!fs.existsSync(filePath)) {
-      logsDir = path.join(__dirname, '../../../logs');
-      filePath = path.join(logsDir, decodedFilename.replace('../logs/', ''));
-    }
-
-    if (!fs.existsSync(filePath)) {
-      return res.json({ content: `Log file "${decodedFilename}" not found. Available log locations checked:\n- ${path.join(__dirname, '../../logs')}\n- ${path.join(__dirname, '../../../logs')}` });
-    }
-
-    // Read the last 1000 lines of the file (or entire file if smaller)
-    const stats = fs.statSync(filePath);
-    const maxBytes = 500 * 1024; // 500KB max
-    
-    let content;
-    if (stats.size > maxBytes) {
-      // Read last portion of file
-      const fd = fs.openSync(filePath, 'r');
-      const buffer = Buffer.alloc(maxBytes);
-      fs.readSync(fd, buffer, 0, maxBytes, stats.size - maxBytes);
-      fs.closeSync(fd);
-      content = '... (showing last 500KB of file) ...\n\n' + buffer.toString('utf8');
-    } else {
-      content = fs.readFileSync(filePath, 'utf8');
-    }
-
-    res.json({ content, filename: decodedFilename, size: stats.size });
-  } catch (error) {
-    logger.error('Error reading log file:', error);
-    res.status(500).json({ error: 'Failed to read log file', content: '' });
-  }
-});
+// Log files are served by /api/logs (logsRoutes.js)
 
 // ==================== CONTACT MESSAGES MANAGEMENT ====================
 
