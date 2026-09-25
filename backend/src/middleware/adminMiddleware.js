@@ -1,5 +1,6 @@
 const pool = require('../config/database');
 const rateLimit = require('express-rate-limit');
+const logger = require('../config/logger');
 
 /**
  * Rate limiter for admin routes
@@ -30,8 +31,7 @@ const isAdmin = async (req, res, next) => {
     
     next();
   } catch (error) {
-    console.error('Error during admin verification for user:', req.user && req.user.id, error);
-    console.error('Error during admin verification for user:', req.user && req.user.id, error);
+    logger.error(`Error during admin verification for user ${req.user && req.user.id}: ${error.message}`);
     res.status(500).json({ error: 'Server error during admin verification' });
   }
 };
