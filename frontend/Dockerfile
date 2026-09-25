@@ -9,7 +9,12 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
-RUN npm run build
+
+# CRA bakes REACT_APP_* in at build time. A build arg passed by compose is
+# used when given; otherwise the value comes from frontend/.env as before
+# (an empty variable would override .env, hence the unset)
+ARG REACT_APP_API_URL
+RUN if [ -z "$REACT_APP_API_URL" ]; then unset REACT_APP_API_URL; fi && npm run build
 
 FROM nginx:alpine
 
