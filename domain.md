@@ -108,7 +108,7 @@ DB_PASSWORD=YourSecureDatabasePassword123!
 
 # JWT Configuration
 # Generate with: openssl rand -base64 32
-JWT_SECRET=K8h3nP9mR2vL5sJ7wQ1xZ4tY6uF0aE3g
+JWT_SECRET=<output of: openssl rand -base64 32>
 JWT_EXPIRE=7d
 
 # Google OAuth
@@ -130,7 +130,7 @@ FRONTEND_URL=https://yourdomain.com
 
 # Session Secret
 # Generate with: openssl rand -base64 32
-SESSION_SECRET=M2nB7kL9pR4vX8wS3tF6yQ1zA5eH0jC2
+SESSION_SECRET=<output of: openssl rand -base64 32>
 ```
 
 ### 3. Frontend `.env`

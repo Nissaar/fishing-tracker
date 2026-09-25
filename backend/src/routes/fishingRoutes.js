@@ -7,14 +7,15 @@ const { getWeatherForReference, getTideHeight } = require('../services/openMeteo
 const { allLocations } = require('../data/mauritiusLocations');
 const { calculateSolunarPeriods, getCurrentActivity } = require('../utils/solunarTheory');
 const { getLeaderboard } = require('../services/leaderboardService');
+const { logCreateLimiter, conditionsLimiter } = require('../middleware/rateLimiters');
 
 const router = express.Router();
 
 router.use(authMiddleware);
 
 router.get('/locations', fishingController.getLocations);
-router.get('/environmental-data', fishingController.getEnvironmentalData);
-router.post('/logs', fishingController.createLog);
+router.get('/environmental-data', conditionsLimiter, fishingController.getEnvironmentalData);
+router.post('/logs', logCreateLimiter, fishingController.createLog);
 router.get('/logs', fishingController.getLogs);
 router.get('/logs/:id', fishingController.getLog);
 router.put('/logs/:id', fishingController.updateLog);
@@ -224,7 +225,7 @@ router.post('/custom-submission', async (req, res) => {
 // ==================== TRIP RECOMMENDATIONS ====================
 
 // Get personalized trip recommendations based on historical data
-router.post('/trip-recommendations', async (req, res) => {
+router.post('/trip-recommendations', conditionsLimiter, async (req, res) => {
   try {
     const { location, fishingType, baitType, fishingMethod, date, startTime, endTime } = req.body;
 
