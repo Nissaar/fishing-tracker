@@ -1,24 +1,24 @@
 import React, { useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const AuthCallback = () => {
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { checkAuth } = useAuth();
 
   useEffect(() => {
-    const token = searchParams.get('token');
-    
+    // The backend puts the token in the fragment so it never reaches a server log
+    const token = new URLSearchParams(window.location.hash.slice(1)).get('token');
+
+    // Drop the token from the address bar and browser history right away
+    window.history.replaceState(null, '', window.location.pathname);
+
     if (token) {
       localStorage.setItem('token', token);
-      setTimeout(() => {
-        window.location.href = '/dashboard';
-      }, 500);
+      // Full reload so AuthContext loads the profile with the new token
+      window.location.replace('/dashboard');
     } else {
-      navigate('/login');
+      navigate('/login', { replace: true });
     }
-  }, [searchParams, navigate]);
+  }, [navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-cyan-50">

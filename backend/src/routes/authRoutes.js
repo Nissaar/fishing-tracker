@@ -1,14 +1,18 @@
 const express = require('express');
 const { body } = require('express-validator');
 const passport = require('../config/passport');
-const jwt = require('jsonwebtoken');
+const { isGoogleConfigured } = require('../config/passport');
 const authController = require('../controllers/authController');
 const authMiddleware = require('../middleware/authMiddleware');
+const { loginLimiter, registerLimiter } = require('../middleware/rateLimiters');
+const { signToken } = require('../utils/token');
+const logger = require('../config/logger');
 
 const router = express.Router();
 
 router.post(
   '/register',
+  registerLimiter,
   [
     body('username').trim().isLength({ min: 3 }),
     body('email').isEmail().normalizeEmail(),
@@ -17,20 +21,32 @@ router.post(
   authController.register
 );
 
-router.post('/login', authController.login);
+router.post('/login', loginLimiter, authController.login);
 router.get('/profile', authMiddleware, authController.getProfile);
 
-// Google OAuth
-router.get('/google',
-  passport.authenticate('google', { scope: ['profile', 'email'], session: false })
-);
+// Google OAuth — only mounted when credentials are configured, otherwise
+// passport throws "Unknown authentication strategy" and the route returns 500
+if (isGoogleConfigured) {
+  router.get('/google',
+    passport.authenticate('google', { scope: ['profile', 'email'], session: false })
+  );
 
-router.get('/google/callback',
-  passport.authenticate('google', { failureRedirect: process.env.FRONTEND_URL + '/login', session: false }),
-  (req, res) => {
-    const token = jwt.sign({ userId: req.user.id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRE });
-    res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${token}`);
-  }
-);
+  router.get('/google/callback', (req, res, next) => {
+    const loginUrl = `${process.env.FRONTEND_URL}/login`;
+
+    passport.authenticate('google', { session: false }, (err, user, info) => {
+      if (err) {
+        logger.error(`Google sign-in failed: ${err.message}`);
+        return res.redirect(`${loginUrl}?error=google_failed`);
+      }
+      if (!user) {
+        return res.redirect(`${loginUrl}?error=${(info && info.reason) || 'google_failed'}`);
+      }
+      // Fragment, not query string: browsers never send it to a server, so the
+      // token stays out of access logs and Referer headers
+      res.redirect(`${process.env.FRONTEND_URL}/auth/callback#token=${signToken(user.id)}`);
+    })(req, res, next);
+  });
+}
 
 module.exports = router;
