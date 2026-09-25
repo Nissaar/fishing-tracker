@@ -121,27 +121,6 @@ exports.getLog = async (req, res) => {
   }
 };
 
-exports.updateLog = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const logId = req.params.id;
-    const logData = req.body;
-    
-    const log = await FishingLog.update(logId, userId, logData);
-    
-    if (!log) {
-      return res.status(404).json({ error: 'Log not found' });
-    }
-    
-    res.json({
-      message: 'Log updated successfully',
-      log
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to update log' });
-  }
-};
-
 exports.deleteLog = async (req, res) => {
   try {
     const userId = req.user.id;

@@ -38,7 +38,6 @@ export const fishingAPI = {
   createLog: (logData) => api.post('/fishing/logs', logData),
   getLogs: (limit) => api.get('/fishing/logs', { params: { limit } }),
   getLog: (id) => api.get(`/fishing/logs/${id}`),
-  updateLog: (id, logData) => api.put(`/fishing/logs/${id}`, logData),
   deleteLog: (id) => api.delete(`/fishing/logs/${id}`),
   getStatistics: () => api.get('/fishing/statistics'),
   getLeaderboard: (period = 'week') => api.get('/fishing/leaderboard', { params: { period } })

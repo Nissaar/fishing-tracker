@@ -8,6 +8,8 @@ const { allLocations } = require('../data/mauritiusLocations');
 const { calculateSolunarPeriods, getCurrentActivity } = require('../utils/solunarTheory');
 const { getLeaderboard } = require('../services/leaderboardService');
 const { logCreateLimiter, conditionsLimiter } = require('../middleware/rateLimiters');
+const { validateNewLog } = require('../middleware/validateLog');
+const { fromMauritiusLocal } = require('../utils/mauritiusTime');
 
 const router = express.Router();
 
@@ -15,10 +17,9 @@ router.use(authMiddleware);
 
 router.get('/locations', fishingController.getLocations);
 router.get('/environmental-data', conditionsLimiter, fishingController.getEnvironmentalData);
-router.post('/logs', logCreateLimiter, fishingController.createLog);
+router.post('/logs', logCreateLimiter, validateNewLog, fishingController.createLog);
 router.get('/logs', fishingController.getLogs);
 router.get('/logs/:id', fishingController.getLog);
-router.put('/logs/:id', fishingController.updateLog);
 router.delete('/logs/:id', fishingController.deleteLog);
 router.get('/statistics', fishingController.getStatistics);
 router.get('/fish-species', fishingController.getFishSpecies);
