@@ -71,7 +71,9 @@ app.use('/api/events', eventsRoutes);
 
 const pool = require('./config/database');
 
-app.get('/health', async (req, res) => {
+// Also served under /api, the only prefix Traefik routes to the backend in
+// production; /health there is answered by the frontend's index.html
+app.get(['/health', '/api/health'], async (req, res) => {
   try {
     // Verify database connectivity
     await pool.query('SELECT 1');
