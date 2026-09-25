@@ -1,4 +1,7 @@
 const express = require('express');
+// Express 4 ignores rejected promises from async handlers; this routes them
+// to the error handler below instead of the process-exiting unhandledRejection
+require('express-async-errors');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');

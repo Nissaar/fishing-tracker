@@ -1,4 +1,5 @@
 const { Pool } = require('pg');
+const logger = require('./logger');
 require('dotenv').config();
 
 const pool = new Pool({
@@ -16,7 +17,8 @@ const pool = new Pool({
 });
 
 pool.on('error', (err) => {
-  // Pool errors are logged but don't crash the app to allow reconnection
+  // Logged but not rethrown, so an idle client dropping doesn't crash the app
+  logger.error(`Database pool error: ${err.message}`);
 });
 
 module.exports = pool;
