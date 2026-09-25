@@ -8,6 +8,9 @@ const logger = require('../config/logger');
 const adminLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 admin requests per windowMs
+  // The e2e suite makes more admin calls than this from one IP, and 429s
+  // there turned into empty tables that weak tests didn't notice
+  skip: () => process.env.NODE_ENV === 'test',
   message: { error: 'Too many requests, please try again later' }
 });
 

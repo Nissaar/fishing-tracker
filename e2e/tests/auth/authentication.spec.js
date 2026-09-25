@@ -17,6 +17,11 @@ const { test, expect } = require('../fixtures');
  * See TEST_DOCUMENTATION.md for step-by-step reproduction instructions
  */
 
+const TEST_USER = {
+  email: process.env.TEST_USER_EMAIL || 'e2etest@fishingtracker.mu',
+  password: process.env.TEST_USER_PASSWORD || 'password'
+};
+
 test.describe('Authentication - Login', () => {
   
   test('should render login page correctly', async ({ page }) => {
@@ -109,14 +114,9 @@ test.describe('Authentication - Login', () => {
       await page.click('button[type="submit"]');
     });
     
-    await test.step('5. Verify redirect to dashboard or success toast appears', async () => {
-      try {
-        await page.waitForURL(/\/dashboard/, { timeout: 15000 });
-        expect(page.url()).toContain('/dashboard');
-      } catch {
-        const hasToast = await page.locator('.Toastify__toast').isVisible();
-        expect(hasToast).toBeTruthy();
-      }
+    await test.step('5. Verify redirect to dashboard', async () => {
+      await expect(page).toHaveURL(/\/dashboard/, { timeout: 15000 });
+      await expect(page.getByRole('button', { name: 'Logout' })).toBeVisible();
     });
   });
   
@@ -141,12 +141,18 @@ test.describe('Authentication - Login', () => {
     });
     
     await test.step('5. Wait for login to complete', async () => {
-      await page.waitForTimeout(3000);
+      await page.waitForURL(/\/dashboard/);
     });
     
     await test.step('6. Verify token is stored in localStorage', async () => {
       const token = await page.evaluate(() => localStorage.getItem('token'));
-      // Token should exist after successful login
+      expect(token).toBeTruthy();
+    });
+
+    await test.step('7. Reload and verify the session survives', async () => {
+      await page.reload();
+      await expect(page).toHaveURL(/\/dashboard/);
+      await expect(page.getByRole('button', { name: 'Logout' })).toBeVisible();
     });
   });
   
@@ -225,11 +231,8 @@ test.describe('Authentication - Registration', () => {
       await page.goto('/register');
     });
     
-    await test.step('2. Fill username field if visible', async () => {
-      const usernameField = page.locator('input[name="username"], input[placeholder*="username" i], input[type="text"]').first();
-      if (await usernameField.isVisible()) {
-        await usernameField.fill('testuser');
-      }
+    await test.step('2. Fill username field', async () => {
+      await page.getByLabel('Username').fill('testuser');
     });
     
     await test.step('3. Enter invalid email format: invalid-email', async () => {
@@ -258,30 +261,26 @@ test.describe('Authentication - Registration', () => {
       await page.goto('/register');
     });
     
-    await test.step('2. Fill username field if visible', async () => {
-      const usernameField = page.locator('input[name="username"], input[placeholder*="username" i], input[type="text"]').first();
-      if (await usernameField.isVisible()) {
-        await usernameField.fill('newuser');
-      }
+    await test.step('2. Fill username field', async () => {
+      await page.getByLabel('Username').fill('newuser');
     });
     
     await test.step(`3. Enter existing user email: ${existingEmail}`, async () => {
       await page.locator('input[type="email"]').first().fill(existingEmail);
     });
     
-    await test.step('4. Enter password: NewPassword123!', async () => {
-      await page.locator('input[type="password"]').first().fill('NewPassword123!');
+    await test.step('4. Enter password: NewPassword123! in both password fields', async () => {
+      await page.getByLabel('Password', { exact: true }).fill('NewPassword123!');
+      await page.getByLabel('Confirm Password').fill('NewPassword123!');
     });
     
     await test.step('5. Click the submit button', async () => {
       await page.locator('button[type="submit"]').first().click();
     });
     
-    await test.step('6. Verify error toast or stays on register page', async () => {
-      await page.waitForTimeout(3000);
-      const hasToast = await page.locator('.Toastify__toast').isVisible();
-      const stillOnRegister = page.url().includes('/register');
-      expect(hasToast || stillOnRegister).toBeTruthy();
+    await test.step('6. Verify an error toast appears and the user stays on the register page', async () => {
+      await expect(page.locator('.Toastify__toast--error')).toContainText('Email already registered');
+      await expect(page).toHaveURL(/\/register/);
     });
   });
   
@@ -294,10 +293,7 @@ test.describe('Authentication - Registration', () => {
     });
     
     await test.step(`2. Fill username field: ${newUser.username}`, async () => {
-      const usernameField = page.locator('input[placeholder*="username" i], input[type="text"]').first();
-      if (await usernameField.isVisible()) {
-        await usernameField.fill(newUser.username);
-      }
+      await page.getByLabel('Username').fill(newUser.username);
     });
     
     await test.step(`3. Enter email: ${newUser.email}`, async () => {
@@ -314,11 +310,10 @@ test.describe('Authentication - Registration', () => {
       await page.locator('button[type="submit"]').first().click();
     });
     
-    await test.step('6. Verify successful registration or appropriate response', async () => {
-      await page.waitForTimeout(3000);
-      const url = page.url();
-      const hasToast = await page.locator('.Toastify__toast').isVisible();
-      expect(url.includes('/dashboard') || url.includes('/login') || url.includes('/register') || hasToast).toBeTruthy();
+    await test.step('6. Verify the new user lands on the dashboard, signed in', async () => {
+      await expect(page).toHaveURL(/\/dashboard/);
+      await expect(page.locator('.Toastify__toast--success')).toContainText('Registration successful');
+      await expect(page.locator('header')).toContainText(newUser.username);
     });
   });
   
@@ -356,8 +351,9 @@ test.describe('Authentication - Protected Routes', () => {
       await page.goto('/dashboard');
     });
     
-    await test.step('3. Verify redirect to login page or auth check', async () => {
-      await page.waitForURL(/\/(login|dashboard)/, { timeout: 10000 });
+    await test.step('3. Verify redirect to login page', async () => {
+      await expect(page).toHaveURL(/\/login$/);
+      await expect(page.locator('input[type="email"]')).toBeVisible();
     });
   });
   
@@ -371,59 +367,78 @@ test.describe('Authentication - Protected Routes', () => {
       await page.goto('/admin');
     });
     
-    await test.step('3. Verify redirect to appropriate page', async () => {
-      await page.waitForURL(/\/(login|admin|dashboard)/, { timeout: 10000 });
+    await test.step('3. Verify redirect to login page', async () => {
+      await expect(page).toHaveURL(/\/login$/);
+      await expect(page.getByRole('heading', { name: 'Admin Dashboard' })).toHaveCount(0);
     });
   });
   
-  test('should show loading state during auth check', async ({ page }) => {
-    await test.step('1. Navigate to /dashboard', async () => {
+  test('should show loading state during auth check', async ({ page, apiHelper }) => {
+    /** @type {() => void} */
+    let releaseProfile = () => {};
+    const profileHeld = new Promise(resolve => { releaseProfile = () => resolve(undefined); });
+
+    await test.step('1. Store a valid token and hold the profile check', async () => {
+      const token = await apiHelper.login(TEST_USER.email, TEST_USER.password);
+      await page.goto('/');
+      await page.evaluate((t) => localStorage.setItem('token', t), token);
+      await page.route('**/api/auth/profile', async (route) => {
+        await profileHeld;
+        await route.continue();
+      });
+    });
+
+    await test.step('2. Navigate to /dashboard', async () => {
       await page.goto('/dashboard');
     });
     
-    await test.step('2. Check for loading spinner during authentication check', async () => {
-      const hasSpinner = await page.locator('.loading-spinner, .animate-spin').isVisible();
-      // Spinner might appear briefly - this is informational
+    await test.step('3. Verify a spinner is shown while the session is checked', async () => {
+      await expect(page.locator('.loading-spinner')).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Logout' })).toHaveCount(0);
+    });
+
+    await test.step('4. Let the check finish and verify the dashboard appears', async () => {
+      releaseProfile();
+      await expect(page.getByRole('button', { name: 'Logout' })).toBeVisible();
+      await expect(page.locator('.loading-spinner')).toHaveCount(0);
     });
   });
 });
 
 test.describe('Authentication - Logout', () => {
+
+  // The auth project runs without a stored session, so sign in first
+  test.beforeEach(async ({ pageHelper }) => {
+    await pageHelper.login(TEST_USER.email, TEST_USER.password);
+  });
   
   test('should have logout button in dashboard', async ({ page }) => {
-    await test.step('1. Navigate to /dashboard (requires authentication)', async () => {
-      await page.goto('/dashboard');
-      await page.waitForLoadState('networkidle');
+    await test.step('1. Verify the dashboard is open', async () => {
+      await expect(page).toHaveURL(/\/dashboard/);
     });
     
-    await test.step('2. Look for logout button/link', async () => {
-      const logoutButton = page.locator('text=/logout|sign out/i');
-      const isVisible = await logoutButton.isVisible().catch(() => false);
-      // If dashboard loaded, logout option should be available
+    await test.step('2. Verify the Logout button is visible in the header', async () => {
+      await expect(page.locator('header').getByRole('button', { name: 'Logout' })).toBeVisible();
     });
   });
   
   test('should clear token on logout', async ({ page }) => {
-    await test.step('1. Navigate to /dashboard (requires authentication)', async () => {
-      await page.goto('/dashboard');
-      await page.waitForLoadState('networkidle');
+    await test.step('1. Click the Logout button', async () => {
+      await page.getByRole('button', { name: 'Logout' }).click();
     });
     
-    await test.step('2. Find and click the logout button if visible', async () => {
-      const logoutButton = page.locator('text=/logout|sign out/i').first();
-      
-      if (await logoutButton.isVisible()) {
-        await logoutButton.click();
-        await page.waitForTimeout(2000);
-      }
+    await test.step('2. Verify the user is sent to the login page', async () => {
+      await expect(page).toHaveURL(/\/login$/);
     });
     
     await test.step('3. Verify token is cleared from localStorage', async () => {
-      const logoutButton = page.locator('text=/logout|sign out/i').first();
-      if (await logoutButton.isVisible().catch(() => false) === false) {
-        const token = await page.evaluate(() => localStorage.getItem('token'));
-        expect(token).toBeNull();
-      }
+      const token = await page.evaluate(() => localStorage.getItem('token'));
+      expect(token).toBeNull();
+    });
+
+    await test.step('4. Verify the dashboard is no longer reachable', async () => {
+      await page.goto('/dashboard');
+      await expect(page).toHaveURL(/\/login$/);
     });
   });
 });

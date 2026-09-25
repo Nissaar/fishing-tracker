@@ -80,6 +80,12 @@ module.exports = defineConfig({
     {
       name: 'setup',
       testMatch: /global\.setup\.js/,
+      teardown: 'teardown',
+    },
+    // Runs once every project that depends on setup has finished
+    {
+      name: 'teardown',
+      testMatch: /global\.teardown\.js/,
     },
     // 2. Public pages & API - no auth needed
     {
