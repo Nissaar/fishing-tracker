@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Compass, MapPin, Fish, Clock, Calendar, AlertCircle, CheckCircle, Info, Loader, TrendingUp, Sun, Moon, Waves, Wind, ThermometerSun } from 'lucide-react';
+import { Compass, MapPin, Fish, Clock, Calendar, AlertCircle, CheckCircle, Info, Loader, TrendingUp, Moon, Waves, Wind, ThermometerSun } from 'lucide-react';
 import { fishingAPI } from '../../services/api';
 import useDropdownOptions from '../../hooks/useDropdownOptions';
 import { toast } from 'react-toastify';

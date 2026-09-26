@@ -977,67 +977,6 @@ router.get('/system-logs', async (req, res) => {
 
 // Log files are served by /api/logs (logsRoutes.js)
 
-// ==================== CONTACT MESSAGES MANAGEMENT ====================
-
-// Get all contact messages
-router.get('/contact-messages', async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT * FROM contact_messages 
-      ORDER BY created_at DESC
-    `);
-    
-    // Get stats
-    const statsResult = await pool.query(`
-      SELECT 
-        COUNT(*) FILTER (WHERE status = 'unread') as unread,
-        COUNT(*) as total
-      FROM contact_messages
-    `);
-
-    res.json({
-      messages: result.rows,
-      stats: statsResult.rows[0] || { unread: 0, total: 0 }
-    });
-  } catch (error) {
-    logger.error('Error fetching contact messages:', error);
-    res.status(500).json({ error: 'Failed to fetch contact messages' });
-  }
-});
-
-// Update contact message status
-router.patch('/contact-messages/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { status } = req.body;
-
-    const result = await pool.query(
-      'UPDATE contact_messages SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
-      [status, id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Message not found' });
-    }
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    logger.error('Error updating contact message:', error);
-    res.status(500).json({ error: 'Failed to update message' });
-  }
-});
-
-// Delete contact message
-router.delete('/contact-messages/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    await pool.query('DELETE FROM contact_messages WHERE id = $1', [id]);
-    res.json({ message: 'Message deleted successfully' });
-  } catch (error) {
-    logger.error('Error deleting contact message:', error);
-    res.status(500).json({ error: 'Failed to delete message' });
-  }
-});
+// Contact messages are managed through /api/contact (contactRoutes.js)
 
 module.exports = router;

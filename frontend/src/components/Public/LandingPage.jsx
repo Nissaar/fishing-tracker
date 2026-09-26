@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Fish, Moon, Waves, Sun, Wind, Eye, Menu, X, Thermometer, ChevronLeft, ChevronRight, Activity, Sunrise, Sunset, Users, Trophy, Layers } from 'lucide-react';
+import { Fish, Moon, Waves, Sun, Wind, Eye, Thermometer, ChevronLeft, ChevronRight, Activity, Sunrise, Sunset, Users, Trophy, Layers } from 'lucide-react';
 import { publicAPI, isCancelled } from '../../services/api';
 import ErrorState from '../Common/ErrorState';
 import PublicNav from './PublicNav';

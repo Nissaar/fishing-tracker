@@ -56,27 +56,26 @@ test.describe('Public Pages - Rendering & Display', () => {
       });
       
       await test.step('2. Navigate to landing page and wait for conditions to load', async () => {
+        const conditions = page.waitForResponse(r => r.url().includes('/api/public/conditions'));
         await page.goto('/');
-        await page.waitForLoadState('networkidle');
-        await page.waitForTimeout(2000);
+        expect((await conditions).ok()).toBeTruthy();
       });
       
       await test.step('3. Verify weather/conditions section is visible', async () => {
-        const conditionsSection = page.locator('[class*="bg-white"]').first();
-        await expect(conditionsSection).toBeVisible();
+        await expect(page.getByRole('heading', { name: /Conditions in Port Louis/ })).toBeVisible();
+        for (const card of ['Moon Phase', 'Tide Level', 'Weather', 'Fish Activity']) {
+          await expect(page.getByRole('heading', { name: card, exact: true })).toBeVisible();
+        }
       });
     });
     
     test('should display fishing rating indicator', async ({ page }) => {
-      await test.step('1. Navigate to landing page and wait for content', async () => {
+      await test.step('1. Navigate to landing page', async () => {
         await page.goto('/');
-        await page.waitForLoadState('networkidle');
-        await page.waitForTimeout(2000);
       });
       
-      await test.step('2. Verify page content is loaded', async () => {
-        const pageContent = await page.content();
-        expect(pageContent.length).toBeGreaterThan(0);
+      await test.step('2. Verify a fishing rating is shown once conditions load', async () => {
+        await expect(page.getByText(/^(🎣 Excellent Fishing!|✅ Good Conditions|⚠️ Fair Conditions|❌ Poor Conditions)$/)).toBeVisible();
       });
     });
     
@@ -86,11 +85,21 @@ test.describe('Public Pages - Rendering & Display', () => {
         await page.waitForLoadState('networkidle');
       });
       
-      await test.step('2. Look for date navigation arrows (optional feature)', async () => {
-        const leftArrow = page.locator('[class*="ChevronLeft"], button:has-text("<")').first();
-        const rightArrow = page.locator('[class*="ChevronRight"], button:has-text(">")').first();
-        const hasNav = await leftArrow.isVisible() || await rightArrow.isVisible();
-        // This is optional, not all designs have this
+      // The page has two copies of the date controls (above the cards and
+      // further down); both drive the same date, so use the first
+      await test.step('2. Verify the previous/next day buttons are visible', async () => {
+        await expect(page.getByRole('button', { name: 'Previous day' }).first()).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Next day' }).first()).toBeVisible();
+      });
+
+      await test.step('3. Click "Next day" and verify conditions are fetched for tomorrow', async () => {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowStr = tomorrow.toLocaleDateString('en-CA');
+        const refetch = page.waitForResponse(r => r.url().includes('/api/public/conditions') && r.url().includes(`date=${tomorrowStr}`));
+        await page.getByRole('button', { name: 'Next day' }).first().click();
+        expect((await refetch).ok()).toBeTruthy();
+        await expect(page.locator('input[type="date"]').first()).toHaveValue(tomorrowStr);
       });
     });
     
@@ -116,8 +125,8 @@ test.describe('Public Pages - Rendering & Display', () => {
         expect(response?.status()).toBeLessThan(500);
       });
       
-      await test.step('2. Wait for page to load', async () => {
-        await page.waitForLoadState('domcontentloaded');
+      await test.step('2. Verify the About heading is shown', async () => {
+        await expect(page.getByRole('heading', { level: 1, name: /About Fishing Tracker Pro/ })).toBeVisible();
       });
     });
     
@@ -204,8 +213,8 @@ test.describe('Public Pages - Rendering & Display', () => {
         await page.click('button[type="submit"]');
       });
       
-      await test.step('7. Verify toast notification appears (success or error)', async () => {
-        await page.waitForSelector('.Toastify__toast', { timeout: 10000 });
+      await test.step('7. Verify the success toast appears', async () => {
+        await expect(page.locator('.Toastify__toast--success')).toContainText('Your message has been sent successfully!');
       });
     });
     
@@ -248,6 +257,10 @@ test.describe('Public Pages - Rendering & Display', () => {
         const response = await page.goto('/privacy');
         expect(response?.status()).toBeLessThan(500);
       });
+
+      await test.step('2. Verify the Privacy Policy heading is shown', async () => {
+        await expect(page.getByRole('heading', { level: 1, name: 'Privacy Policy' })).toBeVisible();
+      });
     });
   });
   
@@ -256,6 +269,10 @@ test.describe('Public Pages - Rendering & Display', () => {
       await test.step('1. Navigate to /data-sources page', async () => {
         const response = await page.goto('/data-sources');
         expect(response?.status()).toBeLessThan(500);
+      });
+
+      await test.step('2. Verify the Data Sources heading is shown', async () => {
+        await expect(page.getByRole('heading', { level: 1, name: 'Data Sources & Calculations' })).toBeVisible();
       });
     });
   });
@@ -313,19 +330,16 @@ test.describe('Public Pages - Navigation', () => {
       await page.goto('/');
     });
     
-    await test.step('2. Find and click "Register" or "Sign Up" link if visible', async () => {
-      const registerLink = page.getByRole('link', { name: /register|sign up/i }).first();
-      if (await registerLink.isVisible()) {
-        await registerLink.click();
-        await page.waitForURL(/register/);
-      }
+    // Use the nav's "Get Started" link: it is always rendered, unlike the
+    // "Sign up" links in the events and leaderboard teasers, which only appear
+    // once their API calls return
+    await test.step('2. Click "Get Started" in the navigation', async () => {
+      await page.getByRole('navigation').getByRole('link', { name: 'Get Started', exact: true }).click();
     });
     
-    await test.step('3. Verify URL changes to /register (if link exists)', async () => {
-      const registerLink = page.getByRole('link', { name: /register|sign up/i }).first();
-      if (await registerLink.isVisible().catch(() => false)) {
-        expect(page.url()).toContain('/register');
-      }
+    await test.step('3. Verify the registration page opens', async () => {
+      await expect(page).toHaveURL(/\/register$/);
+      await expect(page.getByRole('heading', { name: 'Create Account' })).toBeVisible();
     });
   });
   

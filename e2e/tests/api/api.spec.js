@@ -67,19 +67,23 @@ test.describe('API - Public Endpoints', () => {
     
     await test.step('3. Verify response contains weather/moon/tide data', async () => {
       const data = await response.json();
-      expect(data).toBeDefined();
+      expect(data.moon.phase).toBeTruthy();
+      expect(data.tide).toBeDefined();
+      expect(data.weather).toBeDefined();
     });
   });
   
-  test('should return locations list', async ({ apiHelper }) => {
+  // The locations list is not public: without a token it must be refused
+  // (the authenticated case is covered under Fishing Endpoints)
+  test('should require a session for the locations list', async ({ apiHelper }) => {
     let response;
     
-    await test.step('1. Send GET request to locations endpoint', async () => {
+    await test.step('1. Send GET request to locations endpoint without a token', async () => {
       response = await apiHelper.getLocations();
     });
     
-    await test.step('2. Verify response is not a server error (status < 500)', async () => {
-      expect(response.status()).toBeLessThan(500);
+    await test.step('2. Verify it is rejected as unauthenticated', async () => {
+      expect(response.status()).toBe(401);
     });
   });
   
@@ -95,8 +99,9 @@ test.describe('API - Public Endpoints', () => {
       response = await apiHelper.submitContact(contactData);
     });
     
-    await test.step('3. Verify response is success or validation error (status < 500)', async () => {
-      expect(response.status()).toBeLessThan(500);
+    await test.step('3. Verify the message was accepted', async () => {
+      expect(response.status()).toBe(201);
+      expect((await response.json()).messageId).toBeDefined();
     });
   });
 });
@@ -116,9 +121,9 @@ test.describe('API - Authentication Endpoints', () => {
       });
     });
     
-    await test.step('2. Verify response is 4xx error (401 or 400)', async () => {
-      expect(response.status()).toBeGreaterThanOrEqual(400);
-      expect(response.status()).toBeLessThan(500);
+    await test.step('2. Verify response is 401 with no token', async () => {
+      expect(response.status()).toBe(401);
+      expect((await response.json()).token).toBeUndefined();
     });
   });
   
@@ -135,11 +140,10 @@ test.describe('API - Authentication Endpoints', () => {
     });
     
     await test.step('2. Verify response contains JWT token on success', async () => {
-      if (response.ok()) {
-        const data = await response.json();
-        expect(data.token).toBeDefined();
-      }
-      // If not ok, test user might not exist yet
+      expect(response.status()).toBe(200);
+      const data = await response.json();
+      expect(data.token).toBeTruthy();
+      expect(data.user.email).toBe(email);
     });
   });
   
@@ -158,8 +162,9 @@ test.describe('API - Authentication Endpoints', () => {
       });
     });
     
-    await test.step('2. Verify response is 4xx error for duplicate email', async () => {
-      expect(response.status()).toBeGreaterThanOrEqual(400);
+    await test.step('2. Verify response is 400 for duplicate email', async () => {
+      expect(response.status()).toBe(400);
+      expect((await response.json()).error).toBe('Email already registered');
     });
   });
   
@@ -174,19 +179,18 @@ test.describe('API - Authentication Endpoints', () => {
       const loginResponse = await request.post(`${API_URL}/auth/login`, {
         data: { email, password }
       });
-      if (loginResponse.ok()) {
-        const data = await loginResponse.json();
-        token = data.token;
-      }
+      expect(loginResponse.ok()).toBeTruthy();
+      token = (await loginResponse.json()).token;
     });
     
     await test.step('2. Send GET to /api/auth/profile with Bearer token', async () => {
-      if (token) {
-        const profileResponse = await request.get(`${API_URL}/auth/profile`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        expect(profileResponse.status()).toBeLessThan(500);
-      }
+      const profileResponse = await request.get(`${API_URL}/auth/profile`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      expect(profileResponse.status()).toBe(200);
+      const { user } = await profileResponse.json();
+      expect(user.email).toBe(email);
+      expect(user.is_admin).toBe(false);
     });
   });
   
@@ -198,8 +202,8 @@ test.describe('API - Authentication Endpoints', () => {
       response = await request.get(`${API_URL}/auth/profile`);
     });
     
-    await test.step('2. Verify response is 401 or 403 (unauthorized)', async () => {
-      expect(response.status()).toBeGreaterThanOrEqual(400);
+    await test.step('2. Verify response is 401 (unauthorized)', async () => {
+      expect(response.status()).toBe(401);
     });
   });
 });
@@ -218,19 +222,14 @@ test.describe('API - Fishing Endpoints', () => {
       data: { email, password }
     });
     
-    if (loginResponse.ok()) {
-      const data = await loginResponse.json();
-      authToken = data.token;
-    }
+    // Without a token every test below would be meaningless, so fail here
+    expect(loginResponse.ok()).toBeTruthy();
+    authToken = (await loginResponse.json()).token;
   });
   
   test('should return fishing locations', async ({ request }) => {
     const API_URL = process.env.TEST_API_URL || 'http://localhost:5000/api';
     
-    if (!authToken) {
-      test.skip();
-      return;
-    }
     
     const response = await request.get(`${API_URL}/fishing/locations`, {
       headers: { Authorization: `Bearer ${authToken}` }
@@ -245,10 +244,6 @@ test.describe('API - Fishing Endpoints', () => {
   test('should return dropdown options - fishing types', async ({ request }) => {
     const API_URL = process.env.TEST_API_URL || 'http://localhost:5000/api';
     
-    if (!authToken) {
-      test.skip();
-      return;
-    }
     
     const response = await request.get(`${API_URL}/fishing/dropdown/fishing-types`, {
       headers: { Authorization: `Bearer ${authToken}` }
@@ -260,10 +255,6 @@ test.describe('API - Fishing Endpoints', () => {
   test('should return dropdown options - fishing methods', async ({ request }) => {
     const API_URL = process.env.TEST_API_URL || 'http://localhost:5000/api';
     
-    if (!authToken) {
-      test.skip();
-      return;
-    }
     
     const response = await request.get(`${API_URL}/fishing/dropdown/fishing-methods`, {
       headers: { Authorization: `Bearer ${authToken}` }
@@ -275,10 +266,6 @@ test.describe('API - Fishing Endpoints', () => {
   test('should return dropdown options - baits', async ({ request }) => {
     const API_URL = process.env.TEST_API_URL || 'http://localhost:5000/api';
     
-    if (!authToken) {
-      test.skip();
-      return;
-    }
     
     const response = await request.get(`${API_URL}/fishing/dropdown/baits`, {
       headers: { Authorization: `Bearer ${authToken}` }
@@ -290,10 +277,6 @@ test.describe('API - Fishing Endpoints', () => {
   test('should return dropdown options - fish species', async ({ request }) => {
     const API_URL = process.env.TEST_API_URL || 'http://localhost:5000/api';
     
-    if (!authToken) {
-      test.skip();
-      return;
-    }
     
     const response = await request.get(`${API_URL}/fishing/dropdown/fish-species`, {
       headers: { Authorization: `Bearer ${authToken}` }
@@ -305,12 +288,9 @@ test.describe('API - Fishing Endpoints', () => {
   test('should create a fishing log', async ({ request, testData }) => {
     const API_URL = process.env.TEST_API_URL || 'http://localhost:5000/api';
     
-    if (!authToken) {
-      test.skip();
-      return;
-    }
     
-    const logData = testData.fishingLog();
+    // The fixture's location id predates the current ids; use a real one
+    const logData = { ...testData.fishingLog(), location: 'grand-baie', fishingTypes: ['Casting'] };
     
     const response = await request.post(`${API_URL}/fishing/logs`, {
       headers: { 
@@ -320,22 +300,19 @@ test.describe('API - Fishing Endpoints', () => {
       data: logData
     });
     
-    // Should create successfully or return validation error
-    expect(response.status()).toBeLessThan(500);
-    
-    if (response.ok()) {
-      const data = await response.json();
-      expect(data.id || data.log || data.success).toBeDefined();
-    }
+    expect(response.status()).toBe(201);
+    const { log } = await response.json();
+    expect(log.id).toBeDefined();
+    expect(log.location).toBe('grand-baie');
+
+    await request.delete(`${API_URL}/fishing/logs/${log.id}`, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
   });
   
   test('should return user fishing logs', async ({ request }) => {
     const API_URL = process.env.TEST_API_URL || 'http://localhost:5000/api';
     
-    if (!authToken) {
-      test.skip();
-      return;
-    }
     
     const response = await request.get(`${API_URL}/fishing/logs?limit=10`, {
       headers: { Authorization: `Bearer ${authToken}` }
@@ -350,10 +327,6 @@ test.describe('API - Fishing Endpoints', () => {
   test('should return environmental data for location', async ({ request }) => {
     const API_URL = process.env.TEST_API_URL || 'http://localhost:5000/api';
     
-    if (!authToken) {
-      test.skip();
-      return;
-    }
     
     const today = new Date().toISOString().split('T')[0];
     
@@ -361,21 +334,19 @@ test.describe('API - Fishing Endpoints', () => {
       headers: { Authorization: `Bearer ${authToken}` },
       params: {
         date: today,
-        locationId: 'loc_port_louis'
+        locationId: 'grand-baie'
       }
     });
     
-    // Should return data or not found
-    expect(response.status()).toBeLessThan(500);
+    expect(response.status()).toBe(200);
+    const data = await response.json();
+    expect(data.moon.phase).toBeTruthy();
+    expect(data.weather).toBeDefined();
   });
   
   test('should return fishing statistics', async ({ request }) => {
     const API_URL = process.env.TEST_API_URL || 'http://localhost:5000/api';
     
-    if (!authToken) {
-      test.skip();
-      return;
-    }
     
     const response = await request.get(`${API_URL}/fishing/statistics`, {
       headers: { Authorization: `Bearer ${authToken}` }
@@ -387,10 +358,6 @@ test.describe('API - Fishing Endpoints', () => {
   test('should return global predictions', async ({ request }) => {
     const API_URL = process.env.TEST_API_URL || 'http://localhost:5000/api';
     
-    if (!authToken) {
-      test.skip();
-      return;
-    }
     
     const response = await request.get(`${API_URL}/fishing/global-predictions`, {
       headers: { Authorization: `Bearer ${authToken}` }
@@ -402,10 +369,6 @@ test.describe('API - Fishing Endpoints', () => {
   test('should generate trip recommendations', async ({ request }) => {
     const API_URL = process.env.TEST_API_URL || 'http://localhost:5000/api';
     
-    if (!authToken) {
-      test.skip();
-      return;
-    }
     
     const today = new Date().toISOString().split('T')[0];
     
@@ -415,15 +378,14 @@ test.describe('API - Fishing Endpoints', () => {
         'Content-Type': 'application/json'
       },
       data: {
-        location: 'loc_port_louis',
+        location: 'grand-baie',
         date: today,
         startTime: '06:00',
         endTime: '12:00'
       }
     });
     
-    // Should return recommendations or error
-    expect(response.status()).toBeLessThan(500);
+    expect(response.status()).toBe(200);
   });
 });
 
@@ -441,101 +403,79 @@ test.describe('API - Admin Endpoints', () => {
       data: { email, password }
     });
     
-    if (loginResponse.ok()) {
-      const data = await loginResponse.json();
-      adminToken = data.token;
-    }
+    // Without a token every test below would be meaningless, so fail here
+    expect(loginResponse.ok()).toBeTruthy();
+    adminToken = (await loginResponse.json()).token;
   });
   
   test('should return admin statistics', async ({ request }) => {
     const API_URL = process.env.TEST_API_URL || 'http://localhost:5000/api';
     
-    if (!adminToken) {
-      test.skip();
-      return;
-    }
     
     const response = await request.get(`${API_URL}/admin/stats`, {
       headers: { Authorization: `Bearer ${adminToken}` }
     });
     
-    // Admin stats should work or return 403/404
-    expect(response.status()).toBeLessThan(500);
+    expect(response.status()).toBe(200);
+    const data = await response.json();
+    expect(data.overview.totalUsers).toBeGreaterThanOrEqual(2);
   });
   
   test('should return users list for admin', async ({ request }) => {
     const API_URL = process.env.TEST_API_URL || 'http://localhost:5000/api';
     
-    if (!adminToken) {
-      test.skip();
-      return;
-    }
     
     const response = await request.get(`${API_URL}/admin/users`, {
       headers: { Authorization: `Bearer ${adminToken}` }
     });
     
-    expect(response.status()).toBeLessThan(500);
+    expect(response.status()).toBe(200);
+    const { users } = await response.json();
+    expect(users.map(u => u.email)).toContain(process.env.TEST_ADMIN_EMAIL || 'admin@fishingtracker.mu');
   });
   
   test('should return submissions for admin', async ({ request }) => {
     const API_URL = process.env.TEST_API_URL || 'http://localhost:5000/api';
     
-    if (!adminToken) {
-      test.skip();
-      return;
-    }
     
     const response = await request.get(`${API_URL}/admin/submissions`, {
       headers: { Authorization: `Bearer ${adminToken}` }
     });
     
-    expect([200, 403]).toContain(response.status());
+    expect(response.status()).toBe(200);
   });
   
   test('should return contact messages for admin', async ({ request }) => {
     const API_URL = process.env.TEST_API_URL || 'http://localhost:5000/api';
     
-    if (!adminToken) {
-      test.skip();
-      return;
-    }
     
     const response = await request.get(`${API_URL}/contact/all`, {
       headers: { Authorization: `Bearer ${adminToken}` }
     });
     
-    expect([200, 403]).toContain(response.status());
+    expect(response.status()).toBe(200);
   });
   
   test('should return fishing types for admin', async ({ request }) => {
     const API_URL = process.env.TEST_API_URL || 'http://localhost:5000/api';
     
-    if (!adminToken) {
-      test.skip();
-      return;
-    }
     
     const response = await request.get(`${API_URL}/admin/fishing-types`, {
       headers: { Authorization: `Bearer ${adminToken}` }
     });
     
-    expect([200, 403]).toContain(response.status());
+    expect(response.status()).toBe(200);
   });
   
   test('should return system logs for admin', async ({ request }) => {
     const API_URL = process.env.TEST_API_URL || 'http://localhost:5000/api';
     
-    if (!adminToken) {
-      test.skip();
-      return;
-    }
     
     const response = await request.get(`${API_URL}/admin/system-logs`, {
       headers: { Authorization: `Bearer ${adminToken}` }
     });
     
-    expect([200, 403]).toContain(response.status());
+    expect(response.status()).toBe(200);
   });
   
   test('should reject admin endpoints for non-admin users', async ({ request }) => {
@@ -548,14 +488,23 @@ test.describe('API - Admin Endpoints', () => {
       data: { email, password }
     });
     
-    if (loginResponse.ok()) {
-      const { token } = await loginResponse.json();
-      
-      const response = await request.get(`${API_URL}/admin/stats`, {
+    expect(loginResponse.ok()).toBeTruthy();
+    const { token } = await loginResponse.json();
+    
+    for (const endpoint of ['admin/stats', 'admin/users', 'contact/all']) {
+      const response = await request.get(`${API_URL}/${endpoint}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
-      expect(response.status()).toBe(403);
+      expect(response.status(), endpoint).toBe(403);
+    }
+  });
+
+  test('should reject admin endpoints without a token', async ({ request }) => {
+    const API_URL = process.env.TEST_API_URL || 'http://localhost:5000/api';
+
+    for (const endpoint of ['admin/stats', 'contact/all']) {
+      const response = await request.get(`${API_URL}/${endpoint}`);
+      expect(response.status(), endpoint).toBe(401);
     }
   });
 });
