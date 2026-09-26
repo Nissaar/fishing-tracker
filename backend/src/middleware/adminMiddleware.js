@@ -1,5 +1,6 @@
 const pool = require('../config/database');
 const rateLimit = require('express-rate-limit');
+const { clientIp } = require('./rateLimiters');
 
 /**
  * Rate limiter for admin routes
@@ -7,6 +8,7 @@ const rateLimit = require('express-rate-limit');
 const adminLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 admin requests per windowMs
+  keyGenerator: clientIp,
   message: { error: 'Too many requests, please try again later' }
 });
 
