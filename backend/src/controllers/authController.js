@@ -1,12 +1,6 @@
-const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { validationResult } = require('express-validator');
-
-const generateToken = (userId) => {
-  return jwt.sign({ userId }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE
-  });
-};
+const { signToken: generateToken } = require('../utils/token');
 
 exports.register = async (req, res) => {
   try {
@@ -43,11 +37,12 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
+
+    if (typeof email !== 'string' || typeof password !== 'string' || !email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
     
     const user = await User.findByEmail(email);
-    // Security note: We intentionally return a generic "Invalid credentials" message
-    // when no user is found, to avoid revealing whether an email is registered and
-    // reduce the risk of account enumeration. This trades off some UX for security.
     // Security note: We intentionally return a generic "Invalid credentials" message
     // when no user is found, to avoid revealing whether an email is registered and
     // reduce the risk of account enumeration. This trades off some UX for security.
@@ -55,8 +50,9 @@ exports.login = async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     
+    // Accounts created with Google only ever sign in with Google
     if (!user.password_hash) {
-      return res.status(401).json({ error: 'Please use Google Sign-In for this account' });
+      return res.status(401).json({ error: 'This account uses Google Sign-In. Please continue with Google.' });
     }
     
     const isValidPassword = await User.verifyPassword(password, user.password_hash);

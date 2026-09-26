@@ -6,8 +6,18 @@ const { isAdmin } = require('../middleware/adminMiddleware');
 const Mailgun = require('mailgun.js');
 const formData = require('form-data');
 const logger = require('../config/logger');
+const { contactLimiter } = require('../middleware/rateLimiters');
 
 const router = express.Router();
+
+// Submissions come from anonymous visitors and are rendered in an email sent
+// from our own domain, so any markup in them must be shown as text
+const escapeHtml = (value) => String(value)
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
 
 // Initialize Mailgun (optional - only if credentials provided)
 let mg;
@@ -22,6 +32,7 @@ if (process.env.MAILGUN_API_KEY && process.env.MAILGUN_DOMAIN) {
 // Submit contact form (public route)
 router.post(
   '/submit',
+  contactLimiter,
   [
     body('name').trim().isLength({ min: 2, max: 100 }).withMessage('Name must be between 2 and 100 characters'),
     body('email').isEmail().normalizeEmail().withMessage('Invalid email address'),
@@ -56,13 +67,14 @@ router.post(
         const emailData = {
           from: `Fishing Tracker <noreply@${process.env.MAILGUN_DOMAIN}>`,
           to: process.env.CONTACT_EMAIL,
-          subject: `Contact Form: ${subject}`,
+          subject: `Contact Form: ${subject.replace(/[\r\n]+/g, ' ')}`,
+          'h:Reply-To': email,
           html: `
             <h2>New Contact Form Submission</h2>
-            <p><strong>From:</strong> ${name} (${email})</p>
-            <p><strong>Subject:</strong> ${subject}</p>
+            <p><strong>From:</strong> ${escapeHtml(name)} (${escapeHtml(email)})</p>
+            <p><strong>Subject:</strong> ${escapeHtml(subject)}</p>
             <p><strong>Message:</strong></p>
-            <p>${message.replace(/\n/g, '<br>')}</p>
+            <p>${escapeHtml(message).replace(/\n/g, '<br>')}</p>
             <p><em>Received at: ${new Date(result.rows[0].created_at).toLocaleString()}</em></p>
           `
         };

@@ -5,16 +5,8 @@ const morgan = require('morgan');
 const session = require('express-session');
 require('dotenv').config();
 
-// Validate required environment variables
-if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.trim() === '') {
-  if (process.env.NODE_ENV === 'production') {
-    console.error('FATAL ERROR: SESSION_SECRET environment variable is required in production');
-    process.exit(1);
-  } else {
-    console.warn('WARNING: SESSION_SECRET not set. Using default value for development only.');
-    console.warn('Set SESSION_SECRET environment variable for production use.');
-  }
-}
+const { validateEnv } = require('./config/env');
+validateEnv();
 
 const logger = require('./config/logger');
 const passport = require('./config/passport');
@@ -30,8 +22,13 @@ const { runMigrations } = require('./config/migrate');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// One proxy hop (Traefik) sits in front of the API. Without this, rate limits
+// see every visitor as the proxy's IP and secure session cookies are never set.
+app.set('trust proxy', 1);
+
 app.use(helmet());
 app.use(cors({
+  // env.js refuses to start in production without CORS_ORIGIN
   origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : '*',
   credentials: true
 }));
@@ -42,6 +39,8 @@ app.use(morgan('combined', { stream: logger.stream }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Only used to hold the OAuth `state` value during Google sign-in; API auth is
+// by JWT. MemoryStore is fine for the single backend instance this runs as.
 app.use(session({
   secret: process.env.SESSION_SECRET || 'dev-session-secret-change-in-production',
   resave: false,
@@ -49,12 +48,12 @@ app.use(session({
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    sameSite: 'lax',
+    maxAge: 10 * 60 * 1000 // long enough to finish a Google sign-in
   }
 }));
 
 app.use(passport.initialize());
-app.use(passport.session());
 
 // Public routes (no authentication needed)
 app.use('/api/public', publicRoutes);
@@ -76,7 +75,7 @@ app.get('/health', async (req, res) => {
     res.json({ status: 'OK', timestamp: new Date().toISOString(), database: 'connected' });
   } catch (error) {
     logger.error('Health check failed:', error.message);
-    res.status(503).json({ status: 'ERROR', timestamp: new Date().toISOString(), database: 'disconnected', error: error.message });
+    res.status(503).json({ status: 'ERROR', timestamp: new Date().toISOString(), database: 'disconnected' });
   }
 });
 

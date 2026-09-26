@@ -1,14 +1,30 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 import { Fish } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+
+// Codes the backend's Google callback redirects back with
+const GOOGLE_ERRORS = {
+  use_password: 'This email is registered with a password. Please log in with your email and password.',
+  google_unverified: 'Your Google email address is not verified.',
+  google_failed: 'Google sign-in failed. Please try again.'
+};
 
 const Login = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    const code = searchParams.get('error');
+    if (code) {
+      toast.error(GOOGLE_ERRORS[code] || GOOGLE_ERRORS.google_failed);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
 const handleSubmit = async (e) => {
     e.preventDefault(); // This allows Enter key to work

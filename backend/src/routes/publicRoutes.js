@@ -7,10 +7,11 @@ const { getOpenMeteoMarineData, getSeaSurfaceTemperature, getWeatherForReference
 const { getLeaderboardSummary } = require('../services/leaderboardService');
 const pool = require('../config/database');
 const logger = require('../config/logger');
+const { publicConditionsLimiter } = require('../middleware/rateLimiters');
 
 const router = express.Router();
 
-router.get('/conditions', async (req, res) => {
+router.get('/conditions', publicConditionsLimiter, async (req, res) => {
   try {
     const today = new Date().toISOString().split('T')[0];
     const date = req.query.date || today;
