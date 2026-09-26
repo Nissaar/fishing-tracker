@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Compass, MapPin, Fish, Clock, Calendar, AlertCircle, CheckCircle, Info, Loader, TrendingUp, Sun, Moon, Waves, Wind, ThermometerSun } from 'lucide-react';
-import api from '../../services/api';
+import { Compass, MapPin, Fish, Clock, Calendar, AlertCircle, CheckCircle, Info, Loader, TrendingUp, Moon, Waves, Wind, ThermometerSun } from 'lucide-react';
+import { fishingAPI } from '../../services/api';
+import useDropdownOptions from '../../hooks/useDropdownOptions';
 import { toast } from 'react-toastify';
+import { localDateString } from '../../utils/dates';
 
 const PlanTrip = () => {
   const [loading, setLoading] = useState(false);
-  const [loadingDropdowns, setLoadingDropdowns] = useState(true);
   const [recommendation, setRecommendation] = useState(null);
   
   // Form data
@@ -14,45 +15,21 @@ const PlanTrip = () => {
     fishingType: '',
     baitType: '',
     fishingMethod: '',
-    date: new Date().toISOString().split('T')[0],
+    date: localDateString(),
     startTime: '06:00',
     endTime: '12:00'
   });
   
   // Dropdown options
-  const [locations, setLocations] = useState([]);
-  const [fishingTypes, setFishingTypes] = useState([]);
-  const [baits, setBaits] = useState([]);
-  const [fishingMethods, setFishingMethods] = useState([]);
+  const { options, loading: loadingDropdowns, error: dropdownError } = useDropdownOptions(
+    ['locations', 'fishingTypes', 'baits', 'fishingMethods']
+  );
+  const { locations, fishingTypes, baits, fishingMethods } = options;
   const [filteredBaits, setFilteredBaits] = useState([]);
 
-  // Fetch dropdown options on mount
   useEffect(() => {
-    const fetchDropdowns = async () => {
-      try {
-        setLoadingDropdowns(true);
-        const [locRes, typesRes, baitsRes, methodsRes] = await Promise.all([
-          api.get('/fishing/locations'),
-          api.get('/fishing/dropdown/fishing-types'),
-          api.get('/fishing/dropdown/baits'),
-          api.get('/fishing/dropdown/fishing-methods')
-        ]);
-        
-        // Handle both array and object responses
-        setLocations(Array.isArray(locRes.data) ? locRes.data : (locRes.data?.locations || []));
-        setFishingTypes(Array.isArray(typesRes.data) ? typesRes.data : []);
-        setBaits(Array.isArray(baitsRes.data) ? baitsRes.data : []);
-        setFishingMethods(Array.isArray(methodsRes.data) ? methodsRes.data : []);
-      } catch (error) {
-        console.error('Error fetching dropdowns:', error);
-        toast.error('Failed to load dropdown options');
-      } finally {
-        setLoadingDropdowns(false);
-      }
-    };
-    
-    fetchDropdowns();
-  }, []);
+    if (dropdownError) toast.error('Failed to load dropdown options');
+  }, [dropdownError]);
 
   // Filter baits when fishing type changes
   useEffect(() => {
@@ -91,11 +68,10 @@ const PlanTrip = () => {
       setLoading(true);
       setRecommendation(null);
       
-      const response = await api.post('/fishing/trip-recommendations', formData);
+      const response = await fishingAPI.getTripRecommendations(formData);
       setRecommendation(response.data);
       toast.success('Recommendations generated successfully!');
     } catch (error) {
-      console.error('Error getting recommendations:', error);
       toast.error(error.response?.data?.error || 'Failed to get recommendations');
     } finally {
       setLoading(false);
@@ -228,7 +204,7 @@ const PlanTrip = () => {
               name="date"
               value={formData.date}
               onChange={handleInputChange}
-              min={new Date().toISOString().split('T')[0]}
+              min={localDateString()}
               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useAuth } from '../../context/AuthContext';
 import { Calendar, Activity, TrendingUp, Table, MapPin, Compass, Users, Trophy } from 'lucide-react';
 import Header from '../Layout/Header';
 import LogTrip from './LogTrip';
@@ -13,7 +12,6 @@ import Events from './Events';
 import Leaderboard from '../Common/Leaderboard';
 
 const Dashboard = () => {
-  const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('log');
 
   const tabs = [

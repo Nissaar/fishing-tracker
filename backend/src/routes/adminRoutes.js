@@ -5,6 +5,9 @@ const { isAdmin, adminLimiter } = require('../middleware/adminMiddleware');
 const pool = require('../config/database');
 const logger = require('../config/logger');
 const { allLocations } = require('../data/mauritiusLocations');
+const { normalizeEmail } = require('../utils/email');
+const { MAX_FISH_COUNT } = require('../middleware/validateLog');
+const { listSubmissions, reviewSubmission, SubmissionError } = require('../services/submissionService');
 
 // Apply authentication and admin check to all routes
 router.use(authMiddleware);
@@ -153,6 +156,11 @@ router.patch('/users/:userId/admin', async (req, res) => {
     const { userId } = req.params;
     const { isAdmin: makeAdmin } = req.body;
 
+    // A missing value would otherwise write NULL
+    if (typeof makeAdmin !== 'boolean') {
+      return res.status(400).json({ error: 'isAdmin must be true or false' });
+    }
+
     // Prevent self-demotion
     if (parseInt(userId) === req.user.id && !makeAdmin) {
       return res.status(400).json({ error: 'You cannot remove your own admin privileges' });
@@ -206,7 +214,8 @@ router.delete('/users/:userId', async (req, res) => {
 router.patch('/users/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
-    const { username, email } = req.body;
+    const { username } = req.body;
+    const email = typeof req.body.email === 'string' ? normalizeEmail(req.body.email) : '';
 
     if (!username || !email) {
       return res.status(400).json({ error: 'Username and email are required' });
@@ -224,7 +233,7 @@ router.patch('/users/:userId', async (req, res) => {
 
     // Check if email is already taken by another user
     const emailCheck = await pool.query(
-      'SELECT id FROM users WHERE email = $1 AND id != $2',
+      'SELECT id FROM users WHERE lower(email) = $1 AND id != $2',
       [email, userId]
     );
     if (emailCheck.rows.length > 0) {
@@ -286,6 +295,14 @@ router.patch('/fishing-logs/:logId', async (req, res) => {
       'hook_setup',
       'notes'
     ];
+
+    // Would otherwise surface as a 500 from the fish_count CHECK constraint
+    if (Object.prototype.hasOwnProperty.call(req.body, 'fish_count')) {
+      const count = Number(req.body.fish_count);
+      if (!Number.isInteger(count) || count < 0 || count > MAX_FISH_COUNT) {
+        return res.status(400).json({ error: `fish_count must be a whole number from 0 to ${MAX_FISH_COUNT}` });
+      }
+    }
 
     const updates = [];
     const values = [];
@@ -729,190 +746,29 @@ router.delete('/locations/:id', async (req, res) => {
 
 // ==================== CUSTOM SUBMISSIONS MANAGEMENT ====================
 
-// Get all custom dropdown submissions from both custom_dropdown_submissions table and fishing_logs
+// Values from the "+" button and values typed into trip logs, together
 router.get('/submissions', async (req, res) => {
   try {
-    // Combined query that gets submissions from both sources
-    const result = await pool.query(`
-      -- From custom_dropdown_submissions table (from + button)
-      SELECT 
-        cds.id::text as id,
-        cds.user_id,
-        u.username,
-        u.email,
-        cds.submitted_value,
-        cds.submission_type,
-        cds.status,
-        cds.reviewed_by,
-        reviewer.username as reviewer_username,
-        cds.reviewed_at,
-        cds.created_at
-      FROM custom_dropdown_submissions cds
-      LEFT JOIN users u ON cds.user_id = u.id
-      LEFT JOIN users reviewer ON cds.reviewed_by = reviewer.id
-      
-      UNION ALL
-      
-      -- From fishing_logs custom fields (from "other" selections)
-      SELECT 
-        CONCAT('fl_fishing_type_', fl.id)::text as id,
-        fl.user_id,
-        u.username,
-        u.email,
-        fl.fishing_type_other as submitted_value,
-        'fishing_type' as submission_type,
-        'pending' as status,
-        NULL::INTEGER as reviewed_by,
-        NULL as reviewer_username,
-        NULL as reviewed_at,
-        fl.created_at
-      FROM fishing_logs fl
-      LEFT JOIN users u ON fl.user_id = u.id
-      WHERE fl.fishing_type_other IS NOT NULL AND fl.fishing_type_other != ''
-      
-      UNION ALL
-      
-      SELECT 
-        CONCAT('fl_fishing_method_', fl.id)::text as id,
-        fl.user_id,
-        u.username,
-        u.email,
-        fl.fishing_method_other as submitted_value,
-        'fishing_method' as submission_type,
-        'pending' as status,
-        NULL::INTEGER as reviewed_by,
-        NULL as reviewer_username,
-        NULL as reviewed_at,
-        fl.created_at
-      FROM fishing_logs fl
-      LEFT JOIN users u ON fl.user_id = u.id
-      WHERE fl.fishing_method_other IS NOT NULL AND fl.fishing_method_other != ''
-      
-      UNION ALL
-      
-      SELECT 
-        CONCAT('fl_bait_', fl.id)::text as id,
-        fl.user_id,
-        u.username,
-        u.email,
-        fl.bait_other as submitted_value,
-        'bait' as submission_type,
-        'pending' as status,
-        NULL::INTEGER as reviewed_by,
-        NULL as reviewer_username,
-        NULL as reviewed_at,
-        fl.created_at
-      FROM fishing_logs fl
-      LEFT JOIN users u ON fl.user_id = u.id
-      WHERE fl.bait_other IS NOT NULL AND fl.bait_other != ''
-      
-      UNION ALL
-      
-      -- Custom fish species from fish_types JSONB that don't exist in fish_species table
-      SELECT 
-        CONCAT('fl_fish_', fl.id, '_', ROW_NUMBER() OVER (PARTITION BY fl.id ORDER BY fish_name))::text as id,
-        fl.user_id,
-        u.username,
-        u.email,
-        fish_name as submitted_value,
-        'fish_species' as submission_type,
-        'pending' as status,
-        NULL::INTEGER as reviewed_by,
-        NULL as reviewer_username,
-        NULL as reviewed_at,
-        fl.created_at
-      FROM fishing_logs fl
-      CROSS JOIN LATERAL jsonb_array_elements_text(fl.fish_types) as fish_name
-      LEFT JOIN users u ON fl.user_id = u.id
-      LEFT JOIN fish_species fs ON LOWER(fish_name) = LOWER(fs.local_name) 
-                                OR LOWER(fish_name) = LOWER(fs.english_name)
-      WHERE fl.fish_types IS NOT NULL 
-        AND fl.fish_types != '[]'::jsonb
-        AND fs.id IS NULL
-        AND fish_name IS NOT NULL 
-        AND fish_name != ''
-      
-      ORDER BY created_at DESC
-    `);
-
-    // Get counts
-    const countResult = await pool.query(`
-      SELECT 
-        COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending,
-        COUNT(*) as total
-      FROM custom_dropdown_submissions
-      
-      UNION ALL
-      
-      SELECT
-        COUNT(CASE WHEN fishing_type_other IS NOT NULL AND fishing_type_other != '' THEN 1 END) +
-        COUNT(CASE WHEN fishing_method_other IS NOT NULL AND fishing_method_other != '' THEN 1 END) +
-        COUNT(CASE WHEN bait_other IS NOT NULL AND bait_other != '' THEN 1 END) as pending,
-        COUNT(CASE WHEN fishing_type_other IS NOT NULL AND fishing_type_other != '' THEN 1 END) +
-        COUNT(CASE WHEN fishing_method_other IS NOT NULL AND fishing_method_other != '' THEN 1 END) +
-        COUNT(CASE WHEN bait_other IS NOT NULL AND bait_other != '' THEN 1 END) as total
-      FROM fishing_logs
-      
-      UNION ALL
-      
-      -- Count custom fish species not in fish_species table
-      SELECT
-        COUNT(*) as pending,
-        COUNT(*) as total
-      FROM (
-        SELECT DISTINCT fish_name
-        FROM fishing_logs fl
-        CROSS JOIN LATERAL jsonb_array_elements_text(fl.fish_types) as fish_name
-        LEFT JOIN fish_species fs ON LOWER(fish_name) = LOWER(fs.local_name) 
-                                  OR LOWER(fish_name) = LOWER(fs.english_name)
-        WHERE fl.fish_types IS NOT NULL 
-          AND fl.fish_types != '[]'::jsonb
-          AND fs.id IS NULL
-          AND fish_name IS NOT NULL 
-          AND fish_name != ''
-      ) as custom_fish
-    `);
-
-    const counts = countResult.rows.reduce((acc, row) => ({
-      pending: acc.pending + (parseInt(row.pending) || 0),
-      total: acc.total + (parseInt(row.total) || 0)
-    }), { pending: 0, total: 0 });
-
-    res.json({ 
-      submissions: result.rows,
-      counts
-    });
+    const status = req.query.status === 'pending' ? 'pending' : undefined;
+    res.json(await listSubmissions(status));
   } catch (error) {
     logger.error('Error fetching submissions:', error);
     res.status(500).json({ error: 'Failed to fetch submissions' });
   }
 });
 
-// Update submission status (approve/reject)
+// Approve (adds the value to its dropdown) or reject a submission
 router.patch('/submissions/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, admin_notes } = req.body;
-
-    if (!['approved', 'rejected'].includes(status)) {
-      return res.status(400).json({ error: 'Invalid status. Use "approved" or "rejected"' });
-    }
-
-    const result = await pool.query(
-      `UPDATE custom_dropdown_submissions 
-       SET status = $1, admin_notes = $2, reviewed_by = $3, reviewed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP 
-       WHERE id = $4 
-       RETURNING *`,
-      [status, admin_notes, req.user.id, id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Submission not found' });
-    }
-
+    const { status, admin_notes: adminNotes } = req.body;
+    const submission = await reviewSubmission(id, status, adminNotes, req.user.id);
     logger.info(`Submission ${id} ${status} by admin ${req.user.id}`);
-    res.json({ submission: result.rows[0], message: `Submission ${status} successfully` });
+    res.json({ submission, message: `Submission ${status} successfully` });
   } catch (error) {
+    if (error instanceof SubmissionError) {
+      return res.status(error.status).json({ error: error.message });
+    }
     logger.error('Error updating submission:', error);
     res.status(500).json({ error: 'Failed to update submission' });
   }
@@ -961,67 +817,6 @@ router.get('/system-logs', async (req, res) => {
 
 // Log files are served by /api/logs (logsRoutes.js)
 
-// ==================== CONTACT MESSAGES MANAGEMENT ====================
-
-// Get all contact messages
-router.get('/contact-messages', async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT * FROM contact_messages 
-      ORDER BY created_at DESC
-    `);
-    
-    // Get stats
-    const statsResult = await pool.query(`
-      SELECT 
-        COUNT(*) FILTER (WHERE status = 'unread') as unread,
-        COUNT(*) as total
-      FROM contact_messages
-    `);
-
-    res.json({
-      messages: result.rows,
-      stats: statsResult.rows[0] || { unread: 0, total: 0 }
-    });
-  } catch (error) {
-    logger.error('Error fetching contact messages:', error);
-    res.status(500).json({ error: 'Failed to fetch contact messages' });
-  }
-});
-
-// Update contact message status
-router.patch('/contact-messages/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { status } = req.body;
-
-    const result = await pool.query(
-      'UPDATE contact_messages SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
-      [status, id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Message not found' });
-    }
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    logger.error('Error updating contact message:', error);
-    res.status(500).json({ error: 'Failed to update message' });
-  }
-});
-
-// Delete contact message
-router.delete('/contact-messages/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    await pool.query('DELETE FROM contact_messages WHERE id = $1', [id]);
-    res.json({ message: 'Message deleted successfully' });
-  } catch (error) {
-    logger.error('Error deleting contact message:', error);
-    res.status(500).json({ error: 'Failed to delete message' });
-  }
-});
+// Contact messages are managed through /api/contact (contactRoutes.js)
 
 module.exports = router;

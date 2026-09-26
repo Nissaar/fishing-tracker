@@ -61,7 +61,11 @@ const formatCategory = (title, entries, unit) => {
   if (!entries || entries.length === 0) return null;
   const lines = entries
     .slice(0, 5)
-    .map((entry, index) => `${MEDALS[index] || `${index + 1}.`} ${entry.username} — ${entry.value} ${unit}`);
+    // Tied entries share a rank, so they get the same medal
+    .map((entry, index) => {
+      const rank = entry.rank || index + 1;
+      return `${MEDALS[rank - 1] || `${rank}.`} ${entry.username} — ${entry.value} ${unit}`;
+    });
   return `${title}:\n${lines.join('\n')}`;
 };
 

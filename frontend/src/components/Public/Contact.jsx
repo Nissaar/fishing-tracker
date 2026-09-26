@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Mail, MapPin, Phone } from 'lucide-react';
 import PublicNav from './PublicNav';
-import axios from 'axios';
+import { publicAPI } from '../../services/api';
 import { toast } from 'react-toastify';
 
 const Contact = () => {
@@ -25,10 +25,7 @@ const Contact = () => {
     setLoading(true);
 
     try {
-      const response = await axios.post(
-        `${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/contact/submit`,
-        formData
-      );
+      const response = await publicAPI.submitContact(formData);
       
       toast.success(response.data.message);
       

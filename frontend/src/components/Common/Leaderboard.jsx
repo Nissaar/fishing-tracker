@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Trophy, Fish, Target, Bug, Loader } from 'lucide-react';
-import { fishingAPI, publicAPI } from '../../services/api';
+import { fishingAPI, publicAPI, isCancelled } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import FacebookShare from './FacebookShare';
 
@@ -99,23 +99,29 @@ const Leaderboard = ({
 
   const isAdmin = user?.is_admin === true;
 
-  const load = useCallback(async (selectedPeriod) => {
+  // Switching week/month cancels the other period's request, so a slow
+  // answer can't show last month's board under "This week"
+  const load = useCallback(async (selectedPeriod, signal) => {
     try {
       setLoading(true);
       setError(false);
       const response = isAuthenticated
-        ? await fishingAPI.getLeaderboard(selectedPeriod)
-        : await publicAPI.getLeaderboardSummary(selectedPeriod);
+        ? await fishingAPI.getLeaderboard(selectedPeriod, { signal })
+        : await publicAPI.getLeaderboardSummary(selectedPeriod, { signal });
       setLeaderboard(response.data);
+      setLoading(false);
     } catch (err) {
+      if (isCancelled(err)) return;
       setError(true);
-    } finally {
       setLoading(false);
     }
   }, [isAuthenticated]);
 
   useEffect(() => {
-    if (!authLoading) load(period);
+    if (authLoading) return undefined;
+    const controller = new AbortController();
+    load(period, controller.signal);
+    return () => controller.abort();
   }, [period, authLoading, load]);
 
   return (

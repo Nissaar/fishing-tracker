@@ -1,4 +1,7 @@
 const express = require('express');
+// Express 4 ignores rejected promises from async handlers; this routes them
+// to the error handler below instead of the process-exiting unhandledRejection
+require('express-async-errors');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
@@ -70,7 +73,9 @@ app.use('/api/events', eventsRoutes);
 
 const pool = require('./config/database');
 
-app.get('/health', async (req, res) => {
+// Also served under /api, the only prefix Traefik routes to the backend in
+// production; /health there is answered by the frontend's index.html
+app.get(['/health', '/api/health'], async (req, res) => {
   try {
     // Verify database connectivity
     await pool.query('SELECT 1');

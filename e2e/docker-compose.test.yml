@@ -95,11 +95,12 @@ services:
     depends_on:
       test-frontend:
         condition: service_healthy
+      # The backend's healthcheck passes once the database is reachable
       test-backend:
-        condition: service_started
+        condition: service_healthy
     networks:
       - test-network
-    command: bash -c "sleep 10 && npm install @playwright/test@1.42.0 && npx playwright test --reporter=html,json"
+    command: bash -c "npm install @playwright/test@1.42.0 && npx playwright test --reporter=html,json"
 
 networks:
   test-network:

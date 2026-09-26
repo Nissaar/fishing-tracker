@@ -116,29 +116,6 @@ class FishingLog {
     return null;
   }
 
-  static async update(id, userId, logData) {
-    const fishingTypes = normalizeFishingTypes(logData);
-    const query = `
-      UPDATE fishing_logs 
-      SET log_date = $3, location = $4, location_name = $5, caught_fish = $6, fish_count = $7,
-          fish_types = $8, moon_phase = $9, sea_level = $10, tide_data = $11, 
-          weather_data = $12, hook_setup = $13, bait = $14, notes = $15,
-          fishing_type = $16, fishing_types = $17
-      WHERE id = $1 AND user_id = $2
-      RETURNING *
-    `;
-    const values = [
-      id, userId, logData.date, logData.location, logData.locationName, logData.caughtFish,
-      logData.fishCount || 0, JSON.stringify(logData.fishTypes || []),
-      logData.moonPhase, logData.seaLevel, JSON.stringify(logData.tideData || {}),
-      JSON.stringify(logData.weatherData || {}), logData.hookSetup, 
-      logData.bait, logData.notes || '',
-      fishingTypes[0] || null, JSON.stringify(fishingTypes)
-    ];
-    const result = await pool.query(query, values);
-    return result.rows[0];
-  }
-
   static async delete(id, userId) {
     const query = 'DELETE FROM fishing_logs WHERE id = $1 AND user_id = $2';
     await pool.query(query, [id, userId]);

@@ -1,44 +1,44 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Fish, Moon, Waves, Sun, Wind, Eye, Menu, X, Thermometer, ChevronLeft, ChevronRight, Activity, Sunrise, Sunset, Users, Trophy, Layers } from 'lucide-react';
-import axios from 'axios';
+import { Fish, Moon, Waves, Sun, Wind, Eye, Thermometer, ChevronLeft, ChevronRight, Activity, Sunrise, Sunset, Users, Trophy, Layers } from 'lucide-react';
+import { publicAPI, isCancelled } from '../../services/api';
+import ErrorState from '../Common/ErrorState';
 import PublicNav from './PublicNav';
 import CommunityEvents from './CommunityEvents';
 import Leaderboard from '../Common/Leaderboard';
 import { FACEBOOK_PAGE_URL } from '../../utils/shareText';
+import { localDateString } from '../../utils/dates';
 
 const LandingPage = () => {
   const [conditions, setConditions] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [loadError, setLoadError] = useState(null);
+  const [reloadToken, setReloadToken] = useState(0);
 
+  // Conditions for Port Louis on the selected day. Clicking through days
+  // quickly cancels the earlier requests, so the numbers shown always belong
+  // to the date shown.
   useEffect(() => {
-    fetchConditions(selectedDate);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDate]);
-
-  const fetchConditions = async (dateObj) => {
-    try {
-      setLoading(true);
-      // Fetch conditions for Port Louis (main location). Optionally include date query param.
-      const base = `${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/public/conditions`;
-      let url = base;
-      if (dateObj) {
-        const yyyy = dateObj.getFullYear();
-        const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
-        const dd = String(dateObj.getDate()).padStart(2, '0');
-        const dateOnly = `${yyyy}-${mm}-${dd}`;
-        const ref = encodeURIComponent(dateObj.toISOString());
-        url = `${base}?date=${dateOnly}&referenceTime=${ref}`;
-      }
-      const response = await axios.get(url);
-      setConditions(response.data);
-    } catch (error) {
-      console.error('Error fetching conditions:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const controller = new AbortController();
+    setLoading(true);
+    setLoadError(null);
+    publicAPI.getConditions(
+      { date: localDateString(selectedDate), referenceTime: selectedDate.toISOString() },
+      { signal: controller.signal }
+    )
+      .then((response) => {
+        setConditions(response.data);
+        setLoading(false);
+      })
+      .catch((error) => {
+        if (isCancelled(error)) return;
+        setConditions(null);
+        setLoadError(error);
+        setLoading(false);
+      });
+    return () => controller.abort();
+  }, [selectedDate, reloadToken]);
 
   const changeSelectedDate = (days) => {
     setSelectedDate(prev => {
@@ -267,7 +267,7 @@ const LandingPage = () => {
 
           <input
             type="date"
-            value={selectedDate.toISOString().split('T')[0]}
+            value={localDateString(selectedDate)}
             onChange={(e) => setSelectedDate(new Date(e.target.value))}
             className="px-4 py-2 border rounded-lg bg-gray-50 text-gray-800 font-medium cursor-pointer hover:bg-gray-100"
           />
@@ -423,7 +423,10 @@ const LandingPage = () => {
           </div>
           </>
         ) : (
-          <p className="text-center text-gray-600">Unable to load conditions</p>
+          <ErrorState
+            message={loadError ? "Today's conditions couldn't be loaded." : 'Unable to load conditions'}
+            onRetry={() => setReloadToken(token => token + 1)}
+          />
         )}
 
         {/* Solunar Periods - Best Times to Fish */}
@@ -534,7 +537,7 @@ const LandingPage = () => {
 
               <input
                 type="date"
-                value={selectedDate.toISOString().split('T')[0]}
+                value={localDateString(selectedDate)}
                 onChange={(e) => setSelectedDate(new Date(e.target.value))}
                 className="px-4 py-2 border rounded-lg bg-gray-50 text-gray-800 font-medium cursor-pointer hover:bg-gray-100"
               />
@@ -676,6 +679,38 @@ const TideTimeline = ({ tide, solunar }) => {
     return padding + fraction * plotWidth;
   };
 
+  // A period that crosses midnight (start later than end) is drawn as two
+  // bars, one at each edge of the day
+  const periodSegments = (period) => {
+    const startX = timeToX(period.start);
+    const endX = timeToX(period.end);
+    if (endX >= startX) return [[startX, endX]];
+    return [[startX, padding + plotWidth], [padding, endX]]
+      .sort((a, b) => (b[1] - b[0]) - (a[1] - a[0]));
+  };
+
+  const renderPeriod = (period, key, { fill, textFill, label, bold }) => {
+    const segments = periodSegments(period);
+    const [labelStart, labelEnd] = segments[0];
+    return (
+      <g key={key}>
+        {segments.map(([x1, x2], i) => (
+          <rect key={i} x={x1} y={5} width={Math.max(2, x2 - x1)} height={20} fill={fill} opacity={0.6} rx={2} />
+        ))}
+        <text
+          x={(labelStart + labelEnd) / 2}
+          y={18}
+          textAnchor="middle"
+          fontSize="10"
+          fill={textFill}
+          fontWeight={bold ? 'bold' : undefined}
+        >
+          {label}
+        </text>
+      </g>
+    );
+  };
+
   // Determine 'now' position using referenceTime if available
   let nowX = null;
   if (tide.referenceTime) {
@@ -696,61 +731,14 @@ const TideTimeline = ({ tide, solunar }) => {
         {solunar && (
           <>
             {/* Major Periods */}
-            {solunar.majorPeriods?.map((period, idx) => {
-              const startX = timeToX(period.start);
-              const endX = timeToX(period.end);
-              return (
-                <g key={`major-${idx}`}>
-                  <rect
-                    x={startX}
-                    y={5}
-                    width={Math.max(2, endX - startX)}
-                    height={20}
-                    fill="#fbbf24"
-                    opacity={0.6}
-                    rx={2}
-                  />
-                  <text
-                    x={(startX + endX) / 2}
-                    y={18}
-                    textAnchor="middle"
-                    fontSize="10"
-                    fill="#78350f"
-                    fontWeight="bold"
-                  >
-                    🐟🐟
-                  </text>
-                </g>
-              );
-            })}
-            
+            {solunar.majorPeriods?.map((period, idx) =>
+              renderPeriod(period, `major-${idx}`, { fill: '#fbbf24', textFill: '#78350f', label: '🐟🐟', bold: true })
+            )}
+
             {/* Minor Periods */}
-            {solunar.minorPeriods?.map((period, idx) => {
-              const startX = timeToX(period.start);
-              const endX = timeToX(period.end);
-              return (
-                <g key={`minor-${idx}`}>
-                  <rect
-                    x={startX}
-                    y={5}
-                    width={Math.max(2, endX - startX)}
-                    height={20}
-                    fill="#d1d5db"
-                    opacity={0.6}
-                    rx={2}
-                  />
-                  <text
-                    x={(startX + endX) / 2}
-                    y={18}
-                    textAnchor="middle"
-                    fontSize="10"
-                    fill="#374151"
-                  >
-                    🐟
-                  </text>
-                </g>
-              );
-            })}
+            {solunar.minorPeriods?.map((period, idx) =>
+              renderPeriod(period, `minor-${idx}`, { fill: '#d1d5db', textFill: '#374151', label: '🐟' })
+            )}
           </>
         )}
 

@@ -8,6 +8,8 @@ const { allLocations } = require('../data/mauritiusLocations');
 const { calculateSolunarPeriods, getCurrentActivity } = require('../utils/solunarTheory');
 const { getLeaderboard } = require('../services/leaderboardService');
 const { logCreateLimiter, conditionsLimiter } = require('../middleware/rateLimiters');
+const { validateNewLog } = require('../middleware/validateLog');
+const { fromMauritiusLocal } = require('../utils/mauritiusTime');
 
 const router = express.Router();
 
@@ -15,10 +17,9 @@ router.use(authMiddleware);
 
 router.get('/locations', fishingController.getLocations);
 router.get('/environmental-data', conditionsLimiter, fishingController.getEnvironmentalData);
-router.post('/logs', logCreateLimiter, fishingController.createLog);
+router.post('/logs', logCreateLimiter, validateNewLog, fishingController.createLog);
 router.get('/logs', fishingController.getLogs);
 router.get('/logs/:id', fishingController.getLog);
-router.put('/logs/:id', fishingController.updateLog);
 router.delete('/logs/:id', fishingController.deleteLog);
 router.get('/statistics', fishingController.getStatistics);
 router.get('/fish-species', fishingController.getFishSpecies);
@@ -104,17 +105,14 @@ router.get('/dropdown/baits', async (req, res) => {
     `;
     const params = [];
     
+    // Baits for the chosen type plus universal baits (no type). Parenthesised
+    // so the OR can't bypass "is_active = true" and show deactivated baits.
     if (fishingTypeId) {
-      query += ` AND fb.fishing_type_id = $${params.length + 1}`;
+      query += ` AND (fb.fishing_type_id = $${params.length + 1} OR fb.fishing_type_id IS NULL)`;
       params.push(fishingTypeId);
     } else if (fishingTypeName) {
-      query += ` AND ft.name = $${params.length + 1}`;
+      query += ` AND (ft.name = $${params.length + 1} OR fb.fishing_type_id IS NULL)`;
       params.push(fishingTypeName);
-    }
-    
-    // Also include baits that are not linked to any fishing type (universal baits)
-    if (fishingTypeId || fishingTypeName) {
-      query += ' OR fb.fishing_type_id IS NULL';
     }
     
     query += ' ORDER BY fb.name';
@@ -338,9 +336,10 @@ router.post('/trip-recommendations', conditionsLimiter, async (req, res) => {
 
     if (locationObj && date && startTime && endTime) {
       try {
-        // Create datetime strings for start and end of fishing window
-        const startDateTime = `${date}T${startTime}:00`;
-        const endDateTime = `${date}T${endTime}:00`;
+        // The window is Mauritius wall-clock time. Without an offset the string
+        // was read in the server's timezone (UTC), shifting everything by 4h.
+        const startDateTime = fromMauritiusLocal(date, startTime).toISOString();
+        const endDateTime = fromMauritiusLocal(date, endTime).toISOString();
         
         // Get weather, tide, and solunar data in parallel
         const [startWeather, endWeather, startTide, endTide, solunar] = await Promise.all([

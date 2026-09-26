@@ -1,5 +1,4 @@
 # Environment Variables & Secrets
-1
 .env
 .env.local
 .env.production
@@ -8,6 +7,8 @@ backend/.env
 backend/.env.local
 backend/.env.production
 backend/.env.development
+# Written by e2e/scripts/local-e2e-test.sh
+backend/.env.e2e
 frontend/.env
 frontend/.env.local
 frontend/.env.production
@@ -67,3 +68,6 @@ coverage/
 *.tmp
 *.temp
 .cache/
+
+# Process ids written by local scripts
+*.pid

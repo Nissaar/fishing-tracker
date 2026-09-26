@@ -1,14 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import { CalendarPlus, Loader, X, Calendar } from 'lucide-react';
-import api, { eventsAPI, fishingAPI } from '../../services/api';
+import { eventsAPI } from '../../services/api';
+import useDropdownOptions from '../../hooks/useDropdownOptions';
 import FishingTypeSelector from '../Common/FishingTypeSelector';
 import EventCard from '../Common/EventCard';
+import { localDateString } from '../../utils/dates';
 
-const emptyForm = {
+// A function, not a constant: a tab left open overnight would otherwise keep
+// defaulting to the day it was loaded
+const makeEmptyForm = () => ({
   title: '',
   description: '',
-  eventDate: new Date().toISOString().split('T')[0],
+  eventDate: localDateString(),
   timeStart: '06:00',
   timeEnd: '10:00',
   location: '',
@@ -16,7 +20,7 @@ const emptyForm = {
   fishingTypeOther: '',
   fishingMethod: 'land',
   maxParticipants: ''
-};
+});
 
 const Events = () => {
   const [events, setEvents] = useState([]);
@@ -25,30 +29,16 @@ const Events = () => {
   const [busyId, setBusyId] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [formData, setFormData] = useState(emptyForm);
-  const [locations, setLocations] = useState([]);
-  const [fishingTypes, setFishingTypes] = useState([]);
+  const [formData, setFormData] = useState(makeEmptyForm);
+  const { options: { locations, fishingTypes }, error: referenceError } = useDropdownOptions(['locations', 'fishingTypes']);
 
   useEffect(() => {
-    loadReferenceData();
-  }, []);
+    if (referenceError) toast.error('Failed to load locations');
+  }, [referenceError]);
 
   useEffect(() => {
     loadEvents(scope);
   }, [scope]);
-
-  const loadReferenceData = async () => {
-    try {
-      const [locationsRes, typesRes] = await Promise.all([
-        fishingAPI.getLocations(),
-        api.get('/fishing/dropdown/fishing-types')
-      ]);
-      setLocations(locationsRes.data.locations || []);
-      setFishingTypes(Array.isArray(typesRes.data) ? typesRes.data : []);
-    } catch (error) {
-      toast.error('Failed to load locations');
-    }
-  };
 
   const loadEvents = async (selectedScope) => {
     try {
@@ -77,7 +67,7 @@ const Events = () => {
     try {
       await eventsAPI.create({ ...formData, fishingTypes: fishingTypesToSend });
       toast.success('Event created — other anglers can now join you! 🎣');
-      setFormData(emptyForm);
+      setFormData(makeEmptyForm());
       setShowForm(false);
       setScope('upcoming');
       loadEvents('upcoming');
@@ -166,7 +156,7 @@ const Events = () => {
               <input
                 type="date"
                 value={formData.eventDate}
-                min={new Date().toISOString().split('T')[0]}
+                min={localDateString()}
                 onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               />

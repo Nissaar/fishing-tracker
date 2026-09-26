@@ -15,7 +15,8 @@ router.post(
   registerLimiter,
   [
     body('username').trim().isLength({ min: 3 }),
-    body('email').isEmail().normalizeEmail(),
+    // Only trim + lowercase; see utils/email.js for why Gmail dots are kept
+    body('email').trim().isEmail().toLowerCase(),
     body('password').isLength({ min: 6 })
   ],
   authController.register

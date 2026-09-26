@@ -5,18 +5,25 @@ const { chromium } = require('playwright');
 
 const BASE_URL = process.env.BASE_URL || 'https://fishing.nissaar.com';
 
+// Only /api reaches the backend in production. /health there is answered by
+// the frontend with index.html and a 200, so checking it proved nothing.
 async function apiCheck() {
   const results = [];
   const endpoints = [
-    { name: 'Health', url: `${BASE_URL}/health` },
+    {
+      name: 'Health',
+      url: `${BASE_URL}/api/health`,
+      valid: (data) => data?.status === 'OK' && data?.database === 'connected'
+    },
     { name: 'Public conditions', url: `${BASE_URL}/api/public/conditions` }
   ];
-  for (const ep of endpoints) {
+  for (const { valid, ...ep } of endpoints) {
     try {
       const res = await axios.get(ep.url, { timeout: 8000 });
-      results.push({ ...ep, status: res.status });
+      const ok = res.status === 200 && (!valid || valid(res.data));
+      results.push({ ...ep, status: res.status, ok, ...(ok ? {} : { body: res.data }) });
     } catch (err) {
-      results.push({ ...ep, error: err.message });
+      results.push({ ...ep, ok: false, error: err.message });
     }
   }
   return results;
@@ -28,12 +35,18 @@ async function uiCheck() {
   const report = [];
   try {
     await page.goto(BASE_URL, { waitUntil: 'networkidle', timeout: 30000 });
-    await page.waitForTimeout(2000);
     report.push({ step: 'Landing loads', ok: true });
 
-    // Navigate via primary CTA (public UI sanity)
-    await page.click('text=Get Started Free', { timeout: 12000 }).catch(() => {});
-    await page.waitForTimeout(1000);
+    // Navigate via primary CTA (public UI sanity); a missing or broken CTA is
+    // a failure, not something to skip
+    try {
+      await page.click('text=Get Started Free', { timeout: 12000 });
+      await page.waitForURL(url => url.pathname !== '/', { timeout: 12000 });
+      report.push({ step: 'Primary CTA navigates', ok: true });
+    } catch (err) {
+      report.push({ step: 'Primary CTA navigates', ok: false, error: err.message });
+    }
+    await page.goto(BASE_URL, { waitUntil: 'networkidle', timeout: 30000 });
 
     const dateField = await page.isVisible('input[type="date"]').catch(() => false);
     const tideCard = await page.locator('text=Tide').first().isVisible().catch(() => false);
@@ -67,7 +80,7 @@ async function uiCheck() {
 
   // Fail run if any check failed
   const failed = [
-    ...api.filter(r => r.status !== 200),
+    ...api.filter(r => !r.ok),
     ...ui.filter(r => !r.ok)
   ];
   if (failed.length) {

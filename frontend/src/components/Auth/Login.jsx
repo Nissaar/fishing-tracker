@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 import { Fish } from 'lucide-react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { authAPI } from '../../services/api';
 
 // Codes the backend's Google callback redirects back with
 const GOOGLE_ERRORS = {
@@ -17,14 +18,23 @@ const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  // Where ProtectedRoute was sending the user before asking them to log in
+  const from = location.state?.from;
+  const redirectTo = from ? `${from.pathname}${from.search || ''}` : '/dashboard';
 
   useEffect(() => {
     const code = searchParams.get('error');
+    const expired = searchParams.get('expired');
     if (code) {
       toast.error(GOOGLE_ERRORS[code] || GOOGLE_ERRORS.google_failed);
-      setSearchParams({}, { replace: true });
+    } else if (expired) {
+      toast.info('Your session has expired. Please log in again.', { toastId: 'session-expired' });
     }
-  }, [searchParams, setSearchParams]);
+    if (code || expired) {
+      setSearchParams({}, { replace: true, state: location.state });
+    }
+  }, [searchParams, setSearchParams, location.state]);
 
 const handleSubmit = async (e) => {
     e.preventDefault(); // This allows Enter key to work
@@ -32,7 +42,7 @@ const handleSubmit = async (e) => {
     try {
       await login(formData);
       toast.success('Login successful!');
-      navigate('/dashboard');
+      navigate(redirectTo, { replace: true });
     } catch (error) {
       toast.error(error.response?.data?.error || 'Login failed');
     } finally {
@@ -41,7 +51,7 @@ const handleSubmit = async (e) => {
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = `${process.env.REACT_APP_API_URL}/auth/google`;
+    window.location.href = authAPI.googleLoginUrl();
   };
 
   return (
@@ -54,16 +64,22 @@ const handleSubmit = async (e) => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <label htmlFor="login-email" className="sr-only">Email</label>
           <input
+            id="login-email"
             type="email"
+            autoComplete="email"
             placeholder="Email"
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             required
           />
+          <label htmlFor="login-password" className="sr-only">Password</label>
           <input
+            id="login-password"
             type="password"
+            autoComplete="current-password"
             placeholder="Password"
             value={formData.password}
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { fishingAPI } from '../../services/api';
 import { toast } from 'react-toastify';
-import { Trash2, Eye, Search, Filter } from 'lucide-react';
+import { Trash2, Search } from 'lucide-react';
 
 const DataTable = () => {
   const [logs, setLogs] = useState([]);

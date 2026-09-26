@@ -1,5 +1,6 @@
 const pool = require('../config/database');
 const rateLimit = require('express-rate-limit');
+const logger = require('../config/logger');
 const { clientIp } = require('./rateLimiters');
 
 /**
@@ -9,6 +10,9 @@ const adminLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 admin requests per windowMs
   keyGenerator: clientIp,
+  // The e2e suite makes more admin calls than this from one IP, and 429s
+  // there turned into empty tables that weak tests didn't notice
+  skip: () => process.env.NODE_ENV === 'test',
   message: { error: 'Too many requests, please try again later' }
 });
 
@@ -32,8 +36,7 @@ const isAdmin = async (req, res, next) => {
     
     next();
   } catch (error) {
-    console.error('Error during admin verification for user:', req.user && req.user.id, error);
-    console.error('Error during admin verification for user:', req.user && req.user.id, error);
+    logger.error(`Error during admin verification for user ${req.user && req.user.id}: ${error.message}`);
     res.status(500).json({ error: 'Server error during admin verification' });
   }
 };

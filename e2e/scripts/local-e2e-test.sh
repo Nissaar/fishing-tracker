@@ -28,14 +28,18 @@ export TEST_BASE_URL="http://localhost:3000"
 export TEST_API_URL="http://localhost:5000/api"
 export NODE_ENV=test
 
+# Only processes this run started; a stale pid file could point at anything
+BACKEND_PID=""
+FRONTEND_PID=""
+
 # Cleanup function
 cleanup() {
     echo ""
     echo "🧹 Cleaning up..."
     
     # Kill background processes
-    [ -f "$PROJECT_ROOT/backend/backend.pid" ] && kill $(cat "$PROJECT_ROOT/backend/backend.pid") 2>/dev/null || true
-    [ -f "$PROJECT_ROOT/frontend/frontend.pid" ] && kill $(cat "$PROJECT_ROOT/frontend/frontend.pid") 2>/dev/null || true
+    [ -n "$BACKEND_PID" ] && kill "$BACKEND_PID" 2>/dev/null || true
+    [ -n "$FRONTEND_PID" ] && kill "$FRONTEND_PID" 2>/dev/null || true
     
     # Stop postgres container
     docker stop e2e-test-postgres 2>/dev/null || true
@@ -245,10 +249,11 @@ echo ""
 echo "📋 Verifying users in database:"
 docker exec -i e2e-test-postgres psql -U postgres -d fishing_tracker -c "SELECT id, email, is_admin FROM users;"
 
-# Step 4: Create backend .env
+# Step 4: Write the test settings to their own file. backend/.env is never
+# touched, so running this on a machine with real keys can't destroy them.
 echo ""
-echo "📦 Step 4: Creating backend .env..."
-cat > "$PROJECT_ROOT/backend/.env" << EOF
+echo "📦 Step 4: Writing backend/.env.e2e..."
+cat > "$PROJECT_ROOT/backend/.env.e2e" << EOF
 NODE_ENV=test
 PORT=5000
 DB_HOST=localhost
@@ -261,7 +266,7 @@ JWT_EXPIRE=7d
 SESSION_SECRET=test-session-secret
 CORS_ORIGIN=http://localhost:3000,http://localhost:80
 EOF
-echo "✅ Backend .env created"
+echo "✅ backend/.env.e2e written"
 
 # Step 5: Install and start backend
 echo ""
@@ -270,8 +275,9 @@ cd "$PROJECT_ROOT/backend"
 npm install --legacy-peer-deps --no-optional 2>&1 | tail -5
 echo ""
 echo "🚀 Starting backend server..."
-nohup npm start > backend.log 2>&1 &
-echo $! > backend.pid
+# Exported variables win over backend/.env: dotenv never overrides them
+(set -a; . ./.env.e2e; set +a; exec node src/server.js) > backend.log 2>&1 &
+BACKEND_PID=$!
 sleep 5
 
 # Wait for backend to be ready
@@ -333,7 +339,7 @@ fi
 echo "✅ Frontend built"
 echo "🚀 Starting frontend server..."
 npx serve -s build -l 3000 > frontend.log 2>&1 &
-echo $! > frontend.pid
+FRONTEND_PID=$!
 sleep 5
 
 # Wait for frontend
