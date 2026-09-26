@@ -25,8 +25,10 @@ const { runMigrations } = require('./config/migrate');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// One proxy hop (Traefik) sits in front of the API. Without this, rate limits
-// see every visitor as the proxy's IP and secure session cookies are never set.
+// The API sits behind the frontend's nginx (after Cloudflare and Traefik).
+// Trusting that one hop makes req.secure follow the X-Forwarded-Proto it
+// forwards, which secure session cookies need. Rate limits identify
+// visitors by CF-Connecting-IP instead (see rateLimiters.js).
 app.set('trust proxy', 1);
 
 app.use(helmet());

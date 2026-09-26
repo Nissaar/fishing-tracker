@@ -3,10 +3,16 @@ const rateLimit = require('express-rate-limit');
 // The e2e suite logs in hundreds of times from one IP; limits would make it fail
 const skipInTests = () => process.env.NODE_ENV === 'test';
 
+// Requests reach the API through Cloudflare, Traefik and nginx, so req.ip is
+// one of those proxies and every visitor would share one budget. Cloudflare
+// puts the visitor's address in CF-Connecting-IP.
+const clientIp = (req) => req.get('cf-connecting-ip') || req.ip;
+
 const limiter = (options) => rateLimit({
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   skip: skipInTests,
+  keyGenerator: clientIp,
   message: { error: 'Too many requests, please try again later' },
   ...options
 });
@@ -54,6 +60,7 @@ const publicConditionsLimiter = limiter({
 });
 
 module.exports = {
+  clientIp,
   loginLimiter,
   registerLimiter,
   contactLimiter,
