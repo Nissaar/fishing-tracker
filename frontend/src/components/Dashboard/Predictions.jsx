@@ -1,30 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { fishingAPI } from '../../services/api';
-import axios from 'axios';
+import { fishingAPI, publicAPI } from '../../services/api';
+import ErrorState from '../Common/ErrorState';
 import { Moon, Waves, Fish, Calendar, TrendingUp, Activity, Users } from 'lucide-react';
 
 const Predictions = () => {
   const [predictions, setPredictions] = useState(null);
   const [todayConditions, setTodayConditions] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = async () => {
+    setLoading(true);
+    setError(null);
     try {
       const [predResponse, condResponse] = await Promise.all([
-        axios.get(`${process.env.REACT_APP_API_URL}/fishing/global-predictions`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        }),
-        axios.get(`${process.env.REACT_APP_API_URL}/public/conditions`)
+        fishingAPI.getGlobalPredictions(),
+        publicAPI.getConditions()
       ]);
       
       setPredictions(predResponse.data);
       setTodayConditions(condResponse.data);
-    } catch (error) {
-      console.error('Failed to load predictions:', error);
+    } catch (err) {
+      setError(err);
     } finally {
       setLoading(false);
     }
@@ -36,6 +37,10 @@ const Predictions = () => {
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
+  }
+
+  if (error) {
+    return <ErrorState message="Community insights couldn't be loaded." onRetry={loadData} />;
   }
 
   const compareWithToday = (best, today) => {

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Fish, Moon, Waves, Sun, Wind, Eye, Menu, X, Thermometer, ChevronLeft, ChevronRight, Activity, Sunrise, Sunset, Users, Trophy, Layers } from 'lucide-react';
-import axios from 'axios';
+import { publicAPI, isCancelled } from '../../services/api';
+import ErrorState from '../Common/ErrorState';
 import PublicNav from './PublicNav';
 import CommunityEvents from './CommunityEvents';
 import Leaderboard from '../Common/Leaderboard';
@@ -12,31 +13,32 @@ const LandingPage = () => {
   const [conditions, setConditions] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [loadError, setLoadError] = useState(null);
+  const [reloadToken, setReloadToken] = useState(0);
 
+  // Conditions for Port Louis on the selected day. Clicking through days
+  // quickly cancels the earlier requests, so the numbers shown always belong
+  // to the date shown.
   useEffect(() => {
-    fetchConditions(selectedDate);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDate]);
-
-  const fetchConditions = async (dateObj) => {
-    try {
-      setLoading(true);
-      // Fetch conditions for Port Louis (main location). Optionally include date query param.
-      const base = `${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/public/conditions`;
-      let url = base;
-      if (dateObj) {
-        const dateOnly = localDateString(dateObj);
-        const ref = encodeURIComponent(dateObj.toISOString());
-        url = `${base}?date=${dateOnly}&referenceTime=${ref}`;
-      }
-      const response = await axios.get(url);
-      setConditions(response.data);
-    } catch (error) {
-      console.error('Error fetching conditions:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const controller = new AbortController();
+    setLoading(true);
+    setLoadError(null);
+    publicAPI.getConditions(
+      { date: localDateString(selectedDate), referenceTime: selectedDate.toISOString() },
+      { signal: controller.signal }
+    )
+      .then((response) => {
+        setConditions(response.data);
+        setLoading(false);
+      })
+      .catch((error) => {
+        if (isCancelled(error)) return;
+        setConditions(null);
+        setLoadError(error);
+        setLoading(false);
+      });
+    return () => controller.abort();
+  }, [selectedDate, reloadToken]);
 
   const changeSelectedDate = (days) => {
     setSelectedDate(prev => {
@@ -421,7 +423,10 @@ const LandingPage = () => {
           </div>
           </>
         ) : (
-          <p className="text-center text-gray-600">Unable to load conditions</p>
+          <ErrorState
+            message={loadError ? "Today's conditions couldn't be loaded." : 'Unable to load conditions'}
+            onRetry={() => setReloadToken(token => token + 1)}
+          />
         )}
 
         {/* Solunar Periods - Best Times to Fish */}

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { authAPI } from '../../services/api';
 import { toast } from 'react-toastify';
 import { Fish } from 'lucide-react';
 
@@ -54,14 +55,17 @@ const Register = () => {
       toast.success('Registration successful!');
       navigate('/dashboard');
     } catch (error) {
-      toast.error(error.response?.data?.error || 'Registration failed');
+      // Validation failures come back as a list of errors rather than one message
+      const data = error.response?.data;
+      const firstInvalid = data?.errors?.[0]?.path;
+      toast.error(data?.error || (firstInvalid ? `Please check your ${firstInvalid}` : 'Registration failed'));
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleRegister = () => {
-    window.location.href = `${process.env.REACT_APP_API_URL}/auth/google`;
+    window.location.href = authAPI.googleLoginUrl();
   };
 
   return (
@@ -77,24 +81,33 @@ const Register = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <label htmlFor="register-username" className="sr-only">Username</label>
           <input
+            id="register-username"
             type="text"
+            autoComplete="username"
             placeholder="Username"
             value={formData.username}
             onChange={(e) => setFormData({ ...formData, username: e.target.value })}
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             required
           />
+          <label htmlFor="register-email" className="sr-only">Email</label>
           <input
+            id="register-email"
             type="email"
+            autoComplete="email"
             placeholder="Email"
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             required
           />
+          <label htmlFor="register-password" className="sr-only">Password</label>
           <input
+            id="register-password"
             type="password"
+            autoComplete="new-password"
             placeholder="Password"
             value={formData.password}
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
@@ -111,8 +124,11 @@ const Register = () => {
               <li className={/[!@#$%^&*]/.test(formData.password) ? 'text-green-600' : ''}>One special character (!@#$%^&*)</li>
             </ul>
           </div>
+          <label htmlFor="register-confirm" className="sr-only">Confirm Password</label>
           <input
+            id="register-confirm"
             type="password"
+            autoComplete="new-password"
             placeholder="Confirm Password"
             value={formData.confirmPassword}
             onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}

@@ -6,6 +6,7 @@ const pool = require('../config/database');
 const logger = require('../config/logger');
 const { allLocations } = require('../data/mauritiusLocations');
 const { normalizeEmail } = require('../utils/email');
+const { MAX_FISH_COUNT } = require('../middleware/validateLog');
 
 // Apply authentication and admin check to all routes
 router.use(authMiddleware);
@@ -293,6 +294,14 @@ router.patch('/fishing-logs/:logId', async (req, res) => {
       'hook_setup',
       'notes'
     ];
+
+    // Would otherwise surface as a 500 from the fish_count CHECK constraint
+    if (Object.prototype.hasOwnProperty.call(req.body, 'fish_count')) {
+      const count = Number(req.body.fish_count);
+      if (!Number.isInteger(count) || count < 0 || count > MAX_FISH_COUNT) {
+        return res.status(400).json({ error: `fish_count must be a whole number from 0 to ${MAX_FISH_COUNT}` });
+      }
+    }
 
     const updates = [];
     const values = [];

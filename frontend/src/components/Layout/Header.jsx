@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Fish, LogOut, User } from 'lucide-react';
+import { Fish, LogOut, Shield } from 'lucide-react';
 
 const Header = () => {
   const { user, logout } = useAuth();
@@ -19,6 +19,16 @@ const Header = () => {
           </Link>
 
           <div className="flex items-center gap-4">
+            {user?.is_admin && (
+              <Link
+                to="/admin"
+                aria-label="Admin"
+                className="flex items-center gap-2 bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors"
+              >
+                <Shield className="w-4 h-4" aria-hidden="true" />
+                <span className="hidden md:inline">Admin</span>
+              </Link>
+            )}
             <div className="flex items-center gap-2">
               {user?.avatar_url ? (
                 <img src={user.avatar_url} alt={user.username} className="w-10 h-10 rounded-full border-2 border-white" />
@@ -37,9 +47,10 @@ const Header = () => {
 
             <button
               onClick={logout}
+              aria-label="Logout"
               className="flex items-center gap-2 bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-4 h-4" aria-hidden="true" />
               <span className="hidden md:inline">Logout</span>
             </button>
           </div>
