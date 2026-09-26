@@ -31,7 +31,9 @@ const SubmissionsTab = () => {
       toast.success(`Submission ${status}`);
       onRefresh();
     } catch (err) {
-      toast.error('Failed to update submission');
+      // e.g. "This submission was already approved" when another admin got there first
+      toast.error(err.response?.data?.error || 'Failed to update submission');
+      onRefresh();
     }
   };
 

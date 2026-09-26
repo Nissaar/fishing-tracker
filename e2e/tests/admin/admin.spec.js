@@ -328,6 +328,56 @@ test.describe('Admin - Review Submissions Tab', () => {
     });
   });
 
+  // Species typed into a trip log have no submission row until reviewed, and
+  // an id like fl_fish_<logId>_<n>; approving one used to fail with a 500
+  test('should approve a new species typed into a trip log', async ({ apiHelper, request }) => {
+    const page = shared.page;
+    const species = `E2E_TEST_Fish_${uniqueSuffix()}`;
+    let token;
+    let logId;
+
+    await test.step('1. Log a trip with a species that is not in the list yet', async () => {
+      token = await apiHelper.login(USER_EMAIL, USER_PASSWORD);
+      const response = await request.post(`${apiHelper.url}/fishing/logs`, {
+        headers: apiHelper.getAuthHeaders(token),
+        data: {
+          date: new Date().toISOString().split('T')[0],
+          timeStart: '06:00',
+          timeEnd: '09:00',
+          location: 'grand-baie',
+          caughtFish: true,
+          fishCount: 1,
+          fishTypes: [species],
+          fishingTypes: ['Casting'],
+          notes: 'E2E_TEST log-derived species'
+        }
+      });
+      expect(response.status()).toBe(201);
+      logId = (await response.json()).log.id;
+    });
+
+    await test.step('2. Approve it from "Review Submissions"', async () => {
+      await openSubmissions(page);
+      const card = submissionCard(page, species);
+      await expect(card.getByText('fish species', { exact: true })).toBeVisible();
+      await card.getByRole('button', { name: 'Approve' }).click();
+      await expect(successToast(page, 'Submission approved')).toBeVisible();
+      await expect(card.getByText('approved', { exact: true })).toBeVisible();
+    });
+
+    await test.step('3. Verify the species is now offered when logging a trip', async () => {
+      const response = await request.get(`${apiHelper.url}/fishing/dropdown/fish-species`, {
+        headers: apiHelper.getAuthHeaders(token)
+      });
+      const names = (await response.json()).map(s => s.local_name);
+      expect(names).toContain(species);
+    });
+
+    await test.step('4. Clean up the trip', async () => {
+      await request.delete(`${apiHelper.url}/fishing/logs/${logId}`, { headers: apiHelper.getAuthHeaders(token) });
+    });
+  });
+
   test('should show submission count', async ({ apiHelper, request }) => {
     const page = shared.page;
     const pendingButton = page.getByRole('button', { name: /^Pending \(\d+\)$/ });
