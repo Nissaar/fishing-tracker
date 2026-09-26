@@ -1,6 +1,8 @@
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const pool = require('./database');
+const User = require('../models/User');
+const { normalizeEmail } = require('../utils/email');
 
 // Reasons a Google sign-in is refused; the auth route maps these to a
 // ?error= code on the login page
@@ -24,16 +26,16 @@ async function findOrCreateGoogleUser(profile) {
     return { refused: GOOGLE_LOGIN_REFUSED.UNVERIFIED_EMAIL };
   }
 
-  const email = googleEmail.value.trim().toLowerCase();
+  const email = normalizeEmail(googleEmail.value);
 
   const byGoogleId = await pool.query('SELECT * FROM users WHERE google_id = $1', [profile.id]);
   if (byGoogleId.rows.length > 0) {
     return { user: byGoogleId.rows[0] };
   }
 
-  const byEmail = await pool.query('SELECT * FROM users WHERE lower(email) = $1', [email]);
-  if (byEmail.rows.length > 0) {
-    const existing = byEmail.rows[0];
+  // Also finds accounts stored under the legacy dotless Gmail spelling
+  const existing = await User.findByEmail(email);
+  if (existing) {
     // A different Google identity, or an account that signs in with a password
     if (existing.google_id || existing.password_hash) {
       return { refused: GOOGLE_LOGIN_REFUSED.PASSWORD_ACCOUNT };

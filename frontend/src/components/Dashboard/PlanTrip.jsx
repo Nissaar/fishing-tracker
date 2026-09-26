@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Compass, MapPin, Fish, Clock, Calendar, AlertCircle, CheckCircle, Info, Loader, TrendingUp, Sun, Moon, Waves, Wind, ThermometerSun } from 'lucide-react';
 import api from '../../services/api';
 import { toast } from 'react-toastify';
+import { localDateString } from '../../utils/dates';
 
 const PlanTrip = () => {
   const [loading, setLoading] = useState(false);
@@ -14,7 +15,7 @@ const PlanTrip = () => {
     fishingType: '',
     baitType: '',
     fishingMethod: '',
-    date: new Date().toISOString().split('T')[0],
+    date: localDateString(),
     startTime: '06:00',
     endTime: '12:00'
   });
@@ -228,7 +229,7 @@ const PlanTrip = () => {
               name="date"
               value={formData.date}
               onChange={handleInputChange}
-              min={new Date().toISOString().split('T')[0]}
+              min={localDateString()}
               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>

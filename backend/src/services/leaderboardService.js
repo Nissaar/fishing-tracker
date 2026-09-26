@@ -41,13 +41,27 @@ const getPeriodRange = async (period) => {
   return rows[0];
 };
 
-const rankTop = (rows, valueKey, limit = 5) =>
-  rows
+// Equal scores share a rank (1, 1, 3) so a tie never looks like one person is
+// ahead. Display order within a tie is fixed so it can't reshuffle between
+// refreshes or shares: more fish first, then whoever logged first.
+const compareForDisplay = (valueKey) => (a, b) =>
+  Number(b[valueKey]) - Number(a[valueKey])
+  || Number(b.fish) - Number(a.fish)
+  || new Date(a.first_logged_at) - new Date(b.first_logged_at)
+  || Number(a.user_id) - Number(b.user_id);
+
+const rankTop = (rows, valueKey, limit = 5) => {
+  const sorted = rows
     .filter(row => Number(row[valueKey]) > 0)
-    .sort((a, b) => Number(b[valueKey]) - Number(a[valueKey]) || Number(b.trips) - Number(a.trips))
-    .slice(0, limit)
-    .map((row, index) => ({
-      rank: index + 1,
+    .sort(compareForDisplay(valueKey));
+
+  let rank = 0;
+  return sorted.slice(0, limit).map((row, index) => {
+    if (index === 0 || Number(row[valueKey]) !== Number(sorted[index - 1][valueKey])) {
+      rank = index + 1;
+    }
+    return {
+      rank,
       userId: row.user_id,
       username: row.username,
       avatarUrl: row.avatar_url,
@@ -56,7 +70,9 @@ const rankTop = (rows, valueKey, limit = 5) =>
       fish: Number(row.fish),
       fishingTypes: Number(row.fishing_types_count),
       baits: Number(row.baits_count)
-    }));
+    };
+  });
+};
 
 /**
  * Top contributors for the current week or month, ranked four ways:
@@ -94,7 +110,8 @@ const getLeaderboard = async (period = 'week', limit = 5) => {
       COUNT(*) AS trips,
       COALESCE(SUM(pl.fish_count), 0) AS fish,
       COALESCE(MAX(tv.fishing_types_count), 0) AS fishing_types_count,
-      COALESCE(MAX(bv.baits_count), 0) AS baits_count
+      COALESCE(MAX(bv.baits_count), 0) AS baits_count,
+      MIN(pl.created_at) AS first_logged_at
     FROM period_logs pl
     LEFT JOIN type_variety tv ON tv.user_id = pl.user_id
     LEFT JOIN bait_variety bv ON bv.user_id = pl.user_id

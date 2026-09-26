@@ -5,6 +5,7 @@ const { isAdmin, adminLimiter } = require('../middleware/adminMiddleware');
 const pool = require('../config/database');
 const logger = require('../config/logger');
 const { allLocations } = require('../data/mauritiusLocations');
+const { normalizeEmail } = require('../utils/email');
 
 // Apply authentication and admin check to all routes
 router.use(authMiddleware);
@@ -153,6 +154,11 @@ router.patch('/users/:userId/admin', async (req, res) => {
     const { userId } = req.params;
     const { isAdmin: makeAdmin } = req.body;
 
+    // A missing value would otherwise write NULL
+    if (typeof makeAdmin !== 'boolean') {
+      return res.status(400).json({ error: 'isAdmin must be true or false' });
+    }
+
     // Prevent self-demotion
     if (parseInt(userId) === req.user.id && !makeAdmin) {
       return res.status(400).json({ error: 'You cannot remove your own admin privileges' });
@@ -206,7 +212,8 @@ router.delete('/users/:userId', async (req, res) => {
 router.patch('/users/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
-    const { username, email } = req.body;
+    const { username } = req.body;
+    const email = typeof req.body.email === 'string' ? normalizeEmail(req.body.email) : '';
 
     if (!username || !email) {
       return res.status(400).json({ error: 'Username and email are required' });
@@ -224,7 +231,7 @@ router.patch('/users/:userId', async (req, res) => {
 
     // Check if email is already taken by another user
     const emailCheck = await pool.query(
-      'SELECT id FROM users WHERE email = $1 AND id != $2',
+      'SELECT id FROM users WHERE lower(email) = $1 AND id != $2',
       [email, userId]
     );
     if (emailCheck.rows.length > 0) {

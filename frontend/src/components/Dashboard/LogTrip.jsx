@@ -5,6 +5,7 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 import { Calendar, MapPin, Fish, Moon, Waves, Sun, Loader, Thermometer, Wind, Activity, Plus, X, Send } from 'lucide-react';
 import FishingTypeSelector from '../Common/FishingTypeSelector';
+import { localDateString } from '../../utils/dates';
 
 const LogTrip = () => {
   const [locations, setLocations] = useState([]);
@@ -35,7 +36,7 @@ const LogTrip = () => {
   const [submittingCustom, setSubmittingCustom] = useState(false);
   
   const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: localDateString(),
     timeStart: new Date().toTimeString().split(' ')[0].substring(0, 5),
     timeEnd: (() => {
       const endTime = new Date();
@@ -334,7 +335,7 @@ const LogTrip = () => {
       
       // Reset form
       setFormData({
-        date: new Date().toISOString().split('T')[0],
+        date: localDateString(),
         timeStart: new Date().toTimeString().split(' ')[0].substring(0, 5),
         timeEnd: (() => {
           const endTime = new Date();
@@ -692,7 +693,7 @@ const LogTrip = () => {
             <Waves className="w-6 h-6 text-blue-600 mb-2" />
             <p className="text-sm text-gray-600 mb-1">Tide Height</p>
             <p className="text-xl font-bold text-blue-700">
-              {environmentalData.tideHeight?.height}m
+              {environmentalData.tideHeight?.height != null ? `${environmentalData.tideHeight.height}m` : 'Unavailable'}
             </p>
           </div>
 

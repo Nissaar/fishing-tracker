@@ -300,8 +300,11 @@ router.delete('/:id', async (req, res) => {
 // ==================== JOIN / LEAVE ====================
 
 router.post('/:id/join', async (req, res) => {
-  const client = await pool.connect();
+  let client;
   try {
+    // Inside the try: when the pool is exhausted or the database restarts
+    // this rejects, and outside it that became an unhandled rejection
+    client = await pool.connect();
     const userId = req.user.id;
     const note = typeof req.body.note === 'string' ? req.body.note.trim().slice(0, 300) : null;
 
@@ -349,11 +352,12 @@ router.post('/:id/join', async (req, res) => {
     await client.query('COMMIT');
     res.json({ message: 'You joined this trip' });
   } catch (error) {
-    await client.query('ROLLBACK');
+    // The connection may be the thing that failed; don't let ROLLBACK throw too
+    if (client) await client.query('ROLLBACK').catch(() => {});
     logger.error(`Join event error: ${error.message}`);
     res.status(500).json({ error: 'Failed to join event' });
   } finally {
-    client.release();
+    if (client) client.release();
   }
 });
 

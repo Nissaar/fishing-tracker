@@ -9,6 +9,26 @@
 
 const meteoMauritiusService = require('../services/meteoMauritiusService');
 
+const DAY_MINUTES = 24 * 60;
+
+// Keep minutes within one day, so a period around 00:20 becomes 23:20-01:20
+// rather than being clipped to 00:00-01:20
+const wrapMinutes = (minutes) => ((minutes % DAY_MINUTES) + DAY_MINUTES) % DAY_MINUTES;
+
+const timeToMinutes = (timeStr) => {
+  const [h, m] = timeStr.split(':').map(Number);
+  return h * 60 + m;
+};
+
+// True when a time falls in a period, including periods that cross midnight
+const isWithinPeriod = (minutes, startStr, endStr) => {
+  const start = timeToMinutes(startStr);
+  const end = timeToMinutes(endStr);
+  return start <= end
+    ? minutes >= start && minutes <= end
+    : minutes >= start || minutes <= end;
+};
+
 async function calculateSolunarPeriods(dateStr, latitude, longitude) {
   const date = new Date(dateStr);
   
@@ -47,12 +67,6 @@ async function calculateSolunarPeriods(dateStr, latitude, longitude) {
     moonriseMoonset = getApproximateMoonTimes(moonAge);
   }
   
-  // Convert time strings (HH:MM) to minutes since midnight
-  const timeToMinutes = (timeStr) => {
-    const [h, m] = timeStr.split(':').map(Number);
-    return h * 60 + m;
-  };
-  
   const formatTime = (minutes) => {
     const h = Math.floor(minutes / 60);
     const m = Math.floor(minutes % 60);
@@ -62,24 +76,26 @@ async function calculateSolunarPeriods(dateStr, latitude, longitude) {
   const moonriseMinutes = timeToMinutes(moonriseMoonset.moonrise);
   const moonsetMinutes = timeToMinutes(moonriseMoonset.moonset);
   
-  // Calculate moon transit (overhead) and opposing transit (underfoot)
-  // Transit occurs when moon crosses the meridian
-  const transitMinutes = (moonriseMinutes + 6 * 60) % (24 * 60);
-  const opposingTransitMinutes = (transitMinutes + 12 * 60) % (24 * 60);
+  // Moon transit (overhead) is halfway between moonrise and moonset. The moon
+  // is up for about 11 to 13.5 hours here, so the old "moonrise + 6h" was off
+  // by up to 45 minutes. A set earlier than the rise is on the next day.
+  const moonUpMinutes = wrapMinutes(moonsetMinutes - moonriseMinutes);
+  const transitMinutes = wrapMinutes(moonriseMinutes + moonUpMinutes / 2);
+  const opposingTransitMinutes = wrapMinutes(transitMinutes + 12 * 60);
   
   // Major periods: 2 hours centered on moon transit and opposing transit
-  const major1Start = formatTime(Math.max(0, transitMinutes - 60));
-  const major1End = formatTime(Math.min(24 * 60 - 1, transitMinutes + 60));
+  const major1Start = formatTime(wrapMinutes(transitMinutes - 60));
+  const major1End = formatTime(wrapMinutes(transitMinutes + 60));
   
-  const major2Start = formatTime(Math.max(0, opposingTransitMinutes - 60));
-  const major2End = formatTime(Math.min(24 * 60 - 1, opposingTransitMinutes + 60));
+  const major2Start = formatTime(wrapMinutes(opposingTransitMinutes - 60));
+  const major2End = formatTime(wrapMinutes(opposingTransitMinutes + 60));
   
   // Minor periods: 1 hour centered on moonrise and moonset
-  const minor1Start = formatTime(Math.max(0, moonriseMinutes - 30));
-  const minor1End = formatTime(Math.min(24 * 60 - 1, moonriseMinutes + 30));
+  const minor1Start = formatTime(wrapMinutes(moonriseMinutes - 30));
+  const minor1End = formatTime(wrapMinutes(moonriseMinutes + 30));
   
-  const minor2Start = formatTime(Math.max(0, moonsetMinutes - 30));
-  const minor2End = formatTime(Math.min(24 * 60 - 1, moonsetMinutes + 30));
+  const minor2Start = formatTime(wrapMinutes(moonsetMinutes - 30));
+  const minor2End = formatTime(wrapMinutes(moonsetMinutes + 30));
   
   // Calculate moon illumination for rating
   const illumination = Math.round((1 - Math.cos((newMoons % 1) * 2 * Math.PI)) * 50 * 10) / 10;
@@ -90,8 +106,6 @@ async function calculateSolunarPeriods(dateStr, latitude, longitude) {
     rating = 'best'; // Full or new moon
   } else if (illumination > 75 || illumination < 25) {
     rating = 'good';
-  } else if (illumination > 40 && illumination < 60) {
-    rating = 'average'; // Quarter moons
   } else {
     rating = 'average';
   }
@@ -228,29 +242,18 @@ function getApproximateMoonTimes(moonAge) {
  * Get current activity level based on current time and solunar periods
  */
 function getCurrentActivity(solunarData, currentTime) {
-  const timeToMinutes = (timeStr) => {
-    const [h, m] = timeStr.split(':').map(Number);
-    return h * 60 + m;
-  };
-  
   const currentMinutes = timeToMinutes(currentTime);
   
   // Check if we're in a major period
   for (const period of solunarData.majorPeriods) {
-    const startMinutes = timeToMinutes(period.start);
-    const endMinutes = timeToMinutes(period.end);
-    
-    if (currentMinutes >= startMinutes && currentMinutes <= endMinutes) {
+    if (isWithinPeriod(currentMinutes, period.start, period.end)) {
       return { level: period.activity, period: 'major', description: period.description };
     }
   }
   
   // Check if we're in a minor period
   for (const period of solunarData.minorPeriods) {
-    const startMinutes = timeToMinutes(period.start);
-    const endMinutes = timeToMinutes(period.end);
-    
-    if (currentMinutes >= startMinutes && currentMinutes <= endMinutes) {
+    if (isWithinPeriod(currentMinutes, period.start, period.end)) {
       return { level: period.activity, period: 'minor', description: period.description };
     }
   }
