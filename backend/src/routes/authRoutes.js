@@ -4,7 +4,7 @@ const passport = require('../config/passport');
 const { isGoogleConfigured } = require('../config/passport');
 const authController = require('../controllers/authController');
 const authMiddleware = require('../middleware/authMiddleware');
-const { loginLimiter, registerLimiter, accountUpdateLimiter } = require('../middleware/rateLimiters');
+const { loginLimiter, registerLimiter, accountUpdateIpLimiter, accountUpdateLimiter } = require('../middleware/rateLimiters');
 const { signToken } = require('../utils/token');
 const logger = require('../config/logger');
 
@@ -27,6 +27,7 @@ router.get('/profile', authMiddleware, authController.getProfile);
 
 router.put(
   '/profile',
+  accountUpdateIpLimiter,
   authMiddleware,
   accountUpdateLimiter,
   [
@@ -37,7 +38,7 @@ router.put(
   authController.updateProfile
 );
 
-router.put('/password', authMiddleware, accountUpdateLimiter, authController.changePassword);
+router.put('/password', accountUpdateIpLimiter, authMiddleware, accountUpdateLimiter, authController.changePassword);
 
 // Google OAuth — only mounted when credentials are configured, otherwise
 // passport throws "Unknown authentication strategy" and the route returns 500

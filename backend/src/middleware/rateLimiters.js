@@ -51,6 +51,16 @@ const accountUpdateLimiter = limiter({
   message: { error: 'Too many attempts, please try again in 15 minutes' }
 });
 
+// In front of authMiddleware on the same routes, so requests are capped
+// before any token check or database lookup. Per IP and looser than the
+// per-user limit, since people behind one carrier IP share it.
+const accountUpdateIpLimiter = limiter({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  skipSuccessfulRequests: true,
+  message: { error: 'Too many attempts, please try again in 15 minutes' }
+});
+
 const logCreateLimiter = limiter({
   windowMs: 60 * 60 * 1000,
   limit: 30,
@@ -73,6 +83,7 @@ module.exports = {
   clientIp,
   loginLimiter,
   registerLimiter,
+  accountUpdateIpLimiter,
   accountUpdateLimiter,
   contactLimiter,
   logCreateLimiter,

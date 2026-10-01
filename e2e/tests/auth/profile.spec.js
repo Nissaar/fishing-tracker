@@ -1,4 +1,5 @@
 // @ts-check
+const { randomUUID } = require('crypto');
 const { test, expect } = require('../fixtures');
 
 /**
@@ -11,7 +12,7 @@ const { test, expect } = require('../fixtures');
 const STRONG_PASSWORD = 'Str0ng!Pass';
 const NEW_PASSWORD = 'N3wer!Pass';
 
-const uniq = () => `${Date.now()}${Math.floor(Math.random() * 1e6)}`;
+const uniq = () => randomUUID().slice(0, 8);
 
 /** @param {import('@playwright/test').APIRequestContext} request */
 async function registerUser(request, apiUrl) {
