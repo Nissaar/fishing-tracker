@@ -4,7 +4,7 @@ const passport = require('../config/passport');
 const { isGoogleConfigured } = require('../config/passport');
 const authController = require('../controllers/authController');
 const authMiddleware = require('../middleware/authMiddleware');
-const { loginLimiter, registerLimiter } = require('../middleware/rateLimiters');
+const { loginLimiter, registerLimiter, accountUpdateLimiter } = require('../middleware/rateLimiters');
 const { signToken } = require('../utils/token');
 const logger = require('../config/logger');
 
@@ -24,6 +24,20 @@ router.post(
 
 router.post('/login', loginLimiter, authController.login);
 router.get('/profile', authMiddleware, authController.getProfile);
+
+router.put(
+  '/profile',
+  authMiddleware,
+  accountUpdateLimiter,
+  [
+    // VARCHAR(50) in the schema
+    body('username').optional().isString().trim().isLength({ min: 3, max: 50 }),
+    body('email').optional().isString().trim().isEmail().isLength({ max: 100 }).toLowerCase()
+  ],
+  authController.updateProfile
+);
+
+router.put('/password', authMiddleware, accountUpdateLimiter, authController.changePassword);
 
 // Google OAuth — only mounted when credentials are configured, otherwise
 // passport throws "Unknown authentication strategy" and the route returns 500
@@ -45,7 +59,7 @@ if (isGoogleConfigured) {
       }
       // Fragment, not query string: browsers never send it to a server, so the
       // token stays out of access logs and Referer headers
-      res.redirect(`${process.env.FRONTEND_URL}/auth/callback#token=${signToken(user.id)}`);
+      res.redirect(`${process.env.FRONTEND_URL}/auth/callback#token=${signToken(user)}`);
     })(req, res, next);
   });
 }

@@ -12,7 +12,8 @@ const authMiddleware = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decoded.userId);
     
-    if (!user) {
+    // Tokens issued before the last password change are revoked
+    if (!user || (decoded.tokenVersion || 0) !== user.token_version) {
       return res.status(401).json({ error: 'Invalid token' });
     }
     

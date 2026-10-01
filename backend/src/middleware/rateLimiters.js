@@ -41,6 +41,16 @@ const contactLimiter = limiter({
   message: { error: 'Too many messages, please try again later' }
 });
 
+// These check the current password, so a stolen session could otherwise be
+// used to guess it. Failed attempts only, like login.
+const accountUpdateLimiter = limiter({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  skipSuccessfulRequests: true,
+  keyGenerator: byUser,
+  message: { error: 'Too many attempts, please try again in 15 minutes' }
+});
+
 const logCreateLimiter = limiter({
   windowMs: 60 * 60 * 1000,
   limit: 30,
@@ -63,6 +73,7 @@ module.exports = {
   clientIp,
   loginLimiter,
   registerLimiter,
+  accountUpdateLimiter,
   contactLimiter,
   logCreateLimiter,
   conditionsLimiter,
