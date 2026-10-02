@@ -44,9 +44,11 @@ app.use(morgan('combined', { stream: logger.stream }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Only used to hold the OAuth `state` value during Google sign-in; API auth is
-// by JWT. MemoryStore is fine for the single backend instance this runs as.
-app.use(session({
+// Only used to hold the OAuth `state` value during Google sign-in, so it is
+// mounted on those routes alone; API auth is by JWT in the Authorization
+// header, never a cookie. MemoryStore is fine for the single backend instance
+// this runs as. The prefix covers /api/auth/google/callback too.
+app.use('/api/auth/google', session({
   secret: process.env.SESSION_SECRET || 'dev-session-secret-change-in-production',
   resave: false,
   saveUninitialized: false,

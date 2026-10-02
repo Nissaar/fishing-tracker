@@ -10,9 +10,10 @@ const { TIME_ZONE } = require('../utils/mauritiusTime');
 const { MAX_FISH_COUNT } = require('../middleware/validateLog');
 const { listSubmissions, reviewSubmission, SubmissionError } = require('../services/submissionService');
 
-// Apply authentication and admin check to all routes
-router.use(authMiddleware);
+// Rate limit first, so a flood of requests is turned away before the token
+// and admin checks reach the database
 router.use(adminLimiter);
+router.use(authMiddleware);
 router.use(isAdmin);
 
 // Get admin statistics
