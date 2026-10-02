@@ -32,10 +32,23 @@ export const AuthProvider = ({ children }) => {
     return response.data;
   };
 
-    const register = async (credentials) => {
+  const register = async (credentials) => {
     const response = await authAPI.register(credentials);
     localStorage.setItem('token', response.data.token);
     setUser(response.data.user);
+    return response.data;
+  };
+
+  const updateProfile = async (data) => {
+    const response = await authAPI.updateProfile(data);
+    setUser(response.data.user);
+    return response.data;
+  };
+
+  // The old token is revoked by the change, so keep the new one
+  const changePassword = async (data) => {
+    const response = await authAPI.changePassword(data);
+    localStorage.setItem('token', response.data.token);
     return response.data;
   };
 
@@ -49,6 +62,8 @@ export const AuthProvider = ({ children }) => {
     user,
     login,
     register,
+    updateProfile,
+    changePassword,
     logout,
     loading,
     isAuthenticated: !!user

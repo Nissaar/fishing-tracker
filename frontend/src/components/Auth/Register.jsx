@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { authAPI } from '../../services/api';
 import { toast } from 'react-toastify';
 import { Fish } from 'lucide-react';
+import { PASSWORD_RULES, passwordProblem } from '../../utils/passwordRules';
 
 const Register = () => {
   const { register } = useAuth();
@@ -19,25 +20,9 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Password validation
-    if (formData.password.length < 8) {
-      toast.error('Password must be at least 8 characters');
-      return;
-    }
-    if (!/[A-Z]/.test(formData.password)) {
-      toast.error('Password must contain at least one uppercase letter');
-      return;
-    }
-    if (!/[a-z]/.test(formData.password)) {
-      toast.error('Password must contain at least one lowercase letter');
-      return;
-    }
-    if (!/[0-9]/.test(formData.password)) {
-      toast.error('Password must contain at least one number');
-      return;
-    }
-    if (!/[!@#$%^&*]/.test(formData.password)) {
-      toast.error('Password must contain at least one special character (!@#$%^&*)');
+    const problem = passwordProblem(formData.password);
+    if (problem) {
+      toast.error(problem);
       return;
     }
     if (formData.password !== formData.confirmPassword) {
@@ -117,11 +102,9 @@ const Register = () => {
           <div className="text-xs text-gray-600 mt-1 pl-2">
             <p className="font-semibold">Password must contain:</p>
             <ul className="list-disc list-inside mt-1 space-y-0.5">
-              <li className={formData.password.length >= 8 ? 'text-green-600' : ''}>At least 8 characters</li>
-              <li className={/[A-Z]/.test(formData.password) ? 'text-green-600' : ''}>One uppercase letter</li>
-              <li className={/[a-z]/.test(formData.password) ? 'text-green-600' : ''}>One lowercase letter</li>
-              <li className={/[0-9]/.test(formData.password) ? 'text-green-600' : ''}>One number</li>
-              <li className={/[!@#$%^&*]/.test(formData.password) ? 'text-green-600' : ''}>One special character (!@#$%^&*)</li>
+              {PASSWORD_RULES.map(rule => (
+                <li key={rule.label} className={rule.test(formData.password) ? 'text-green-600' : ''}>{rule.label}</li>
+              ))}
             </ul>
           </div>
           <label htmlFor="register-confirm" className="sr-only">Confirm Password</label>

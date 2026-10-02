@@ -29,7 +29,12 @@ const Header = () => {
                 <span className="hidden md:inline">Admin</span>
               </Link>
             )}
-            <div className="flex items-center gap-2">
+            <Link
+              to="/profile"
+              aria-label="Profile"
+              title="Edit your profile"
+              className="flex items-center gap-2 hover:bg-white/20 px-2 py-1 rounded-lg transition-colors"
+            >
               {user?.avatar_url ? (
                 <img src={user.avatar_url} alt={user.username} className="w-10 h-10 rounded-full border-2 border-white" />
               ) : (
@@ -43,7 +48,7 @@ const Header = () => {
                 <p className="font-semibold">{user?.username}</p>
                 <p className="text-xs text-blue-100">{user?.email}</p>
               </div>
-            </div>
+            </Link>
 
             <button
               onClick={logout}

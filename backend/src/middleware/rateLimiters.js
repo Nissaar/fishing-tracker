@@ -41,6 +41,26 @@ const contactLimiter = limiter({
   message: { error: 'Too many messages, please try again later' }
 });
 
+// These check the current password, so a stolen session could otherwise be
+// used to guess it. Failed attempts only, like login.
+const accountUpdateLimiter = limiter({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  skipSuccessfulRequests: true,
+  keyGenerator: byUser,
+  message: { error: 'Too many attempts, please try again in 15 minutes' }
+});
+
+// In front of authMiddleware on the same routes, so requests are capped
+// before any token check or database lookup. Per IP and looser than the
+// per-user limit, since people behind one carrier IP share it.
+const accountUpdateIpLimiter = limiter({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  skipSuccessfulRequests: true,
+  message: { error: 'Too many attempts, please try again in 15 minutes' }
+});
+
 const logCreateLimiter = limiter({
   windowMs: 60 * 60 * 1000,
   limit: 30,
@@ -63,6 +83,8 @@ module.exports = {
   clientIp,
   loginLimiter,
   registerLimiter,
+  accountUpdateIpLimiter,
+  accountUpdateLimiter,
   contactLimiter,
   logCreateLimiter,
   conditionsLimiter,

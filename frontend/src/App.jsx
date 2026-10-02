@@ -15,6 +15,7 @@ import Register from './components/Auth/Register';
 import AuthCallback from './components/Auth/AuthCallback';
 import Dashboard from './components/Dashboard/Dashboard';
 import Admin from './components/Dashboard/Admin';
+import Profile from './components/Profile/Profile';
 
 const FullPageSpinner = () => (
   <div className="min-h-screen flex items-center justify-center">
@@ -59,6 +60,7 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
         </Routes>
       </Router>

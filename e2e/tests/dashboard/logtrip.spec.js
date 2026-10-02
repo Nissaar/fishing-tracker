@@ -236,7 +236,8 @@ test.describe('LogTrip - Environmental Data', () => {
 
     await test.step('2. Verify moon phase and illumination are displayed', async () => {
       await expect(page.getByText('Moon Phase', { exact: true })).toBeVisible();
-      await expect(page.getByText(/^\d+% illuminated$/)).toBeVisible();
+      // One decimal place (e.g. 73.9%); only whole at full and new moon
+      await expect(page.getByText(/^\d+(\.\d)?% illuminated$/)).toBeVisible();
     });
   });
 
