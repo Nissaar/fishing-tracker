@@ -757,10 +757,10 @@ test.describe('Admin - User Management Tab', () => {
     });
   });
 
-  test('should display user details - username, email', async () => {
+  test('should display user details - username, email, joined date', async () => {
     const page = shared.page;
     await test.step('1. Verify the column headers', async () => {
-      for (const header of ['Username', 'Email', 'Logs', 'Admin', 'Actions']) {
+      for (const header of ['Username', 'Email', 'Joined', 'Logs', 'Admin', 'Actions']) {
         await expect(page.getByRole('columnheader', { name: header, exact: true })).toBeVisible();
       }
     });
@@ -769,6 +769,12 @@ test.describe('Admin - User Management Tab', () => {
       const row = userRow(page, USER_EMAIL);
       await expect(row.getByRole('cell').nth(0)).toHaveText('E2E Test User');
       await expect(row.getByRole('cell').nth(1)).toHaveText(USER_EMAIL);
+    });
+
+    await test.step('3. Verify the joined date is a real date', async () => {
+      const joined = userRow(page, USER_EMAIL).getByRole('cell').nth(2);
+      await expect(joined).toHaveText(/\d/);
+      await expect(joined).not.toHaveText(/Invalid Date|^-$/);
     });
   });
 
@@ -798,11 +804,12 @@ test.describe('Admin - User Management Tab', () => {
     const page = shared.page;
     let token;
     let logId;
+    const logDate = new Date().toISOString().split('T')[0];
 
     await test.step('1. Log a trip as the test user', async () => {
       token = await apiHelper.login(USER_EMAIL, USER_PASSWORD);
       const response = await apiHelper.createFishingLog(token, {
-        date: new Date().toISOString().split('T')[0],
+        date: logDate,
         timeStart: '06:00',
         timeEnd: '08:00',
         location: 'grand-baie',
@@ -828,6 +835,13 @@ test.describe('Admin - User Management Tab', () => {
         await expect(page.getByLabel('Select User')).toHaveValue('E2E Test User');
         await expect(page.getByRole('heading', { name: /^Entries \(\d+\)$/ })).toBeVisible();
         await expect(page.getByRole('cell', { name: 'Grand Baie' }).first()).toBeVisible();
+      });
+
+      await test.step('4. Verify the entry shows its trip date, not "Invalid Date"', async () => {
+        // Formatted in the browser so the expected text follows its locale
+        const expected = await page.evaluate(day => new Date(`${day}T00:00:00Z`).toLocaleDateString(undefined, { timeZone: 'UTC' }), logDate);
+        const entryRow = page.getByRole('row').filter({ has: page.getByRole('cell', { name: 'Grand Baie' }) }).first();
+        await expect(entryRow.getByRole('cell').nth(0)).toHaveText(expected);
       });
     } finally {
       await apiHelper.deleteFishingLog(token, logId);
@@ -859,12 +873,12 @@ test.describe('Admin - User Management Tab', () => {
   test('should show admin status for users', async () => {
     const page = shared.page;
     await test.step('1. Verify the admin account is flagged as admin', async () => {
-      await expect(userRow(page, ADMIN_EMAIL).getByRole('cell').nth(3)).toHaveText('Yes');
+      await expect(userRow(page, ADMIN_EMAIL).getByRole('cell').nth(4)).toHaveText('Yes');
       await expect(userRow(page, ADMIN_EMAIL).getByRole('button', { name: 'Remove Admin' })).toBeVisible();
     });
 
     await test.step('2. Verify the regular test user is not', async () => {
-      await expect(userRow(page, USER_EMAIL).getByRole('cell').nth(3)).toHaveText('No');
+      await expect(userRow(page, USER_EMAIL).getByRole('cell').nth(4)).toHaveText('No');
       await expect(userRow(page, USER_EMAIL).getByRole('button', { name: 'Make Admin' })).toBeVisible();
     });
   });

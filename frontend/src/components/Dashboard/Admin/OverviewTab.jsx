@@ -37,7 +37,7 @@ const OverviewTab = ({ stats }) => (
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-gray-600 mb-1">Active Users</p>
-            <p className="text-3xl font-bold text-gray-900">{stats.topUsers?.filter(u => u.log_count > 0).length || 0}</p>
+            <p className="text-3xl font-bold text-gray-900">{stats.overview.activeUsers ?? 0}</p>
           </div>
           <Activity className="w-12 h-12 text-orange-500 opacity-80" />
         </div>

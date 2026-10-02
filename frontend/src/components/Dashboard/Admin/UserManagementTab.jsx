@@ -12,7 +12,7 @@ const UserManagementTab = ({ users, search, setSearch, onToggleAdmin, onDelete, 
       <input type="text" aria-label="Search users" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by username or email..." className="w-full px-4 py-2 border rounded-lg mb-6" />
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead><tr className="border-b-2 border-gray-200"><th className="text-left py-3 px-4">Username</th><th className="text-left py-3 px-4">Email</th><th className="text-center py-3 px-4">Logs</th><th className="text-center py-3 px-4">Admin</th><th className="text-left py-3 px-4">Actions</th></tr></thead>
+          <thead><tr className="border-b-2 border-gray-200"><th className="text-left py-3 px-4">Username</th><th className="text-left py-3 px-4">Email</th><th className="text-left py-3 px-4">Joined</th><th className="text-center py-3 px-4">Logs</th><th className="text-center py-3 px-4">Admin</th><th className="text-left py-3 px-4">Actions</th></tr></thead>
           <tbody>
             {filteredUsers.map((user) => (
               <tr key={user.id} className="border-b border-gray-100 hover:bg-gray-50">
@@ -42,6 +42,7 @@ const UserManagementTab = ({ users, search, setSearch, onToggleAdmin, onDelete, 
                     user.email
                   )}
                 </td>
+                <td className="py-3 px-4 text-gray-600 whitespace-nowrap">{user.created_at ? new Date(user.created_at).toLocaleDateString() : '-'}</td>
                 <td className="py-3 px-4 text-center">{user.log_count}</td>
                 <td className="py-3 px-4 text-center"><span className={`px-2 py-1 rounded-full text-xs font-semibold ${user.is_admin ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>{user.is_admin ? 'Yes' : 'No'}</span></td>
                 <td className="py-3 px-4">
