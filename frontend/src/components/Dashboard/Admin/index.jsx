@@ -14,6 +14,7 @@ import DropdownsTab from './DropdownsTab';
 import UserManagementTab from './UserManagementTab';
 import UserEntriesPanel from './UserEntriesPanel';
 import EditEntryModal from './EditEntryModal';
+import { dateOnly } from '../../../utils/dates';
 
 const TABS = [
   { id: 'overview', name: 'Overview', icon: TrendingUp },
@@ -100,7 +101,8 @@ const Admin = () => {
 
   const handleEditEntry = (entry) => {
     setEditingEntry(entry.id);
-    setEditEntryData({ ...entry });
+    // Date inputs need plain YYYY-MM-DD, not the timestamp the API sends
+    setEditEntryData({ ...entry, log_date: dateOnly(entry.log_date) });
     dropdowns.ensureLoaded();
   };
 

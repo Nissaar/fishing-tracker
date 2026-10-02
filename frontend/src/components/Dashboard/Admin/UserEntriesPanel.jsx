@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { formatDateOnly } from '../../../utils/dates';
 
 const matchesUser = (user, term) => {
   const needle = term.trim().toLowerCase();
@@ -93,7 +94,7 @@ const UserEntriesPanel = ({ users, search, setSearch, onSelectUser, entries, loa
                 {entries.map(entry => (
                   <tr key={entry.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-3 px-4">
-                      {new Date(entry.log_date + 'T00:00:00Z').toLocaleDateString(undefined, { timeZone: 'UTC' })}
+                      {formatDateOnly(entry.log_date)}
                     </td>
                     <td className="py-3 px-4">{entry.location_name || entry.location}</td>
                     <td className="py-3 px-4">{entry.fishing_type || '-'}</td>

@@ -6,6 +6,7 @@ const pool = require('../config/database');
 const logger = require('../config/logger');
 const { allLocations } = require('../data/mauritiusLocations');
 const { normalizeEmail } = require('../utils/email');
+const { TIME_ZONE } = require('../utils/mauritiusTime');
 const { MAX_FISH_COUNT } = require('../middleware/validateLog');
 const { listSubmissions, reviewSubmission, SubmissionError } = require('../services/submissionService');
 
@@ -25,17 +26,22 @@ router.get('/stats', async (req, res) => {
     const logsResult = await pool.query('SELECT COUNT(*) as count FROM fishing_logs');
     const totalLogs = parseInt(logsResult.rows[0].count);
 
-    // Get logs from last 30 days
-    const recentLogsResult = await pool.query(
-      'SELECT COUNT(*) as count FROM fishing_logs WHERE created_at >= NOW() - INTERVAL \'30 days\''
+    // "This month" is the calendar month in Mauritius, the same window the
+    // leaderboard uses. Logs count by the day of the trip, not when they were
+    // typed in, so entries added late still land in the right month.
+    const monthResult = await pool.query(
+      `SELECT
+         (SELECT COUNT(*) FROM users
+           WHERE created_at >= date_trunc('month', now() AT TIME ZONE $1::text) AT TIME ZONE $1::text) AS recent_users,
+         (SELECT COUNT(*) FROM fishing_logs
+           WHERE log_date >= date_trunc('month', now() AT TIME ZONE $1::text)::date
+             AND log_date < (date_trunc('month', now() AT TIME ZONE $1::text) + interval '1 month')::date) AS recent_logs,
+         (SELECT COUNT(DISTINCT user_id) FROM fishing_logs) AS active_users`,
+      [TIME_ZONE]
     );
-    const recentLogs = parseInt(recentLogsResult.rows[0].count);
-
-    // Get users who joined in last 30 days
-    const recentUsersResult = await pool.query(
-      'SELECT COUNT(*) as count FROM users WHERE created_at >= NOW() - INTERVAL \'30 days\''
-    );
-    const recentUsers = parseInt(recentUsersResult.rows[0].count);
+    const recentUsers = parseInt(monthResult.rows[0].recent_users);
+    const recentLogs = parseInt(monthResult.rows[0].recent_logs);
+    const activeUsers = parseInt(monthResult.rows[0].active_users);
 
     // Get most active users (top 5)
     const activeUsersResult = await pool.query(`
@@ -94,6 +100,7 @@ router.get('/stats', async (req, res) => {
         totalLogs,
         recentUsers,
         recentLogs,
+        activeUsers,
         successRate
       },
       topUsers: activeUsersResult.rows,
