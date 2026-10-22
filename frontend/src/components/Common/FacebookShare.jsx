@@ -1,7 +1,25 @@
 import React, { useMemo, useState } from 'react';
-import { Copy, Check, Facebook, Languages, Share2 } from 'lucide-react';
+import { Copy, Check, Languages, Share2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { buildLeaderboardPost, buildFacebookShareUrl, FACEBOOK_PAGE_URL } from '../../utils/shareText';
+
+// lucide-react 1.x dropped its brand icons, so the Facebook mark is drawn here
+// (same outline style and props as the other lucide icons)
+const Facebook = (props) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+    {...props}
+  >
+    <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+  </svg>
+);
 
 /**
  * Admin tool: generates a ready-to-post Facebook update in Kreol Morisien with
