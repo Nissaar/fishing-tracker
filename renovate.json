@@ -117,6 +117,16 @@
       "schedule": [
         "before 7am on the first day of the month"
       ]
+    },
+    {
+      "description": "Tailwind 4 cannot be used with Create React App (react-scripts 5 loads the removed tailwindcss PostCSS plugin itself). It needs the frontend moved to Vite first, plus a visual review of ~400 utility usages (renamed defaults). Lift after that migration.",
+      "matchPackageNames": [
+        "tailwindcss"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "enabled": false
     }
   ]
 }
