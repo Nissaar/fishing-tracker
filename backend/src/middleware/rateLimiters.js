@@ -1,4 +1,5 @@
 const rateLimit = require('express-rate-limit');
+const { ipKeyGenerator } = rateLimit;
 
 // The e2e suite logs in hundreds of times from one IP; limits would make it fail
 const skipInTests = () => process.env.NODE_ENV === 'test';
@@ -6,7 +7,8 @@ const skipInTests = () => process.env.NODE_ENV === 'test';
 // Requests reach the API through Cloudflare, Traefik and nginx, so req.ip is
 // one of those proxies and every visitor would share one budget. Cloudflare
 // puts the visitor's address in CF-Connecting-IP.
-const clientIp = (req) => req.get('cf-connecting-ip') || req.ip;
+// ipKeyGenerator groups IPv6 addresses by /56 so one host can't dodge the limit by rotating addresses
+const clientIp = (req) => ipKeyGenerator(req.get('cf-connecting-ip') || req.ip);
 
 const limiter = (options) => rateLimit({
   standardHeaders: 'draft-7',
