@@ -23,6 +23,9 @@
   "prConcurrentLimit": 5,
   "automerge": false,
   "dependencyDashboard": true,
+  "constraints": {
+    "npm": "^10"
+  },
   "packageRules": [
     {
       "description": "One PR for all npm minor and patch updates; majors stay separate",
