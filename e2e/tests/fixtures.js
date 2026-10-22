@@ -239,7 +239,7 @@ const test = base.extend({
       // Generate random user
       randomUser() {
         return {
-          username: `E2E_TEST_${faker.internet.userName()}`,
+          username: `E2E_TEST_${faker.internet.username()}`,
           email: `e2e_${faker.internet.email()}`,
           password: faker.internet.password({ length: 12 })
         };
