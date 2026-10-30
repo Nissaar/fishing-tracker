@@ -12,7 +12,7 @@ A fishing log for anglers in Mauritius: record trips and catches, see conditions
 
 ## Stack
 
-React 18 (Create React App, Tailwind) behind nginx · Node 20 + Express · PostgreSQL 15 · Python helper for the Meteo scraper · Docker Compose.
+React 19 (Create React App, Tailwind 3) behind nginx · Node 24 + Express 5 · PostgreSQL 15 · Python helper for the Meteo scraper · Docker Compose.
 
 ## Run it
 
@@ -27,7 +27,7 @@ Without Docker: `cd backend && npm install && npm run dev`, and `cd frontend && 
 
 ## Tests
 
-End-to-end tests with Playwright (pages, auth, dashboard, admin, API; Chrome, Firefox and mobile Chrome): see [e2e/README.md](e2e/README.md) and [e2e/TEST_DOCUMENTATION.md](e2e/TEST_DOCUMENTATION.md). CI runs them (`e2e.yml`), CodeQL (`codeql.yml`) and a production check after every merge to `main` (`post-merge-prod-check.yml`); every push is mirrored to GitLab.
+End-to-end tests with Playwright (pages, auth, dashboard, admin, API; Chrome, Firefox and mobile Chrome): see [e2e/README.md](e2e/README.md) and [e2e/TEST_DOCUMENTATION.md](e2e/TEST_DOCUMENTATION.md). CI runs them (`e2e.yml`), CodeQL (`codeql.yml`) and a production smoke check (`post-merge-prod-check.yml`); every push is mirrored to GitLab.
 
 ## Layout
 
