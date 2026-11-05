@@ -8,38 +8,77 @@ on:
 permissions:
   contents: read
 
+env:
+  BASE_URL: https://fishing.nissaar.com
+
 jobs:
   prod-check:
     runs-on: ubuntu-latest
     steps:
+      # A GitHub runner often cannot see production at all: the hostname may
+      # not resolve publicly, and Cloudflare Bot Fight Mode answers runner IPs
+      # with a challenge (403) instead of the site. Neither says anything about
+      # the deploy, so the run is skipped with a warning rather than failed.
+      # Anything else (a real 5xx, a wrong body, a broken page) still fails.
+      - name: Check production is reachable from this runner
+        id: reach
+        run: |
+          host="${BASE_URL#https://}"; host="${host%%/*}"
+          headers="$(mktemp)"; body="$(mktemp)"
+          rc=0
+          code="$(curl -sS --max-time 20 -o "$body" -D "$headers" -w '%{http_code}' "$BASE_URL/api/health" 2>"$RUNNER_TEMP/curl.err")" || rc=$?
+
+          skip() {
+            echo "::warning title=Prod check skipped::$1"
+            printf '### Prod check skipped\n\n%s\n\nRun it from a machine that can reach production to check the deploy.\n' "$1" >> "$GITHUB_STEP_SUMMARY"
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          }
+
+          if [ "$rc" = 6 ]; then
+            skip "$host does not resolve in public DNS, so this runner cannot reach production."
+          elif [ "$rc" != 0 ]; then
+            skip "$BASE_URL is unreachable from this runner (curl exit $rc: $(cat "$RUNNER_TEMP/curl.err"))."
+          elif grep -qi '^cf-mitigated: *challenge' "$headers" \
+            || grep -qiE 'challenges\.cloudflare\.com|cf-chl-|<title>Just a moment' "$body"; then
+            skip "Cloudflare answered this runner with a bot challenge (HTTP $code), so the site itself was never reached."
+          fi
+
+          echo "$BASE_URL answered HTTP $code; running the checks."
+          echo "ok=true" >> "$GITHUB_OUTPUT"
+
       - name: Checkout
+        if: steps.reach.outputs.ok == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Node
+        if: steps.reach.outputs.ok == 'true'
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
 
       - name: Install required OS packages for Playwright
+        if: steps.reach.outputs.ok == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y libasound2t64 libnss3 libxss1 libgtk-3-0 libdrm2 libgbm1
 
       - name: Install deps
+        if: steps.reach.outputs.ok == 'true'
         run: |
           npm install playwright@1.42.0 axios
 
       - name: Install Playwright Browsers
+        if: steps.reach.outputs.ok == 'true'
         run: npx playwright install chromium
 
       - name: Run checks
-        env:
-          BASE_URL: https://fishing.nissaar.com
+        if: steps.reach.outputs.ok == 'true'
         run: |
           node .github/scripts/prod-check.js
 
       - name: Upload HTML report (artifact)
-        if: always()
+        if: always() && steps.reach.outputs.ok == 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: prod-check-report
